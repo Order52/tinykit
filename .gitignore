@@ -1,0 +1,9 @@
+# Android build output and local config
+.gradle/
+build/
+app/build/
+local.properties
+keystore.properties
+*.jks
+*.keystore
+.DS_Store
