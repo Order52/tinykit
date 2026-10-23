@@ -150,7 +150,6 @@ public class MainActivity extends Activity {
     private List<App> apps;
     private SharedPreferences prefs;
     private FrameLayout frame;
-    private View shizukuCard;
     private TextView shizukuText;
     private Button shizukuButton;
     private Button startButton;
@@ -248,25 +247,24 @@ public class MainActivity extends Activity {
     // ---- Shizuku --------------------------------------------------------------------
 
     private void refreshShizuku() {
+        boolean installed = Shell.installed(getPackageManager());
+        boolean running = Shell.running();
         boolean ready = Shell.ready();
-        shizukuCard.setVisibility(ready ? View.GONE : View.VISIBLE);
-        if (!Shell.installed(getPackageManager())) {
-            shizukuText.setText("TinyKit needs Shizuku for system access. Install it first.");
+        if (!installed) {
+            shizukuText.setText("Shizuku is not installed");
             shizukuButton.setText("Get Shizuku");
             shizukuButton.setOnClickListener(v -> openUrl(SHIZUKU_DOWNLOAD));
-        } else if (!Shell.running()) {
-            shizukuText.setText("Shizuku is not running. Start it here (through Termux with "
-                    + "shizuku-termux) or in the Shizuku app.");
-            shizukuButton.setText("Open Shizuku");
-            shizukuButton.setOnClickListener(v -> openApp(SHIZUKU_PKG));
-        } else if (!ready) {
-            shizukuText.setText("Allow TinyKit to use Shizuku.");
+        } else if (running && !ready) {
+            shizukuText.setText("Shizuku is running. Allow TinyKit to use it.");
             shizukuButton.setText("Allow");
             shizukuButton.setOnClickListener(v -> Shizuku.requestPermission(REQUEST_SHIZUKU));
+        } else {
+            shizukuText.setText(running ? "Shizuku is running  ✓" : "Shizuku is not running");
+            shizukuButton.setText("Open Shizuku");
+            shizukuButton.setOnClickListener(v -> openApp(SHIZUKU_PKG));
         }
-        startButton.setVisibility(Shell.installed(getPackageManager()) && !Shell.running()
-                ? View.VISIBLE : View.GONE);
-        startButton.setEnabled(!starting);
+        startButton.setVisibility(installed ? View.VISIBLE : View.GONE);
+        startButton.setEnabled(!starting && !running);
         startButton.setText(starting ? "Starting…" : "Start Shizuku");
         for (View row : shizukuRows) row.setAlpha(ready ? 1f : 0.4f);
         if (ready) loadSettings();
@@ -368,9 +366,9 @@ public class MainActivity extends Activity {
 
     // ---- Home -----------------------------------------------------------------------
 
+    /** Home: the Shizuku card and one row per category, so it fits on one screen. */
     private View buildHome() {
-        LinearLayout list = vertical();
-        list.setPadding(0, 0, 0, dp(24));
+        LinearLayout home = vertical();
 
         LinearLayout card = vertical();
         card.setPadding(dp(16), dp(16), dp(16), dp(8));
@@ -383,10 +381,33 @@ public class MainActivity extends Activity {
         buttons.addView(startButton, wrap());
         buttons.addView(shizukuButton, wrap());
         card.addView(buttons);
-        shizukuCard = card;
-        list.addView(card);
+        home.addView(card);
 
-        section(list, "Privacy");
+        category(home, "Privacy", "Developer options, ad-blocking DNS, scanning, camera & mic",
+                buildPrivacy());
+        category(home, "Apps", "Running apps, background limits, keep alive, APK backup", buildApps());
+        category(home, "Clean & speed", "Clear caches, optimize apps, trim storage", buildClean());
+        category(home, "Network & battery", "Free hotspot, mobile data on Wi-Fi", buildNetwork());
+        category(home, "Info & logs", "Phone info, crash log", buildInfo());
+        return scroll(home);
+    }
+
+    private void category(LinearLayout home, String title, String summary, View page) {
+        row(home, title, summary, arrow(), () -> {
+            push(title, page);
+            loadSettings();
+        }, false);
+    }
+
+    private View scroll(LinearLayout list) {
+        list.setPadding(0, 0, 0, dp(16));
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(list);
+        return scroll;
+    }
+
+    private View buildPrivacy() {
+        LinearLayout list = vertical();
         toggle(list, "Hide developer options",
                 "Apps see Developer options as off. adb and Shizuku keep working.",
                 s -> "0".equals(s.get("development_settings_enabled")),
@@ -405,7 +426,11 @@ public class MainActivity extends Activity {
         link(list, "Block camera & mic",
                 "Pick apps that can never use the camera or microphone.", this::openCameraMic);
 
-        section(list, "Apps");
+        return scroll(list);
+    }
+
+    private View buildApps() {
+        LinearLayout list = vertical();
         link(list, "Running apps", "Memory use of everything running. Stop any app.", this::openRunning);
         link(list, "Stop background activity",
                 "Pick apps that can't run or wake the phone in the background.", this::openBackground);
@@ -414,7 +439,11 @@ public class MainActivity extends Activity {
                 this::openKeepAlive);
         link(list, "Back up app as APK", "Save any app's APK to Download/TinyKit.", this::openBackup);
 
-        section(list, "Clean & speed");
+        return scroll(list);
+    }
+
+    private View buildClean() {
+        LinearLayout list = vertical();
         action(list, "Clear all app caches", "Frees the space used by every app's cache.", () -> {
             String free = "df -k /data | tail -1 | awk '{print $4}'";
             Shell.Result r = Shell.run("a=$(" + free + "); pm trim-caches 999G; b=$(" + free + "); "
@@ -437,7 +466,11 @@ public class MainActivity extends Activity {
             return r.ok() ? "Started. Android finishes it in the background." : "Failed: " + r.out;
         });
 
-        section(list, "Network & battery");
+        return scroll(list);
+    }
+
+    private View buildNetwork() {
+        LinearLayout list = vertical();
         toggle(list, "Free hotspot",
                 "Hotspot uses your normal data connection, so carriers that block it can't (works on many carriers).",
                 s -> "0".equals(s.get("tether_dun_required")),
@@ -448,13 +481,14 @@ public class MainActivity extends Activity {
                 s -> "0".equals(s.get("mobile_data_always_on")),
                 on -> "settings put global mobile_data_always_on " + (on ? 0 : 1));
 
-        section(list, "Info & logs");
+        return scroll(list);
+    }
+
+    private View buildInfo() {
+        LinearLayout list = vertical();
         row(list, "Phone info", "Battery, memory, storage and system details.", arrow(), this::openInfo, false);
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(list);
-        return scroll;
+        return scroll(list);
     }
 
     /** Turning on remembers the previous Private DNS setting so turning off restores it. */

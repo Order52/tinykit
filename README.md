@@ -11,7 +11,7 @@ No root, no internet permission, nothing running in the background. 36 KB.
 ## Features
 
 **Start Shizuku**
-- When Shizuku isn't running, TinyKit shows a **Start Shizuku** button that starts it without a
+- The Shizuku card at the top has a **Start Shizuku** button that starts it without a
   computer, through Termux and [shizuku-termux](https://github.com/Order52/shizuku-termux).
 
 **Privacy**
