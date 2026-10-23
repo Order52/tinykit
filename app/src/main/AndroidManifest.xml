@@ -48,6 +48,17 @@
                 android:value="true" />
         </service>
 
+        <service
+            android:name=".ScreenshotTile"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_screenshot"
+            android:label="Screenshot"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <!-- Termux's reply to a tile tap. -->
         <receiver
             android:name=".ShizukuTile$Result"
