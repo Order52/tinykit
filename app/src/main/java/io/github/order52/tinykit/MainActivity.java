@@ -692,6 +692,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Run a command", "Run a shell command via Shizuku", this::openRunCommand));
         f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
         f.add(new Feature("Settings backup & restore", "Save and restore all settings", this::openBackupRestore));
+        f.add(new Feature("Advanced reboot", "Reboot, recovery, bootloader, soft reboot", this::openReboot));
         f.add(new Feature("Clear all app caches", "Free cached space", () -> selectTab(3)));
         f.add(new Feature("Optimize apps", "Recompile apps so they open faster", () -> selectTab(3)));
         f.add(new Feature("Trim storage", "Storage maintenance and TRIM", () -> selectTab(3)));
@@ -840,6 +841,8 @@ public class MainActivity extends Activity {
                 arrow(), this::openRecover, false);
         row(list, "Settings backup & restore", "Save all system settings to a file and put them back.",
                 arrow(), this::openBackupRestore, false);
+        link(list, "Advanced reboot", "Reboot, recovery, bootloader or a soft (userspace) reboot.",
+                this::openReboot);
 
         section(list, "Clean & speed");
         action(list, "Clear all app caches", "Frees the space used by every app's cache.", () -> {
@@ -1827,6 +1830,41 @@ public class MainActivity extends Activity {
                 }
             });
         });
+    }
+
+    // ---- Advanced reboot ------------------------------------------------------------------------
+
+    private void openReboot() {
+        String[] labels = {"Reboot", "Reboot to recovery", "Reboot to bootloader", "Soft reboot"};
+        String[] cmds = {"svc power reboot", "svc power reboot recovery",
+                "svc power reboot bootloader", "svc power reboot userspace"};
+        String[] notes = {"", "", "",
+                "Restarts Android without a full reboot. Needs Android 11+; otherwise it reboots normally."};
+        new AlertDialog.Builder(this)
+                .setTitle("Advanced reboot")
+                .setItems(labels, (d, which) -> confirmReboot(labels[which], cmds[which], notes[which]))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void confirmReboot(String label, String cmd, String note) {
+        String message = (label.contains("recovery") || label.contains("bootloader")
+                ? "The phone will restart into that mode now."
+                : "The phone will restart now.") + (note.isEmpty() ? "" : "\n\n" + note);
+        new AlertDialog.Builder(this)
+                .setTitle(label + "?")
+                .setMessage(message)
+                .setPositiveButton(label, (d, w) -> {
+                    toast(label + "…");
+                    worker.execute(() -> {
+                        Shell.Result r = Shell.run(cmd);
+                        if (!r.ok()) {
+                            main.post(() -> toast("Couldn't do that. " + (r.out.isEmpty() ? "" : r.out)));
+                        }
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     // ---- Settings backup & restore --------------------------------------------------------------
