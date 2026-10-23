@@ -2575,6 +2575,7 @@ public class MainActivity extends Activity {
             holder[0] = row(list, type[0], "…", arrow(), () -> pickForType(type, holder[0]), true);
             refreshType(type, holder[0]);
         }
+        push("Default apps", scroll(list));
     }
 
     /** Shows the apps that can open this type and the current default. */
