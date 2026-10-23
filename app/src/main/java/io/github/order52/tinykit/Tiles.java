@@ -339,6 +339,23 @@ public abstract class Tiles extends TileService {
         }
     }
 
+    /** Turns every sensor off (motion, mic, camera) — the hidden "Sensors off" developer tile. */
+    public static final class SensorsOff extends Tiles {
+        @Override
+        Object[] state() {
+            Shell.await();
+            boolean on = "true".equals(Shell.run(MainActivity.sensorsCmd(this, "state")).out.trim());
+            return state(on, on ? "Blocked" : null);
+        }
+
+        @Override
+        void tap(boolean active) {
+            if (!shizuku()) return;
+            Shell.Result r = Shell.run(MainActivity.sensorsCmd(this, active ? "off" : "on"));
+            if (!r.ok()) toast("Couldn't toggle sensors. " + r.out);
+        }
+    }
+
     /** Closes whatever app is on screen. */
     public static final class KillForeground extends Tiles {
         @Override

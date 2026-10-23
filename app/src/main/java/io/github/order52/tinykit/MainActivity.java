@@ -674,6 +674,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Stop background scanning", "Wi-Fi and Bluetooth stop scanning", () -> selectTab(1)));
         f.add(new Feature("Analytics & telemetry", "Huawei and Google tracking off", this::openAnalytics));
         f.add(new Feature("Saved Wi-Fi networks", "Passwords and QR codes", this::openWifi));
+        f.add(new Feature("All sensors off", "Block motion, mic and camera sensors", () -> selectTab(1)));
         f.add(new Feature("App permissions", "Set Real, Fake or Off per app", () -> openAppList(
                 "App permissions", "Pick an app to change its permissions and app-ops.", this::openAppPage)));
         f.add(new Feature("Default apps", "Launcher, browser, phone and more", this::openDefaults));
@@ -768,6 +769,11 @@ public class MainActivity extends Activity {
                         && "0".equals(s.get("ble_scan_always_enabled")),
                 on -> "settings put global wifi_scan_always_enabled " + (on ? 0 : 1)
                         + "; settings put global ble_scan_always_enabled " + (on ? 0 : 1));
+        privacySwitch(list, "All sensors off",
+                "Blocks every sensor for all apps — motion, microphone and camera — like the hidden "
+                        + "developer \"Sensors off\" tile. Resets on reboot.",
+                () -> "true".equals(Shell.run(sensorsCmd(this, "state")).out.trim()),
+                block -> error(Shell.run(sensorsCmd(this, block ? "on" : "off"))));
 
         section(list, "Tracking");
         link(list, "Analytics & telemetry",
@@ -1468,6 +1474,7 @@ public class MainActivity extends Activity {
                 {Tiles.DevOptions.class, "Developer options", "Turn developer options on or off.", R.drawable.ic_tile_dev},
                 {Tiles.UsbDebug.class, "USB debugging", "Turn USB debugging on or off.", R.drawable.ic_tile_usb},
                 {Tiles.KillForeground.class, "Close app", "Close the app on screen.", R.drawable.ic_tile_kill},
+                {Tiles.SensorsOff.class, "Sensors off", "Block every sensor (motion, mic, camera).", R.drawable.ic_tile_sensors},
                 {Tiles.Timeout.class, "Screen timeout", "Cycle 30 s to never.", R.drawable.ic_tile_timeout},
                 {Tiles.Grayscale.class, "Grayscale", "Grey out the whole screen.", R.drawable.ic_tile_grayscale},
                 {Tiles.AdBlock.class, "Ad-block DNS", "Block ads with Private DNS.", R.drawable.ic_tile_adblock},
@@ -3140,6 +3147,12 @@ public class MainActivity extends Activity {
         return Shell.run("settings get " + table + " " + key).out.trim();
     }
 
+    /** The app_process command that toggles or reads all-sensors privacy. arg is on | off | state. */
+    static String sensorsCmd(Context c, String arg) {
+        return "CLASSPATH=" + c.getPackageCodePath()
+                + " app_process /system/bin io.github.order52.tinykit.Sensors " + arg;
+    }
+
     // ---- Privacy: saved Wi-Fi --------------------------------------------------------------------
 
     private void openWifi() {
@@ -3917,7 +3930,7 @@ public class MainActivity extends Activity {
     private View sortBar(String[] options, OnPage onSelect) {
         final int[] sel = {0};
         LinearLayout bar = new LinearLayout(this);
-        bar.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        bar.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         bar.setPadding(dp(12), dp(8), dp(12), dp(4));
         TextView chip = text("", 13, true);
         chip.setGravity(Gravity.CENTER);

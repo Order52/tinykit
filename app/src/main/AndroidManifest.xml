@@ -89,6 +89,10 @@
         <service android:name=".Tiles$KillForeground" android:exported="true" android:icon="@drawable/ic_tile_kill" android:label="Close app" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
+        <service android:name=".Tiles$SensorsOff" android:exported="true" android:icon="@drawable/ic_tile_sensors" android:label="Sensors off" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
         <service android:name=".Tiles$Timeout" android:exported="true" android:icon="@drawable/ic_tile_timeout" android:label="Screen timeout" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>

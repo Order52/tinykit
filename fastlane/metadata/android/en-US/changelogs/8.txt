@@ -1,0 +1,1 @@
+- TinyKit 1.6.0: permissions, tiles, recovery, search, mixed audio, force dark, sensors off.

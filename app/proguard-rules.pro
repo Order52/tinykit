@@ -7,3 +7,6 @@
 -keep class io.github.order52.tinykit.WifiDump {
     public static void main(java.lang.String[]);
 }
+
+# Started by name with app_process (as the shell user) to toggle all-sensors privacy.
+-keep class io.github.order52.tinykit.Sensors { public static void main(java.lang.String[]); }

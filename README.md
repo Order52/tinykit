@@ -20,7 +20,7 @@ A search bar on the home screen jumps straight to any tool.
 
 **Quick Settings tiles** — add any from *System → TinyKit tiles* (one tap on Android 13+):
 - Shizuku on/off · Screenshot · Screen record · Caffeine (keep the screen on)
-- Developer options · USB debugging · Hide developer options
+- Developer options · USB debugging · Hide developer options · Sensors off
 - Grayscale · Extra dim · Ad-block DNS · Mic & camera off
 - Screen timeout cycle · Clear caches · Free RAM · Close the app on screen
 
@@ -31,6 +31,8 @@ A search bar on the home screen jumps straight to any tool.
 - **Analytics & telemetry**: switches to turn off Huawei's User Experience Programme, its
   background diagnostics apps and HiCloud, and to limit Google ad personalisation. Your Huawei ID
   sign-in is never touched.
+- **All sensors off**: block every sensor for all apps — motion, microphone and camera — like the
+  hidden developer "Sensors off" tile. One toggle, nothing running in the background.
 - **Saved Wi-Fi networks**: see saved passwords and share any network with a QR code. Searchable.
 - **Hide developer options**, **Ad-blocking DNS**, **Stop background scanning**,
   **Block camera & mic** per app.

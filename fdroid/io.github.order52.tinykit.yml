@@ -1,0 +1,24 @@
+# F-Droid metadata recipe for TinyKit.
+# This file belongs in the fdroiddata repository, not in TinyKit itself. See fdroid/README.md.
+Categories:
+  - System
+License: MIT
+AuthorName: Ali Alakbar
+SourceCode: https://github.com/Order52/tinykit
+IssueTracker: https://github.com/Order52/tinykit/issues
+
+RepoType: git
+Repo: https://github.com/Order52/tinykit.git
+
+Builds:
+  - versionName: 1.6.0
+    versionCode: 8
+    commit: v1.6.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+CurrentVersion: 1.6.0
+CurrentVersionCode: 8
