@@ -44,6 +44,10 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -72,6 +76,7 @@ public class MainActivity extends Activity {
     private static final String SHIZUKU_PKG = "moe.shizuku.privileged.api";
     private static final String SHIZUKU_DOWNLOAD = "https://shizuku.rikka.app/download/";
     private static final String SHIZUKU_TERMUX = "https://github.com/Order52/shizuku-termux";
+    private static final String REPO = "https://github.com/Order52/tinykit";
     private static final String TERMUX = "com.termux";
     private static final String TERMUX_BIN = "/data/data/com.termux/files/usr/bin/";
     private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
@@ -590,6 +595,10 @@ public class MainActivity extends Activity {
         LinearLayout list = vertical();
         row(list, "Phone info", "Battery, memory, storage and system details.", arrow(), this::openInfo, false);
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
+        View[] update = new View[1];
+        update[0] = row(list, "Check for updates", "You have version " + versionName(getPackageName()) + ".",
+                null, () -> checkForUpdate(update[0]), false);
+        row(list, "About", "Made by Ali Alakbar", arrow(), this::showAbout, false);
         return scroll(list);
     }
 
@@ -992,6 +1001,85 @@ public class MainActivity extends Activity {
             case BatteryManager.BATTERY_HEALTH_COLD: return "Cold";
             default: return "Unknown";
         }
+    }
+
+    /** Asks GitHub for the latest release. Runs only when tapped; nothing checks in the background. */
+    private void checkForUpdate(View row) {
+        TextView status = (TextView) row.getTag();
+        if (!row.isEnabled()) return;
+        row.setEnabled(false);
+        status.setText("Checking…");
+        worker.execute(() -> {
+            String latest = null;
+            String apk = null;
+            try {
+                HttpURLConnection conn = (HttpURLConnection) new URL(
+                        "https://api.github.com/repos/Order52/tinykit/releases/latest").openConnection();
+                conn.setConnectTimeout(10_000);
+                conn.setReadTimeout(10_000);
+                conn.setRequestProperty("Accept", "application/vnd.github+json");
+                String body;
+                try (InputStream in = conn.getInputStream()) {
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                    body = out.toString("UTF-8");
+                }
+                Matcher tag = Pattern.compile("\"tag_name\"\\s*:\\s*\"v?([^\"]+)\"").matcher(body);
+                if (tag.find()) latest = tag.group(1);
+                Matcher url = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").matcher(body);
+                if (url.find()) apk = url.group(1);
+            } catch (Exception ignored) {
+            }
+            String current = versionName(getPackageName());
+            String found = latest;
+            String download = apk != null ? apk : REPO + "/releases/latest";
+            main.post(() -> {
+                row.setEnabled(true);
+                if (found == null) {
+                    status.setText("Couldn't reach GitHub. Check your internet and try again.");
+                } else if (compareVersions(found, current) > 0) {
+                    status.setText("Version " + found + " is available.");
+                    new AlertDialog.Builder(this)
+                            .setTitle("Update available")
+                            .setMessage("TinyKit " + found + " is out (you have " + current + ").")
+                            .setPositiveButton("Download", (d, w) -> openUrl(download))
+                            .setNegativeButton("Later", null)
+                            .show();
+                } else {
+                    status.setText("You have the latest version (" + current + ").");
+                }
+            });
+        });
+    }
+
+    private static int compareVersions(String a, String b) {
+        String[] x = a.split("\\."), y = b.split("\\.");
+        for (int i = 0; i < Math.max(x.length, y.length); i++) {
+            int p = i < x.length ? parseInt(x[i]) : 0;
+            int q = i < y.length ? parseInt(y[i]) : 0;
+            if (p != q) return Integer.compare(p, q);
+        }
+        return 0;
+    }
+
+    private static int parseInt(String value) {
+        try {
+            return Integer.parseInt(value.replaceAll("\\D.*", ""));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private void showAbout() {
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.app_name) + " " + versionName(getPackageName()))
+                .setMessage("Made by Ali Alakbar\n\nSmall Android tweaks powered by Shizuku. "
+                        + "Free and open source (MIT).\n\n" + REPO)
+                .setPositiveButton("GitHub", (d, w) -> openUrl(REPO))
+                .setNegativeButton("Close", null)
+                .show();
     }
 
     // ---- Crash log ------------------------------------------------------------------------------

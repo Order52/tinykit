@@ -7,6 +7,9 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Only used when "Check for updates" is tapped. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Start Shizuku by asking Termux to run the shizuku-termux command (granted by the user). -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 

@@ -2,11 +2,11 @@
 
 [![Release](https://img.shields.io/github/v/release/Order52/tinykit?label=release)](https://github.com/Order52/tinykit/releases/latest)
 [![Android 7+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
-[![APK size](https://img.shields.io/badge/APK-37%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
+[![APK size](https://img.shields.io/badge/APK-39%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Small but useful Android tweaks in one clean menu, powered by [Shizuku](https://shizuku.rikka.app/).**
-No root, no internet permission, nothing running in the background. 37 KB.
+No root, no ads or tracking, nothing running in the background. 39 KB.
 Pure black theme, with everything one tap away in the bottom bar: Shizuku, Privacy, Apps, System, Info.
 
 ## Features
@@ -40,6 +40,9 @@ Pure black theme, with everything one tap away in the bottom bar: Shizuku, Priva
 - **Phone info**: battery health, temperature, voltage, capacity and cycles (when the phone
   reports them), memory, storage and system details.
 - **Crash log**: why an app crashed or closed by itself.
+- **Check for updates**: asks GitHub for the latest release. Internet is used only when you tap
+  it; nothing checks in the background.
+- **About**.
 
 Everything is a normal system setting or app-ops change, so it can be undone from the same screen.
 
@@ -75,7 +78,7 @@ Without a `keystore.properties` file the release APK is signed with your debug k
 
 ## Credits
 
-Made with the assistance of AI.
+Made by Ali Alakbar, with the assistance of AI.
 
 ## License
 
