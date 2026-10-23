@@ -2,17 +2,19 @@
 
 [![Release](https://img.shields.io/github/v/release/Order52/tinykit?label=release)](https://github.com/Order52/tinykit/releases/latest)
 [![Android 7+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
-[![APK size](https://img.shields.io/badge/APK-36%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
+[![APK size](https://img.shields.io/badge/APK-37%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Small but useful Android tweaks in one clean menu, powered by [Shizuku](https://shizuku.rikka.app/).**
-No root, no internet permission, nothing running in the background. 36 KB.
+No root, no internet permission, nothing running in the background. 37 KB.
+Pure black theme, with everything one tap away in the bottom bar: Shizuku, Privacy, Apps, System, Info.
 
 ## Features
 
-**Start Shizuku**
-- The Shizuku card at the top has a **Start Shizuku** button that starts it without a
-  computer, through Termux and [shizuku-termux](https://github.com/Order52/shizuku-termux).
+**Shizuku**
+- **Start** and **Stop** Shizuku from TinyKit. With Shizuku's auth token set (from Shizuku's
+  settings), both go straight to Shizuku, and Stop works with its Watchdog. Without it, Start uses
+  Termux with [shizuku-termux](https://github.com/Order52/shizuku-termux).
 
 **Privacy**
 - **Hide developer options**: apps see Developer options as off; adb and Shizuku keep working.
@@ -27,10 +29,10 @@ No root, no internet permission, nothing running in the background. 36 KB.
 - **Keep apps alive** per app: exempt from battery optimization, so Android doesn't kill it.
 - **Back up app as APK** to `Download/TinyKit` (split APKs are saved as a folder).
 
-**Clean & speed**
+**System: clean & speed**
 - **Clear all app caches**, **Optimize apps** (background compilation), **Trim storage**.
 
-**Network & battery**
+**System: network & battery**
 - **Free hotspot**: hotspot uses your normal data connection (works on many carriers).
 - **Mobile data off on Wi-Fi**: saves battery.
 

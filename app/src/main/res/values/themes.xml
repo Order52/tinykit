@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="android:Theme.Material.Light.DarkActionBar">
-        <item name="android:colorPrimary">#3F51B5</item>
-        <item name="android:colorPrimaryDark">#303F9F</item>
-        <item name="android:colorAccent">#3F51B5</item>
+    <!-- Pure black: looks clean and saves power on OLED screens. -->
+    <style name="AppTheme" parent="android:Theme.Material">
+        <item name="android:colorPrimary">#000000</item>
+        <item name="android:colorPrimaryDark">#000000</item>
+        <item name="android:colorAccent">#8C9EFF</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:colorBackground">#000000</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#0D0D0D</item>
     </style>
 </resources>

@@ -77,6 +77,7 @@ public class MainActivity extends Activity {
     private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
     private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
     private static final int REQUEST_RUN_COMMAND = 2;
+    private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
     private static final String BACKUP_DIR = "/sdcard/Download/TinyKit";
     private static final String READ_SETTINGS = "for k in development_settings_enabled "
@@ -150,9 +151,13 @@ public class MainActivity extends Activity {
     private List<App> apps;
     private SharedPreferences prefs;
     private FrameLayout frame;
+    private final TextView[] tabs = new TextView[TAB_NAMES.length];
+    private View[] tabRoots;
     private TextView shizukuText;
+    private TextView tokenText;
     private Button shizukuButton;
     private Button startButton;
+    private Button stopButton;
     private boolean starting;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
@@ -160,7 +165,7 @@ public class MainActivity extends Activity {
     private final Shizuku.OnRequestPermissionResultListener permissionResult =
             (code, result) -> main.post(this::refreshShizuku);
     private final Runnable startTimeout = () -> startFinished(
-            "No answer from Termux. Open Termux once, then try again.");
+            "Shizuku didn't start. Open Termux or the Shizuku app to see why.");
     private final BroadcastReceiver termuxResult = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -174,9 +179,13 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("tinykit", MODE_PRIVATE);
+        LinearLayout root = vertical();
         frame = new FrameLayout(this);
-        setContentView(frame);
-        push(getString(R.string.app_name), buildHome());
+        root.addView(frame, new LinearLayout.LayoutParams(-1, 0, 1f));
+        root.addView(buildTabBar());
+        setContentView(root);
+        tabRoots = new View[]{buildShizuku(), buildPrivacy(), buildApps(), buildSystem(), buildInfo()};
+        selectTab(Math.min(prefs.getInt("tab", 0), TAB_NAMES.length - 1));
         Shizuku.addBinderReceivedListenerSticky(binderReceived);
         Shizuku.addBinderDeadListener(binderDead);
         Shizuku.addRequestPermissionResultListener(permissionResult);
@@ -229,10 +238,40 @@ public class MainActivity extends Activity {
             pages.remove(pages.size() - 1);
             titles.remove(titles.size() - 1);
             show();
-            if (pages.size() == 1) loadSettings();
         } else {
             super.onBackPressed();
         }
+    }
+
+    /** Bottom bar: one tab per group, so every tool is at most two taps away. */
+    private View buildTabBar() {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setBackgroundColor(0xFF0D0D0D);
+        for (int i = 0; i < TAB_NAMES.length; i++) {
+            TextView tab = text(TAB_NAMES[i], 13, false);
+            tab.setGravity(Gravity.CENTER);
+            tab.setPadding(0, dp(16), 0, dp(16));
+            tab.setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
+            int index = i;
+            tab.setOnClickListener(v -> selectTab(index));
+            tabs[i] = tab;
+            bar.addView(tab, new LinearLayout.LayoutParams(0, -2, 1f));
+        }
+        return bar;
+    }
+
+    private void selectTab(int index) {
+        prefs.edit().putInt("tab", index).apply();
+        for (int i = 0; i < tabs.length; i++) {
+            boolean selected = i == index;
+            tabs[i].setTextColor(selected ? attrColor(android.R.attr.colorAccent) : 0xFFFFFFFF);
+            tabs[i].setAlpha(selected ? 1f : 0.6f);
+            tabs[i].setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+        }
+        pages.clear();
+        titles.clear();
+        push(index == 0 ? getString(R.string.app_name) : TAB_NAMES[index], tabRoots[index]);
+        loadSettings();
     }
 
     @Override
@@ -263,9 +302,16 @@ public class MainActivity extends Activity {
             shizukuButton.setText("Open Shizuku");
             shizukuButton.setOnClickListener(v -> openApp(SHIZUKU_PKG));
         }
-        startButton.setVisibility(installed ? View.VISIBLE : View.GONE);
-        startButton.setEnabled(!starting && !running);
-        startButton.setText(starting ? "Starting…" : "Start Shizuku");
+        if (starting && running) {
+            starting = false;
+            main.removeCallbacks(startTimeout);
+        }
+        startButton.setEnabled(installed && !starting && !running);
+        startButton.setText(starting ? "Starting…" : "Start");
+        stopButton.setEnabled(running);
+        tokenText.setText(token().isEmpty()
+                ? "Not set. Tap to paste it from Shizuku's settings."
+                : "Set. Start and Stop go straight to Shizuku.");
         for (View row : shizukuRows) row.setAlpha(ready ? 1f : 0.4f);
         if (ready) loadSettings();
     }
@@ -276,6 +322,14 @@ public class MainActivity extends Activity {
      */
     private void startShizuku() {
         if (starting) return;
+        if (!token().isEmpty()) {
+            sendBroadcast(new Intent(SHIZUKU_PKG + ".START").setPackage(SHIZUKU_PKG)
+                    .putExtra("auth", token()));
+            starting = true;
+            refreshShizuku();
+            main.postDelayed(startTimeout, 60_000L);
+            return;
+        }
         try {
             getPackageManager().getPackageInfo(TERMUX, 0);
         } catch (PackageManager.NameNotFoundException e) {
@@ -309,6 +363,61 @@ public class MainActivity extends Activity {
         starting = true;
         refreshShizuku();
         main.postDelayed(startTimeout, 60_000L);
+    }
+
+    /**
+     * With the auth token this uses Shizuku's own stop intent, which its Watchdog respects.
+     * Without it the server process is ended, and the Watchdog may start it again.
+     */
+    private void stopShizuku() {
+        if (!token().isEmpty()) {
+            sendBroadcast(new Intent(SHIZUKU_PKG + ".STOP").setPackage(SHIZUKU_PKG)
+                    .putExtra("auth", token()));
+            toast("Stopping Shizuku…");
+            main.postDelayed(this::refreshShizuku, 1500);
+            return;
+        }
+        if (!Shell.ready()) {
+            toast("Set the auth token first (below), or allow TinyKit in Shizuku.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Stop Shizuku?")
+                .setMessage("Without the auth token TinyKit ends Shizuku's process. If Shizuku's "
+                        + "Watchdog is on, it will start Shizuku again. Set the auth token to stop it properly.")
+                .setPositiveButton("Stop anyway", (d, w) -> worker.execute(() ->
+                        Shell.run("pkill -f shizuku_server || killall shizuku_server")))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private String token() {
+        return prefs.getString("auth", "");
+    }
+
+    private void editToken() {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setText(token());
+        input.setHint("Auth token");
+        FrameLayout box = new FrameLayout(this);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+        box.addView(input);
+        new AlertDialog.Builder(this)
+                .setTitle("Shizuku auth token")
+                .setMessage("Copy it from Shizuku: Settings, where the start/stop intent "
+                        + "parameters are listed.")
+                .setView(box)
+                .setPositiveButton("Save", (d, w) -> {
+                    prefs.edit().putString("auth", input.getText().toString().trim()).apply();
+                    refreshShizuku();
+                })
+                .setNeutralButton("Clear", (d, w) -> {
+                    prefs.edit().remove("auth").apply();
+                    refreshShizuku();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void startFinished(String message) {
@@ -366,37 +475,33 @@ public class MainActivity extends Activity {
 
     // ---- Home -----------------------------------------------------------------------
 
-    /** Home: the Shizuku card and one row per category, so it fits on one screen. */
-    private View buildHome() {
-        LinearLayout home = vertical();
-
-        LinearLayout card = vertical();
-        card.setPadding(dp(16), dp(16), dp(16), dp(8));
-        card.setBackgroundColor(0x22808080);
-        shizukuText = text("", 15, false);
-        shizukuButton = button("", null);
-        startButton = button("Start Shizuku", v -> startShizuku());
-        card.addView(shizukuText);
+    private View buildShizuku() {
+        LinearLayout list = vertical();
+        LinearLayout status = vertical();
+        status.setPadding(dp(16), dp(20), dp(16), dp(8));
+        shizukuText = text("", 20, true);
+        status.addView(shizukuText);
         LinearLayout buttons = new LinearLayout(this);
-        buttons.addView(startButton, wrap());
-        buttons.addView(shizukuButton, wrap());
-        card.addView(buttons);
-        home.addView(card);
+        buttons.setPadding(0, dp(12), 0, 0);
+        startButton = button("Start", v -> startShizuku());
+        stopButton = button("Stop", v -> stopShizuku());
+        buttons.addView(startButton, weight());
+        buttons.addView(stopButton, weight());
+        status.addView(buttons);
+        shizukuButton = button("", null);
+        LinearLayout.LayoutParams full = new LinearLayout.LayoutParams(-1, -2);
+        full.setMargins(dp(4), 0, dp(4), 0);
+        status.addView(shizukuButton, full);
+        list.addView(status);
 
-        category(home, "Privacy", "Developer options, ad-blocking DNS, scanning, camera & mic",
-                buildPrivacy());
-        category(home, "Apps", "Running apps, background limits, keep alive, APK backup", buildApps());
-        category(home, "Clean & speed", "Clear caches, optimize apps, trim storage", buildClean());
-        category(home, "Network & battery", "Free hotspot, mobile data on Wi-Fi", buildNetwork());
-        category(home, "Info & logs", "Phone info, crash log", buildInfo());
-        return scroll(home);
-    }
-
-    private void category(LinearLayout home, String title, String summary, View page) {
-        row(home, title, summary, arrow(), () -> {
-            push(title, page);
-            loadSettings();
-        }, false);
+        row(list, "Auth token", "", arrow(), this::editToken, false);
+        tokenText = (TextView) list.getChildAt(list.getChildCount() - 1).getTag();
+        TextView help = text("Start uses the auth token when it's set, otherwise Termux with "
+                + "shizuku-termux. Set the token if you use Shizuku's Watchdog, so Stop really stops it.", 13, false);
+        help.setAlpha(0.6f);
+        help.setPadding(dp(16), dp(8), dp(16), 0);
+        list.addView(help);
+        return scroll(list);
     }
 
     private View scroll(LinearLayout list) {
@@ -442,8 +547,9 @@ public class MainActivity extends Activity {
         return scroll(list);
     }
 
-    private View buildClean() {
+    private View buildSystem() {
         LinearLayout list = vertical();
+        section(list, "Clean & speed");
         action(list, "Clear all app caches", "Frees the space used by every app's cache.", () -> {
             String free = "df -k /data | tail -1 | awk '{print $4}'";
             Shell.Result r = Shell.run("a=$(" + free + "); pm trim-caches 999G; b=$(" + free + "); "
@@ -466,11 +572,7 @@ public class MainActivity extends Activity {
             return r.ok() ? "Started. Android finishes it in the background." : "Failed: " + r.out;
         });
 
-        return scroll(list);
-    }
-
-    private View buildNetwork() {
-        LinearLayout list = vertical();
+        section(list, "Network & battery");
         toggle(list, "Free hotspot",
                 "Hotspot uses your normal data connection, so carriers that block it can't (works on many carriers).",
                 s -> "0".equals(s.get("tether_dun_required")),
@@ -1109,10 +1211,6 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1f);
         params.setMargins(dp(4), 0, dp(4), 0);
         return params;
-    }
-
-    private LinearLayout.LayoutParams wrap() {
-        return new LinearLayout.LayoutParams(-2, -2);
     }
 
     private static TextWatcher watcher(Runnable onChange) {
