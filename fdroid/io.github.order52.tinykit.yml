@@ -11,14 +11,14 @@ RepoType: git
 Repo: https://github.com/Order52/tinykit.git
 
 Builds:
-  - versionName: 1.6.0
-    versionCode: 8
-    commit: v1.6.0
+  - versionName: 1.7.0
+    versionCode: 9
+    commit: v1.7.0
     subdir: app
     gradle:
       - yes
 
 AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
-CurrentVersion: 1.6.0
-CurrentVersionCode: 8
+CurrentVersion: 1.7.0
+CurrentVersionCode: 9

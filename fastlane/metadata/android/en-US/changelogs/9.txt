@@ -1,0 +1,1 @@
+- TinyKit 1.7.0: all-sensors off, mixed audio, force dark, animation speed, advanced reboot, plus permissions, tiles, file recovery with thumbnails, search and sorting.

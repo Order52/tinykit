@@ -2,11 +2,11 @@
 
 [![Release](https://img.shields.io/github/v/release/Order52/tinykit?label=release)](https://github.com/Order52/tinykit/releases/latest)
 [![Android 7+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
-[![APK size](https://img.shields.io/badge/APK-92%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
+[![APK size](https://img.shields.io/badge/APK-100%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Small but useful Android tweaks in one clean menu, powered by [Shizuku](https://shizuku.rikka.app/).**
-No root, no ads or tracking, nothing running in the background. 92 KB.
+No root, no ads or tracking, nothing running in the background. 100 KB.
 Pure black theme, with everything one tap away in the bottom bar: Shizuku, Privacy, Apps, System, Info.
 A search bar on the home screen jumps straight to any tool.
 
