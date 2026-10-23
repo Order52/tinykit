@@ -39,6 +39,8 @@ A search bar on the home screen jumps straight to any tool.
 - **Default apps**: set the launcher, browser, phone, SMS and assistant.
 - **Hide apps** from the launcher · **Unused apps** (longest-unused first) · **Storage by app**.
 - **Recent access**: who used the camera, mic, location, contacts or clipboard, and when.
+- **Mixed audio**: let apps play audio at the same time, or mute an app — app-op changes the
+  audio system enforces, so nothing runs in the background.
 - **Running apps** (stop any) · **Stop background activity** · **Keep apps alive** ·
   **Back up app as APK**.
 

@@ -218,6 +218,8 @@ public class MainActivity extends Activity {
     private final List<View> pages = new ArrayList<>();
     private final List<CharSequence> titles = new ArrayList<>();
     private final Map<String, String> labels = new HashMap<>();
+    // Mixed audio state per package: {muted 0/1, plays-with-others 0/1}.
+    private final Map<String, int[]> audioState = new HashMap<>();
     private Map<String, String> settings = new HashMap<>();
     private List<App> apps;
     private SharedPreferences prefs;
@@ -679,6 +681,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Unused apps", "Apps you haven't opened in a long time", this::openUnused));
         f.add(new Feature("Storage by app", "Which apps take the most space", this::openStorage));
         f.add(new Feature("Recent access", "Camera, mic, location, contacts, clipboard", this::openRecentAccess));
+        f.add(new Feature("Mixed audio", "Play apps together or mute an app", this::openMixedAudio));
         f.add(new Feature("Running apps", "Memory use; stop any app", this::openRunning));
         f.add(new Feature("Stop background activity", "Per-app background block", this::openBackground));
         f.add(new Feature("Keep apps alive", "Exempt apps from battery limits", this::openKeepAlive));
@@ -791,6 +794,8 @@ public class MainActivity extends Activity {
         link(list, "Storage by app", "Which apps take the most space.", this::openStorage);
         link(list, "Recent access",
                 "Who used the camera, mic, location, contacts or clipboard lately.", this::openRecentAccess);
+        link(list, "Mixed audio",
+                "Let apps play audio together, or mute an app.", this::openMixedAudio);
 
         section(list, "Running & background");
         link(list, "Running apps", "Memory use of everything running. Stop any app.", this::openRunning);
@@ -2866,6 +2871,142 @@ public class MainActivity extends Activity {
         } catch (RuntimeException e) {
             toast("Couldn't open app settings.");
         }
+    }
+
+    // ---- Apps: mixed audio ----------------------------------------------------------------------
+
+    /**
+     * Lets apps play audio at the same time, or mutes an app. Both are app-op changes
+     * (TAKE_AUDIO_FOCUS and PLAY_AUDIO) that the audio system enforces — nothing runs in the
+     * background, uses no memory or battery once set.
+     */
+    private void openMixedAudio() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Let apps play audio together, or mute an app. These are app-op changes; "
+                + "nothing runs in the background.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        EditText search = new EditText(this);
+        search.setHint("Search apps");
+        search.setSingleLine(true);
+        page.addView(search);
+        CheckBox system = new CheckBox(this);
+        system.setText("Show system apps");
+        page.addView(system);
+        final int[] sort = {0};
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Mixed audio", page);
+
+        audioState.clear();
+        List<App> all = new ArrayList<>();
+        Adapter<App> adapter = new Adapter<>(false, (app, row) -> {
+            row.first.setText(app.label);
+            row.second.setText(audioStateText(app.pkg));
+            showIcon(row, app.pkg);
+        });
+        listView.setAdapter(adapter);
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            List<App> shown = new ArrayList<>();
+            for (App a : all) {
+                boolean set = audioState.containsKey(a.pkg);
+                if ((system.isChecked() || !a.system || set)
+                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) {
+                    shown.add(a);
+                }
+            }
+            Collections.sort(shown, (x, y) -> x.label.compareToIgnoreCase(y.label));
+            adapter.set(shown);
+        };
+        page.addView(sortBar(new String[]{"Name", "Package"}, i -> {
+            sort[0] = i;
+            Collections.sort(all, (x, y) -> i == 1
+                    ? x.pkg.compareToIgnoreCase(y.pkg) : x.label.compareToIgnoreCase(y.label));
+            filter.run();
+        }), 3);
+        search.addTextChangedListener(watcher(filter));
+        system.setOnCheckedChangeListener((v, checked) -> filter.run());
+        listView.setOnItemClickListener((parent, view, position, id) ->
+                showAudioDialog(adapter.getItem(position), filter));
+        Runnable show = () -> {
+            all.clear();
+            for (App a : installedApps()) all.add(a.copy());
+            filter.run();
+        };
+        if (appsLoaded()) show.run();
+        else worker.execute(() -> {
+            installedApps();
+            main.post(show);
+        });
+        loadAudioState(filter);
+    }
+
+    private String audioStateText(String pkg) {
+        int[] st = audioState.get(pkg);
+        boolean muted = st != null && st[0] == 1;
+        boolean mixed = st != null && st[1] == 1;
+        if (muted && mixed) return "Muted  ·  plays with others";
+        if (muted) return "Muted";
+        if (mixed) return "Plays with others";
+        return pkg;
+    }
+
+    /** Reads which apps are muted or set to mix, then runs {@code after} on the main thread. */
+    private void loadAudioState(Runnable after) {
+        worker.execute(() -> {
+            String out = Shell.run("echo '@M'; appops query-op PLAY_AUDIO deny; "
+                    + "echo '@F'; appops query-op TAKE_AUDIO_FOCUS ignore; "
+                    + "appops query-op TAKE_AUDIO_FOCUS deny").out;
+            Map<String, int[]> state = new HashMap<>();
+            int section = 0;
+            for (String line : out.split("\n")) {
+                line = line.trim();
+                if (line.equals("@M")) {
+                    section = 1;
+                    continue;
+                }
+                if (line.equals("@F")) {
+                    section = 2;
+                    continue;
+                }
+                if (!PACKAGE.matcher(line).matches()) continue;
+                int[] st = state.get(line);
+                if (st == null) state.put(line, st = new int[2]);
+                if (section == 1) st[0] = 1;
+                else if (section == 2) st[1] = 1;
+            }
+            main.post(() -> {
+                audioState.clear();
+                audioState.putAll(state);
+                after.run();
+            });
+        });
+    }
+
+    private void showAudioDialog(App app, Runnable refresh) {
+        int[] st = audioState.get(app.pkg);
+        boolean muted = st != null && st[0] == 1;
+        boolean mixed = st != null && st[1] == 1;
+        String q = Shell.quote(app.pkg);
+        LinkedHashMap<String, String> actions = new LinkedHashMap<>();
+        actions.put(muted ? "Unmute audio" : "Mute audio",
+                "appops set " + q + " PLAY_AUDIO " + (muted ? "allow" : "deny"));
+        actions.put(mixed ? "Play normally (take focus)" : "Let it play with others",
+                "appops set " + q + " TAKE_AUDIO_FOCUS " + (mixed ? "allow" : "ignore"));
+        String[] labels = actions.keySet().toArray(new String[0]);
+        String[] cmds = actions.values().toArray(new String[0]);
+        new AlertDialog.Builder(this)
+                .setTitle(app.label)
+                .setItems(labels, (d, which) -> worker.execute(() -> {
+                    String err = error(Shell.run(cmds[which]));
+                    if (err != null) main.post(() -> toast(err));
+                    loadAudioState(refresh);
+                }))
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     // ---- Privacy: analytics & tracking ----------------------------------------------------------
