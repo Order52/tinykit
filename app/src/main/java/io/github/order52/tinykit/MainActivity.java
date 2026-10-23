@@ -688,6 +688,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Keep apps alive", "Exempt apps from battery limits", this::openKeepAlive));
         f.add(new Feature("Back up app as APK", "Save any app's APK", this::openBackup));
         f.add(new Feature("Force dark on all apps", "Dark-theme apps that have no dark mode", () -> selectTab(3)));
+        f.add(new Feature("Animation speed", "Off, faster or slower system animations", () -> selectTab(3)));
         f.add(new Feature("Edit quick panel", "Reorder, add and remove tiles", this::openQuickPanel));
         f.add(new Feature("Run a command", "Run a shell command via Shizuku", this::openRunCommand));
         f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
@@ -828,6 +829,9 @@ public class MainActivity extends Activity {
                         + " && (settings put secure op_force_dark_entire_world " + (block ? 1 : 0)
                         + " 2>/dev/null; settings put secure aosp_force_dark_mode " + (block ? 1 : 0)
                         + " 2>/dev/null; true)")));
+        View[] anim = new View[1];
+        anim[0] = row(list, "Animation speed", "…", arrow(), () -> chooseAnimationSpeed(anim[0]), true);
+        refreshAnimationSpeed(anim[0]);
 
         section(list, "Quick panel");
         link(list, "Edit quick panel", "Reorder, add and remove tiles with one tap each.", this::openQuickPanel);
@@ -1829,6 +1833,62 @@ public class MainActivity extends Activity {
                     toast(r.out.isEmpty() ? "Couldn't restore it." : r.out);
                 }
             });
+        });
+    }
+
+    // ---- Animation speed ------------------------------------------------------------------------
+
+    private static final float[] ANIM_SCALES = {0f, 0.5f, 1f, 1.5f, 2f};
+    private static final String[] ANIM_LABELS = {"Off", "0.5× (faster)", "Normal (1×)", "1.5×", "2× (slower)"};
+
+    private void refreshAnimationSpeed(View row) {
+        TextView sub = (TextView) row.getTag();
+        worker.execute(() -> {
+            String label = animLabel(animScale());
+            main.post(() -> sub.setText(label));
+        });
+    }
+
+    private float animScale() {
+        try {
+            return Float.parseFloat(Shell.run("settings get global window_animation_scale").out.trim());
+        } catch (NumberFormatException e) {
+            return 1f;
+        }
+    }
+
+    private static String animLabel(float scale) {
+        for (int i = 0; i < ANIM_SCALES.length; i++) {
+            if (Math.abs(ANIM_SCALES[i] - scale) < 0.01f) return ANIM_LABELS[i];
+        }
+        return scale + "×";
+    }
+
+    private void chooseAnimationSpeed(View row) {
+        worker.execute(() -> {
+            float cur = animScale();
+            int selected = 2;
+            for (int i = 0; i < ANIM_SCALES.length; i++) {
+                if (Math.abs(ANIM_SCALES[i] - cur) < 0.01f) selected = i;
+            }
+            int finalSel = selected;
+            main.post(() -> new AlertDialog.Builder(this)
+                    .setTitle("Animation speed")
+                    .setSingleChoiceItems(ANIM_LABELS, finalSel, (d, which) -> {
+                        d.dismiss();
+                        float s = ANIM_SCALES[which];
+                        worker.execute(() -> {
+                            String err = error(Shell.run("settings put global window_animation_scale " + s
+                                    + "; settings put global transition_animation_scale " + s
+                                    + "; settings put global animator_duration_scale " + s));
+                            main.post(() -> {
+                                if (err != null) toast(err);
+                                refreshAnimationSpeed(row);
+                            });
+                        });
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show());
         });
     }
 
