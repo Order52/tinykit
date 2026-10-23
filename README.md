@@ -59,8 +59,14 @@ A search bar on the home screen jumps straight to any tool.
 - **Network & battery**: Free hotspot, Mobile data off on Wi-Fi.
 
 **Info & logs**
-- **Phone info**, **Network info**, **Charging info**, **Temperatures** (every thermal sensor),
-  **Device IDs**.
+- **Phone info**, **Network info** (addresses, Wi-Fi, DNS, public IP and **Open router
+  settings** for the default gateway), **Charging info**, **Temperatures** (every thermal
+  sensor), **Device IDs**.
+- **Notification history**: saves notifications and what they said, grouped per app (tap
+  WhatsApp to see all of its saved notifications), searchable, kept after they're removed.
+  Choose to save all apps, only chosen apps, or all except chosen ones. TinyKit doesn't run in
+  the background, so it saves what's in the shade each time you open the page; it can also
+  switch on Android's own 24-hour notification history.
 - **Battery usage**, **Wake-ups**, **Vibration log** — all shown as plain, readable lists.
 - **App log**, **Crash log**, **Check for updates**, **About**.
 

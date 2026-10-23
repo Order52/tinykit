@@ -33,6 +33,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.net.RouteInfo;
 import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -75,8 +76,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URL;
@@ -203,14 +208,21 @@ public class MainActivity extends Activity {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
-    // Thumbnails and app icons load in parallel and are cached, so lists stay fast while scrolling.
-    private final ExecutorService thumbs = Executors.newFixedThreadPool(4);
-    private final Map<String, Bitmap> thumbCache = Collections.synchronizedMap(new HashMap<>());
-    private final Map<String, Drawable> iconCache = Collections.synchronizedMap(
-            new LinkedHashMap<String, Drawable>(16, 0.75f, true) {
+    // Icons and recover-page thumbnails load off the main thread and are cached as small bitmaps,
+    // both bounded (so memory stays low) and cleared when the app is sent to the background.
+    private final ExecutorService thumbs = Executors.newFixedThreadPool(3);
+    private final Map<String, Bitmap> thumbCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, Bitmap>(16, 0.75f, true) {
                 @Override
-                protected boolean removeEldestEntry(Map.Entry<String, Drawable> eldest) {
-                    return size() > 256;
+                protected boolean removeEldestEntry(Map.Entry<String, Bitmap> eldest) {
+                    return size() > 96;
+                }
+            });
+    private final Map<String, Bitmap> iconCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, Bitmap>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Bitmap> eldest) {
+                    return size() > 128;
                 }
             });
     private final List<Toggle> toggles = new ArrayList<>();
@@ -277,6 +289,20 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshShizuku();
+    }
+
+    /**
+     * Frees the icon and thumbnail bitmap caches as soon as the app leaves the screen, so a
+     * backgrounded TinyKit keeps almost no memory (and it never runs anything in the background).
+     * Settings live in SharedPreferences and the system, so nothing is lost.
+     */
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (level >= TRIM_MEMORY_UI_HIDDEN) {
+            iconCache.clear();
+            thumbCache.clear();
+        }
     }
 
     @Override
@@ -709,6 +735,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Vibration log", "Recent vibrations", this::openVibration));
         f.add(new Feature("App log", "An app's recent log output", this::openAppLog));
         f.add(new Feature("Crash log", "Why an app crashed", this::openCrashes));
+        f.add(new Feature("Notification history", "Saved notifications and their text", this::openNotifications));
         f.add(new Feature("Check for updates", "Get the latest version", () -> selectTab(4)));
         f.add(new Feature("About", "About TinyKit", this::showAbout));
         return f;
@@ -832,6 +859,17 @@ public class MainActivity extends Activity {
         View[] anim = new View[1];
         anim[0] = row(list, "Animation speed", "…", arrow(), () -> chooseAnimationSpeed(anim[0]), true);
         refreshAnimationSpeed(anim[0]);
+        Switch iconsSwitch = new Switch(this);
+        iconsSwitch.setChecked(prefs.getBoolean("icons", true));
+        iconsSwitch.setClickable(false);
+        iconsSwitch.setFocusable(false);
+        row(list, "Show app icons", "Real app icons in lists. Turn off for the lowest memory use on "
+                + "big app lists.", iconsSwitch, () -> {
+                    boolean on = !iconsSwitch.isChecked();
+                    iconsSwitch.setChecked(on);
+                    prefs.edit().putBoolean("icons", on).apply();
+                    if (!on) iconCache.clear();
+                }, false);
 
         section(list, "Quick panel");
         link(list, "Edit quick panel", "Reorder, add and remove tiles with one tap each.", this::openQuickPanel);
@@ -900,6 +938,8 @@ public class MainActivity extends Activity {
         link(list, "Vibration log", "Recent vibrations and what asked for them.", this::openVibration);
         link(list, "App log", "See an app's log output (Huawei hides most of it).", this::openAppLog);
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
+        link(list, "Notification history", "Save notifications and what they said, per app.",
+                this::openNotifications);
         View[] update = new View[1];
         update[0] = row(list, "Check for updates", "You have version " + versionName(getPackageName()) + ".",
                 null, () -> checkForUpdate(update[0]), false);
@@ -1471,6 +1511,444 @@ public class MainActivity extends Activity {
         load.run();
     }
 
+    // ---- Notification history -------------------------------------------------------------------
+
+    private static final String NOTIF_FILE = "notifications.tsv";
+    private static final int NOTIF_MAX = 3000;
+    private static final String[] NOTIF_FILTERS = {"All apps", "Only chosen apps", "All apps except chosen"};
+
+    /**
+     * Saved notifications. TinyKit never runs in the background, so it saves what's in the
+     * notification shade each time this page opens; Android's own history (Android 11+) can be
+     * switched on here to record everything for 24 hours by itself.
+     */
+    private void openNotifications() {
+        LinearLayout header = vertical();
+        header.addView(note("TinyKit never runs in the background, so it saves the notifications in "
+                + "your shade each time you open this page — open it before clearing them."));
+        if (Build.VERSION.SDK_INT >= 30) {
+            privacySwitch(header, "Android notification history",
+                    "Android records every notification for 24 hours, even dismissed ones.",
+                    () -> {
+                        String v = Shell.run("settings get secure notification_history_enabled").out.trim();
+                        return v.isEmpty() ? null : "1".equals(v);
+                    },
+                    on -> {
+                        Shell.Result r = Shell.run("settings put secure notification_history_enabled " + (on ? 1 : 0));
+                        return r.ok() ? null : "Couldn't change it.";
+                    });
+            link(header, "Open Android's history", "See the last 24 hours of notifications.", () -> {
+                try {
+                    startActivity(new Intent("android.settings.NOTIFICATION_HISTORY"));
+                } catch (RuntimeException e) {
+                    toast("This phone doesn't have a notification history screen.");
+                }
+            });
+        }
+        View[] filterRow = new View[1];
+        filterRow[0] = row(header, "Apps to save", notifFilterSummary(), arrow(),
+                () -> chooseNotifFilter((TextView) filterRow[0].getTag()), false);
+        EditText search = new EditText(this);
+        search.setHint("Search apps or notifications");
+        search.setSingleLine(true);
+        LinearLayout searchBox = vertical();
+        searchBox.setPadding(dp(16), 0, dp(16), 0);
+        searchBox.addView(search);
+        header.addView(searchBox);
+        final int[] sort = {0};
+        List<String[]> all = new ArrayList<>();
+        // One row per app: {package, count, newest time, newest title, newest text}.
+        Adapter<String[]> adapter = new Adapter<>(false, (g, row) -> {
+            row.first.setText(label(g[0]));
+            row.second.setText(g[1] + " saved  ·  " + DateUtils.getRelativeTimeSpanString(
+                    Long.parseLong(g[2]), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS));
+            row.third.setText(g[3].isEmpty() ? g[4] : g[4].isEmpty() ? g[3] : g[3] + ": " + g[4]);
+            row.third.setMaxLines(2);
+            row.third.setEllipsize(TextUtils.TruncateAt.END);
+            showIcon(row, g[0]);
+        });
+        TextView status = note("Reading…");
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            Map<String, String[]> groups = new LinkedHashMap<>();
+            for (String[] n : all) {
+                if (!q.isEmpty() && !label(n[1]).toLowerCase(Locale.ROOT).contains(q)
+                        && !(n[2] + " " + n[3]).toLowerCase(Locale.ROOT).contains(q)) {
+                    continue;
+                }
+                String[] g = groups.get(n[1]);
+                if (g == null) {
+                    groups.put(n[1], new String[]{n[1], "1", n[0], n[2], n[3]});
+                } else {
+                    g[1] = String.valueOf(Integer.parseInt(g[1]) + 1);
+                    if (Long.parseLong(n[0]) >= Long.parseLong(g[2])) {
+                        g[2] = n[0];
+                        g[3] = n[2];
+                        g[4] = n[3];
+                    }
+                }
+            }
+            List<String[]> shown = new ArrayList<>(groups.values());
+            Collections.sort(shown, (a, b) -> sort[0] == 2 ? label(a[0]).compareToIgnoreCase(label(b[0]))
+                    : sort[0] == 1 ? Integer.parseInt(b[1]) - Integer.parseInt(a[1])
+                    : Long.compare(Long.parseLong(b[2]), Long.parseLong(a[2])));
+            adapter.set(shown);
+        };
+        header.addView(sortBar(new String[]{"Newest", "Most", "Name"}, i -> {
+            sort[0] = i;
+            filter.run();
+        }));
+        header.addView(status);
+        row(header, "Clear saved notifications", "Delete everything TinyKit has saved.", null, () ->
+                new AlertDialog.Builder(this)
+                        .setTitle("Clear saved notifications?")
+                        .setMessage("This deletes every notification TinyKit has saved.")
+                        .setPositiveButton("Clear", (d, w) -> {
+                            deleteFile(NOTIF_FILE);
+                            all.clear();
+                            filter.run();
+                            status.setText("Nothing saved yet.");
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show(), false);
+
+        ListView listView = new ListView(this);
+        listView.addHeaderView(header, null, false);
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            Object item = parent.getItemAtPosition(position);
+            if (!(item instanceof String[])) return;
+            String pkg = ((String[]) item)[0];
+            List<String[]> mine = new ArrayList<>();
+            for (String[] n : all) if (n[1].equals(pkg)) mine.add(n);
+            openAppNotifications(pkg, mine, search.getText().toString(), () -> {
+                // This app's notifications were deleted on its page.
+                List<String[]> keep = new ArrayList<>();
+                for (String[] n : all) if (!n[1].equals(pkg)) keep.add(n);
+                all.clear();
+                all.addAll(keep);
+                filter.run();
+                status.setText(all.isEmpty() ? "Nothing saved yet." : all.size() + " saved");
+            });
+        });
+        search.addTextChangedListener(watcher(filter));
+        push("Notification history", listView);
+
+        worker.execute(() -> {
+            List<String[]> saved = readNotifications();
+            List<String[]> first = new ArrayList<>(saved);
+            main.post(() -> {
+                all.addAll(first);
+                filter.run();
+            });
+            if (!Shell.ready()) {
+                main.post(() -> status.setText(first.size() + " saved  ·  Start Shizuku to save new ones."));
+                return;
+            }
+            int added = saveNotifications(saved);
+            List<String[]> merged = new ArrayList<>(saved);
+            main.post(() -> {
+                all.clear();
+                all.addAll(merged);
+                filter.run();
+                status.setText(merged.isEmpty() ? "Nothing saved yet."
+                        : merged.size() + " saved" + (added > 0 ? "  ·  " + added + " new" : ""));
+            });
+        });
+    }
+
+    /** One app's saved notifications, newest first, kept even after they leave the shade. */
+    private void openAppNotifications(String pkg, List<String[]> items, String query, Runnable onDeleted) {
+        LinearLayout header = vertical();
+        EditText search = new EditText(this);
+        search.setHint("Search " + label(pkg));
+        search.setSingleLine(true);
+        search.setText(query);
+        LinearLayout searchBox = vertical();
+        searchBox.setPadding(dp(16), dp(8), dp(16), 0);
+        searchBox.addView(search);
+        header.addView(searchBox);
+        final int[] sort = {0};
+        Adapter<String[]> adapter = new Adapter<>(false, (n, row) -> {
+            row.first.setText(n[2].isEmpty() ? label(pkg) : n[2]);
+            row.second.setText(DateUtils.getRelativeTimeSpanString(Long.parseLong(n[0]),
+                    System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS) + "  ·  "
+                    + DateUtils.formatDateTime(this, Long.parseLong(n[0]),
+                    DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_ABBREV_MONTH));
+            row.third.setText(n[3]);
+            row.third.setMaxLines(4);
+            row.third.setEllipsize(TextUtils.TruncateAt.END);
+            showIcon(row, pkg);
+        });
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            List<String[]> shown = new ArrayList<>();
+            for (String[] n : items) {
+                if (q.isEmpty() || label(pkg).toLowerCase(Locale.ROOT).contains(q)
+                        || (n[2] + " " + n[3]).toLowerCase(Locale.ROOT).contains(q)) {
+                    shown.add(n);
+                }
+            }
+            Collections.sort(shown, (a, b) -> sort[0] == 1
+                    ? Long.compare(Long.parseLong(a[0]), Long.parseLong(b[0]))
+                    : Long.compare(Long.parseLong(b[0]), Long.parseLong(a[0])));
+            adapter.set(shown);
+        };
+        header.addView(sortBar(new String[]{"Newest", "Oldest"}, i -> {
+            sort[0] = i;
+            filter.run();
+        }));
+        row(header, "Delete " + label(pkg) + "'s notifications",
+                items.size() + " saved. Removes them from TinyKit only.", null, () ->
+                new AlertDialog.Builder(this)
+                        .setTitle("Delete " + label(pkg) + "'s notifications?")
+                        .setPositiveButton("Delete", (d, w) -> worker.execute(() -> {
+                            List<String[]> keep = new ArrayList<>();
+                            for (String[] n : readNotifications()) if (!n[1].equals(pkg)) keep.add(n);
+                            writeNotifications(keep);
+                            main.post(() -> {
+                                onDeleted.run();
+                                onBackPressed();
+                            });
+                        }))
+                        .setNegativeButton("Cancel", null)
+                        .show(), false);
+        ListView listView = new ListView(this);
+        listView.addHeaderView(header, null, false);
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            Object item = parent.getItemAtPosition(position);
+            if (item instanceof String[]) showNotification((String[]) item);
+        });
+        search.addTextChangedListener(watcher(filter));
+        filter.run();
+        push(label(pkg), listView);
+    }
+
+    private String notifFilterSummary() {
+        int mode = prefs.getInt("notif_filter", 0);
+        int n = prefs.getStringSet("notif_apps", Collections.emptySet()).size();
+        return mode == 0 ? NOTIF_FILTERS[0] : NOTIF_FILTERS[mode] + " (" + n + ")";
+    }
+
+    private void chooseNotifFilter(TextView summary) {
+        int mode = prefs.getInt("notif_filter", 0);
+        String[] items = new String[NOTIF_FILTERS.length];
+        for (int i = 0; i < items.length; i++) items[i] = (i == mode ? "●  " : "○  ") + NOTIF_FILTERS[i];
+        new AlertDialog.Builder(this)
+                .setTitle("Apps to save")
+                .setItems(items, (d, which) -> {
+                    prefs.edit().putInt("notif_filter", which).apply();
+                    summary.setText(notifFilterSummary());
+                    if (which == 0) return;
+                    openPicker(which == 1 ? "Save only" : "Don't save",
+                            which == 1 ? "Only these apps' notifications are saved."
+                                    : "These apps' notifications are never saved.", true,
+                            () -> new HashSet<>(prefs.getStringSet("notif_apps", Collections.emptySet())),
+                            (pkg, on) -> {
+                                Set<String> set = new HashSet<>(prefs.getStringSet("notif_apps", Collections.emptySet()));
+                                if (on) set.add(pkg);
+                                else set.remove(pkg);
+                                prefs.edit().putStringSet("notif_apps", set).apply();
+                                main.post(() -> summary.setText(notifFilterSummary()));
+                                return null;
+                            });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showNotification(String[] n) {
+        TextView body = text(n[3].isEmpty() ? "(no text)" : n[3], 15, false);
+        body.setTextIsSelectable(true);
+        body.setPadding(dp(24), dp(12), dp(24), 0);
+        ScrollView box = new ScrollView(this);
+        box.addView(body);
+        new AlertDialog.Builder(this)
+                .setTitle(n[2].isEmpty() ? label(n[1]) : n[2])
+                .setView(box)
+                .setPositiveButton("Copy", (d, w) -> {
+                    ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+                            .setPrimaryClip(android.content.ClipData.newPlainText("Notification",
+                                    (n[2] + "\n" + n[3]).trim()));
+                    toast("Copied");
+                })
+                .setNeutralButton("App info", (d, w) -> openAppInfo(n[1]))
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    /** Saved notifications as {time, package, title, text}, oldest first. */
+    private List<String[]> readNotifications() {
+        List<String[]> list = new ArrayList<>();
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(openFileInput(NOTIF_FILE), "UTF-8"))) {
+            String line;
+            while ((line = in.readLine()) != null) {
+                String[] p = line.split("\t", -1);
+                if (p.length == 4 && !p[0].isEmpty()) {
+                    p[2] = unescapeNotif(p[2]);
+                    p[3] = unescapeNotif(p[3]);
+                    list.add(p);
+                }
+            }
+        } catch (IOException ignored) {
+            // Nothing saved yet.
+        }
+        return list;
+    }
+
+    /**
+     * Reads the notifications in the shade from {@code dumpsys notification}, adds the new ones that
+     * pass the app filter to {@code saved} and writes the file. Returns how many were added.
+     */
+    private int saveNotifications(List<String[]> saved) {
+        int mode = prefs.getInt("notif_filter", 0);
+        Set<String> chosen = prefs.getStringSet("notif_apps", Collections.emptySet());
+        Set<String> keys = new HashSet<>();
+        for (String[] n : saved) keys.add(n[0] + "|" + n[1] + "|" + n[2] + "|" + n[3]);
+        int added = 0;
+        for (String[] n : shadeNotifications()) {
+            if (n[1].equals(getPackageName())) continue;
+            if (mode == 1 && !chosen.contains(n[1])) continue;
+            if (mode == 2 && chosen.contains(n[1])) continue;
+            if (keys.add(n[0] + "|" + n[1] + "|" + n[2] + "|" + n[3])) {
+                saved.add(n);
+                added++;
+            }
+        }
+        if (added == 0) return 0;
+        Collections.sort(saved, (a, b) -> Long.compare(Long.parseLong(a[0]), Long.parseLong(b[0])));
+        while (saved.size() > NOTIF_MAX) saved.remove(0);
+        return writeNotifications(saved) ? added : 0;
+    }
+
+    private boolean writeNotifications(List<String[]> saved) {
+        StringBuilder out = new StringBuilder();
+        for (String[] n : saved) {
+            out.append(n[0]).append('\t').append(n[1]).append('\t').append(escapeNotif(n[2]))
+                    .append('\t').append(escapeNotif(n[3])).append('\n');
+        }
+        try (OutputStream o = openFileOutput(NOTIF_FILE, MODE_PRIVATE)) {
+            o.write(out.toString().getBytes("UTF-8"));
+            return true;
+        } catch (IOException ignored) {
+            return false;
+        }
+    }
+
+    /** Parses the "Notification List" section of {@code dumpsys notification --noredact}. */
+    private static List<String[]> shadeNotifications() {
+        List<String[]> list = new ArrayList<>();
+        Pattern record = Pattern.compile("NotificationRecord\\(\\S+ pkg=(\\S+)");
+        Pattern field = Pattern.compile("^\\s*([A-Za-z_][\\w.]*)=(.*)$");
+        String pkg = null, title = "", text = "", big = null;
+        long time = 0;
+        int flags = 0;
+        boolean inPublic = false;
+        String multi = null;
+        StringBuilder multiValue = null;
+        for (String raw : (Shell.run("dumpsys notification --noredact").out + "\nmArchive=").split("\n")) {
+            Matcher fm = field.matcher(raw);
+            boolean isField = fm.find();
+            if (multi != null) {
+                // A value that spans lines (a long message) continues until the next field.
+                if (!isField && !raw.contains("NotificationRecord(") && !raw.trim().equals("}")) {
+                    multiValue.append('\n').append(raw);
+                    continue;
+                }
+                big = stripValue(multiValue.toString());
+                multi = null;
+            }
+            Matcher rm = record.matcher(raw);
+            boolean end = raw.trim().startsWith("mArchive=");
+            if (rm.find() || end) {
+                if (pkg != null && (flags & 0x202) == 0) {
+                    String body = big != null && !big.isEmpty() ? big : text;
+                    if (!title.isEmpty() || !body.isEmpty()) {
+                        list.add(new String[]{String.valueOf(time > 0 ? time : System.currentTimeMillis()),
+                                pkg, title, body});
+                    }
+                }
+                if (end) break;
+                pkg = rm.group(1);
+                title = "";
+                text = "";
+                big = null;
+                time = 0;
+                flags = 0;
+                inPublic = false;
+                continue;
+            }
+            if (pkg == null || !isField) continue;
+            String key = fm.group(1), value = fm.group(2);
+            // The redacted lock-screen copy repeats the fields; keep the real ones.
+            if (key.equals("publicNotification")) inPublic = true;
+            if (inPublic && !key.equals("mCreationTimeMs")) continue;
+            switch (key) {
+                case "flags":
+                    try {
+                        flags = Integer.parseInt(value.replace("0x", ""), 16);
+                    } catch (NumberFormatException ignored) {
+                        // Leave it 0.
+                    }
+                    break;
+                case "mCreationTimeMs":
+                case "when":
+                    try {
+                        long t = Long.parseLong(value.trim());
+                        if (t > 0 && (key.equals("mCreationTimeMs") || time == 0)) time = t;
+                    } catch (NumberFormatException ignored) {
+                        // Keep the current time.
+                    }
+                    break;
+                case "android.title":
+                    title = stripValue(value);
+                    break;
+                case "android.text":
+                    text = stripValue(value);
+                    break;
+                case "android.bigText":
+                    if (value.trim().endsWith(")") || !value.contains(" (")) {
+                        big = stripValue(value);
+                    } else {
+                        multi = key;
+                        multiValue = new StringBuilder(value);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        return list;
+    }
+
+    /** Turns {@code String (Hello)} into {@code Hello}; {@code null} into an empty string. */
+    private static String stripValue(String v) {
+        v = v.trim();
+        if (v.equals("null")) return "";
+        int open = v.indexOf(" (");
+        if (open > 0 && v.endsWith(")")) v = v.substring(open + 2, v.length() - 1);
+        return v.trim();
+    }
+
+    private static String escapeNotif(String s) {
+        return s.replace("\\", "\\\\").replace("\t", " ").replace("\r", "").replace("\n", "\\n");
+    }
+
+    private static String unescapeNotif(String s) {
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '\\' && i + 1 < s.length()) {
+                char nx = s.charAt(++i);
+                b.append(nx == 'n' ? '\n' : nx);
+            } else {
+                b.append(c);
+            }
+        }
+        return b.toString();
+    }
+
     // ---- Tiles catalog --------------------------------------------------------------------------
 
     private void openTiles() {
@@ -1550,7 +2028,7 @@ public class MainActivity extends Activity {
 
     private static final String RECOVER_DIR = "/sdcard/Download/TinyKit/Recovered";
     private static final String BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    private static final long THUMB_MAX = 16L * 1024 * 1024;
+    private static final long THUMB_MAX = 10L * 1024 * 1024;
     private static final Set<String> IMAGE_EXT = new HashSet<>(Arrays.asList(
             "jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "dng"));
 
@@ -1751,7 +2229,7 @@ public class MainActivity extends Activity {
 
     private void loadThumb(Deleted d, ImageView icon) {
         thumbs.execute(() -> {
-            if (thumbCache.containsKey(d.path)) return;
+            if (!d.path.equals(icon.getTag()) || thumbCache.containsKey(d.path)) return;
             Bitmap bitmap = makeThumb(d.path);
             if (bitmap == null) return;
             thumbCache.put(d.path, bitmap);
@@ -1984,50 +2462,121 @@ public class MainActivity extends Activity {
 
     // ---- Network, charging, temperatures, device IDs --------------------------------------------
 
+    /** Local network details render instantly; only the public IP is fetched in the background. */
     private void openNetworkInfo() {
-        infoPage("Network info", () -> {
-            List<String[]> info = new ArrayList<>();
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            Network network = cm.getActiveNetwork();
-            NetworkCapabilities caps = network == null ? null : cm.getNetworkCapabilities(network);
-            LinkProperties lp = network == null ? null : cm.getLinkProperties(network);
-            info.add(new String[]{"Connection", null});
-            String type = "Offline";
-            if (caps != null) {
-                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) type = "Wi-Fi";
-                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) type = "Mobile data";
-                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) type = "Ethernet";
-                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) type = "VPN";
-                else type = "Other";
-            }
-            info.add(new String[]{"Type", type});
-            if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-                WifiInfo wi = wm == null ? null : wm.getConnectionInfo();
-                if (wi != null) {
-                    String ssid = wi.getSSID();
-                    if (ssid != null && !ssid.contains("unknown")) {
-                        info.add(new String[]{"SSID", ssid.replace("\"", "")});
-                    }
-                    if (wi.getLinkSpeed() > 0) info.add(new String[]{"Link speed", wi.getLinkSpeed() + " Mbps"});
-                    info.add(new String[]{"Signal", wi.getRssi() + " dBm"});
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), dp(24));
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(page);
+        push("Network info", scroll);
+
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        Network network = cm.getActiveNetwork();
+        NetworkCapabilities caps = network == null ? null : cm.getNetworkCapabilities(network);
+        LinkProperties lp = network == null ? null : cm.getLinkProperties(network);
+
+        section(page, "Connection");
+        String type = "Offline";
+        if (caps != null) {
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) type = "Wi-Fi";
+            else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) type = "Mobile data";
+            else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) type = "Ethernet";
+            else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) type = "VPN";
+            else type = "Other";
+        }
+        addKv(page, "Type", type);
+        if (caps != null && caps.getLinkDownstreamBandwidthKbps() > 0) {
+            addKv(page, "Downlink", caps.getLinkDownstreamBandwidthKbps() / 1000 + " Mbps");
+            addKv(page, "Uplink", caps.getLinkUpstreamBandwidthKbps() / 1000 + " Mbps");
+        }
+        if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+            WifiInfo wi = wm == null ? null : wm.getConnectionInfo();
+            if (wi != null) {
+                String ssid = wi.getSSID();
+                if (ssid != null && !ssid.contains("unknown")) addKv(page, "SSID", ssid.replace("\"", ""));
+                if (wi.getLinkSpeed() > 0) addKv(page, "Link speed", wi.getLinkSpeed() + " Mbps");
+                addKv(page, "Signal", wi.getRssi() + " dBm");
+                int f = wi.getFrequency();
+                if (f > 0) {
+                    addKv(page, "Frequency", f + " MHz  ·  "
+                            + (f > 5925 ? "6 GHz" : f > 5000 ? "5 GHz" : "2.4 GHz"));
                 }
             }
-            if (lp != null) {
-                info.add(new String[]{"Addresses", null});
-                if (lp.getInterfaceName() != null) info.add(new String[]{"Interface", lp.getInterfaceName()});
-                for (LinkAddress la : lp.getLinkAddresses()) {
-                    info.add(new String[]{"IP", la.getAddress().getHostAddress()});
-                }
-                for (InetAddress dns : lp.getDnsServers()) {
-                    info.add(new String[]{"DNS", dns.getHostAddress()});
-                }
-                if (Build.VERSION.SDK_INT >= 28 && lp.getPrivateDnsServerName() != null) {
-                    info.add(new String[]{"Private DNS", lp.getPrivateDnsServerName()});
+        }
+
+        String gateway = null;
+        if (lp != null) {
+            section(page, "Addresses");
+            if (lp.getInterfaceName() != null) addKv(page, "Interface", lp.getInterfaceName());
+            for (LinkAddress la : lp.getLinkAddresses()) addKv(page, "IP", la.getAddress().getHostAddress());
+            for (RouteInfo r : lp.getRoutes()) {
+                if (r.isDefaultRoute() && r.getGateway() != null && !r.getGateway().isAnyLocalAddress()) {
+                    gateway = r.getGateway().getHostAddress();
+                    addKv(page, "Gateway", gateway);
                 }
             }
-            return info;
-        });
+            for (InetAddress dns : lp.getDnsServers()) addKv(page, "DNS", dns.getHostAddress());
+            if (Build.VERSION.SDK_INT >= 28 && lp.getPrivateDnsServerName() != null) {
+                addKv(page, "Private DNS", lp.getPrivateDnsServerName());
+            }
+        }
+
+        if (gateway != null && gateway.indexOf(':') < 0) {
+            final String url = "http://" + gateway;
+            section(page, "Router");
+            row(page, "Open router settings", "Opens " + url + " in your browser.", arrow(),
+                    () -> openUrl(url), false);
+        }
+
+        section(page, "Internet");
+        TextView publicIp = addKv(page, "Public IP", "Checking…");
+        boolean online = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        if (!online) {
+            publicIp.setText("Offline");
+        } else {
+            worker.execute(() -> {
+                String pub = httpGet("https://api.ipify.org", 3000);
+                if (pub == null) pub = httpGet("https://ifconfig.me/ip", 3000);
+                String result = pub != null && pub.length() <= 45 && pub.matches("[0-9a-fA-F:.]+")
+                        ? pub : "Couldn't reach the internet";
+                main.post(() -> publicIp.setText(result));
+            });
+        }
+    }
+
+    /** Adds a dim key line and a selectable value line, returning the value view so it can update. */
+    private TextView addKv(LinearLayout page, String key, String value) {
+        TextView k = text(key, 13, false);
+        k.setAlpha(0.7f);
+        k.setPadding(0, dp(8), 0, 0);
+        page.addView(k);
+        TextView v = text(value, 16, false);
+        v.setTextIsSelectable(true);
+        page.addView(v);
+        return v;
+    }
+
+    /** A short-timeout HTTP GET returning the trimmed body, or null. Call off the main thread. */
+    private static String httpGet(String url, int timeoutMs) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
+            conn.setRequestProperty("User-Agent", "TinyKit");
+            try (InputStream in = conn.getInputStream()) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                return out.toString("UTF-8").trim();
+            }
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
     }
 
     private void openChargingInfo() {
@@ -2430,8 +2979,8 @@ public class MainActivity extends Activity {
         head.addView(htext);
         list.addView(head);
         thumbs.execute(() -> {
-            Drawable d = appIcon(pkg);
-            if (d != null) main.post(() -> appIc.setImageDrawable(d));
+            Bitmap b = iconBitmap(pkg, dp(52));
+            if (b != null) main.post(() -> appIc.setImageBitmap(b));
         });
         list.addView(note("Tap Real, Fake or Off for each permission. Fake shows the app the "
                 + "permission as granted while it actually gets nothing."));
@@ -4178,30 +4727,44 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Shows an app's icon in a row, loaded off the main thread and cached. */
+    /** Shows an app's icon in a row, loaded off the main thread and cached as a small bitmap. */
     private void showIcon(Row row, String pkg) {
+        if (!prefs.getBoolean("icons", true)) {
+            row.icon.setVisibility(View.GONE);
+            return;
+        }
         row.icon.setVisibility(View.VISIBLE);
         row.icon.setTag(pkg);
-        Drawable cached = iconCache.get(pkg);
+        Bitmap cached = iconCache.get(pkg);
         if (cached != null) {
-            row.icon.setImageDrawable(cached);
+            row.icon.setImageBitmap(cached);
             return;
         }
         row.icon.setImageResource(android.R.drawable.sym_def_app_icon);
         thumbs.execute(() -> {
-            Drawable d = appIcon(pkg);
-            if (d == null) return;
-            iconCache.put(pkg, d);
+            // The row may have been recycled to another app while scrolling — skip the render for
+            // one that's no longer on screen, so a fast scroll doesn't load hundreds of icons.
+            if (!pkg.equals(row.icon.getTag()) || iconCache.containsKey(pkg)) return;
+            Bitmap b = iconBitmap(pkg, dp(40));
+            if (b == null) return;
+            iconCache.put(pkg, b);
             main.post(() -> {
-                if (pkg.equals(row.icon.getTag())) row.icon.setImageDrawable(d);
+                if (pkg.equals(row.icon.getTag())) row.icon.setImageBitmap(b);
             });
         });
     }
 
-    private Drawable appIcon(String pkg) {
+    /** An app's icon rendered once to a small {@code size}px bitmap, so the heavy source drawable
+     * is dropped and only the small bitmap is cached. Call off the main thread. */
+    private Bitmap iconBitmap(String pkg, int size) {
         try {
-            return getPackageManager().getApplicationIcon(pkg);
-        } catch (PackageManager.NameNotFoundException | RuntimeException e) {
+            Drawable d = getPackageManager().getApplicationIcon(pkg);
+            Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bmp);
+            d.setBounds(0, 0, size, size);
+            d.draw(canvas);
+            return bmp;
+        } catch (PackageManager.NameNotFoundException | RuntimeException | OutOfMemoryError e) {
             return null;
         }
     }

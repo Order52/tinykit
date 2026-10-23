@@ -1,0 +1,3 @@
+- Notification history: save notifications and their text, view them per app, include or exclude apps.
+- Network info: opens instantly, shows your public IP, and adds Open router settings. Removed the inaccurate devices count.
+- Lower memory use and faster pages.
