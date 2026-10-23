@@ -3,6 +3,9 @@ package io.github.order52.tinykit;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -68,6 +71,12 @@ public class MainActivity extends Activity {
     private static final int REQUEST_SHIZUKU = 1;
     private static final String SHIZUKU_PKG = "moe.shizuku.privileged.api";
     private static final String SHIZUKU_DOWNLOAD = "https://shizuku.rikka.app/download/";
+    private static final String SHIZUKU_TERMUX = "https://github.com/Order52/shizuku-termux";
+    private static final String TERMUX = "com.termux";
+    private static final String TERMUX_BIN = "/data/data/com.termux/files/usr/bin/";
+    private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
+    private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
+    private static final int REQUEST_RUN_COMMAND = 2;
     private static final String DNS_HOST = "dns.adguard-dns.com";
     private static final String BACKUP_DIR = "/sdcard/Download/TinyKit";
     private static final String READ_SETTINGS = "for k in development_settings_enabled "
@@ -144,11 +153,23 @@ public class MainActivity extends Activity {
     private View shizukuCard;
     private TextView shizukuText;
     private Button shizukuButton;
+    private Button startButton;
+    private boolean starting;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnRequestPermissionResultListener permissionResult =
             (code, result) -> main.post(this::refreshShizuku);
+    private final Runnable startTimeout = () -> startFinished(
+            "No answer from Termux. Open Termux once, then try again.");
+    private final BroadcastReceiver termuxResult = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String message = termuxMessage(intent.getBundleExtra("result"));
+            // Shizuku's binder can arrive a moment after the command returns.
+            main.postDelayed(() -> startFinished(message), 1500);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,6 +181,12 @@ public class MainActivity extends Activity {
         Shizuku.addBinderReceivedListenerSticky(binderReceived);
         Shizuku.addBinderDeadListener(binderDead);
         Shizuku.addRequestPermissionResultListener(permissionResult);
+        IntentFilter filter = new IntentFilter(ACTION_TERMUX_RESULT);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(termuxResult, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(termuxResult, filter);
+        }
     }
 
     @Override
@@ -173,6 +200,8 @@ public class MainActivity extends Activity {
         Shizuku.removeBinderReceivedListener(binderReceived);
         Shizuku.removeBinderDeadListener(binderDead);
         Shizuku.removeRequestPermissionResultListener(permissionResult);
+        main.removeCallbacks(startTimeout);
+        unregisterReceiver(termuxResult);
         worker.shutdown();
         super.onDestroy();
     }
@@ -226,8 +255,8 @@ public class MainActivity extends Activity {
             shizukuButton.setText("Get Shizuku");
             shizukuButton.setOnClickListener(v -> openUrl(SHIZUKU_DOWNLOAD));
         } else if (!Shell.running()) {
-            shizukuText.setText("Shizuku is not running. Start it in the Shizuku app (or with "
-                    + "shizuku-termux), then come back.");
+            shizukuText.setText("Shizuku is not running. Start it here (through Termux with "
+                    + "shizuku-termux) or in the Shizuku app.");
             shizukuButton.setText("Open Shizuku");
             shizukuButton.setOnClickListener(v -> openApp(SHIZUKU_PKG));
         } else if (!ready) {
@@ -235,8 +264,86 @@ public class MainActivity extends Activity {
             shizukuButton.setText("Allow");
             shizukuButton.setOnClickListener(v -> Shizuku.requestPermission(REQUEST_SHIZUKU));
         }
+        startButton.setVisibility(Shell.installed(getPackageManager()) && !Shell.running()
+                ? View.VISIBLE : View.GONE);
+        startButton.setEnabled(!starting);
+        startButton.setText(starting ? "Starting…" : "Start Shizuku");
         for (View row : shizukuRows) row.setAlpha(ready ? 1f : 0.4f);
         if (ready) loadSettings();
+    }
+
+    /**
+     * Starts Shizuku without a computer by asking Termux to run the shizuku-termux command,
+     * the same way the Shizuku Termux app does. The result comes back to {@link #termuxResult}.
+     */
+    private void startShizuku() {
+        if (starting) return;
+        try {
+            getPackageManager().getPackageInfo(TERMUX, 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            toast("Starting from the phone needs Termux with shizuku-termux installed.");
+            openUrl(SHIZUKU_TERMUX);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 23
+                && checkSelfPermission(PERMISSION_RUN_COMMAND) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{PERMISSION_RUN_COMMAND}, REQUEST_RUN_COMMAND);
+            return;
+        }
+        int flags = PendingIntent.FLAG_ONE_SHOT;
+        if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
+        PendingIntent result = PendingIntent.getBroadcast(this, 0,
+                new Intent(ACTION_TERMUX_RESULT).setPackage(getPackageName()), flags);
+        Intent intent = new Intent("com.termux.RUN_COMMAND")
+                .setClassName(TERMUX, "com.termux.app.RunCommandService")
+                .putExtra("com.termux.RUN_COMMAND_PATH", TERMUX_BIN + "bash")
+                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c",
+                        "[ -x " + TERMUX_BIN + "shizuku ] || exit 127; exec " + TERMUX_BIN
+                                + "shizuku start </dev/null"})
+                .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
+                .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", result);
+        try {
+            startService(intent);
+        } catch (RuntimeException e) {
+            toast("Could not reach Termux. Open Termux once, then try again.");
+            return;
+        }
+        starting = true;
+        refreshShizuku();
+        main.postDelayed(startTimeout, 60_000L);
+    }
+
+    private void startFinished(String message) {
+        main.removeCallbacks(startTimeout);
+        starting = false;
+        refreshShizuku();
+        if (!Shell.running() && !TextUtils.isEmpty(message)) toast(message);
+    }
+
+    private static String termuxMessage(Bundle result) {
+        if (result == null) return "Termux returned no result.";
+        int exitCode = result.getInt("exitCode", -1);
+        String errmsg = result.getString("errmsg", "");
+        if (result.getInt("err", 0) > 0 && exitCode == -1) {
+            return errmsg.contains("allow-external-apps")
+                    ? "Termux doesn't allow other apps to run commands yet. Run the shizuku-termux "
+                            + "install command in Termux once."
+                    : errmsg;
+        }
+        if (exitCode == 127) {
+            return "shizuku-termux isn't installed in Termux. Get it from github.com/Order52/shizuku-termux.";
+        }
+        return (result.getString("stdout", "") + "\n" + result.getString("stderr", "")).trim();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        if (requestCode != REQUEST_RUN_COMMAND) return;
+        if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+            startShizuku();
+        } else {
+            toast("Allow \"Run commands in Termux environment\" for TinyKit to start Shizuku.");
+        }
     }
 
     private void loadSettings() {
@@ -270,8 +377,12 @@ public class MainActivity extends Activity {
         card.setBackgroundColor(0x22808080);
         shizukuText = text("", 15, false);
         shizukuButton = button("", null);
+        startButton = button("Start Shizuku", v -> startShizuku());
         card.addView(shizukuText);
-        card.addView(shizukuButton, wrap());
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.addView(startButton, wrap());
+        buttons.addView(shizukuButton, wrap());
+        card.addView(buttons);
         shizukuCard = card;
         list.addView(card);
 
