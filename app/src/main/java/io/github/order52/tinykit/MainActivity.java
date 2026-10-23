@@ -4,6 +4,10 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.app.usage.StorageStats;
+import android.app.usage.StorageStatsManager;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -15,19 +19,34 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.media.MediaScannerConnection;
+import android.net.ConnectivityManager;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import android.os.StatFs;
+import android.os.storage.StorageManager;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.service.quicksettings.TileService;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -59,12 +78,14 @@ import android.widget.Toast;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -108,7 +129,6 @@ public class MainActivity extends Activity {
             + "echo \"$k=$(settings get global $k)\"; done";
     private static final Pattern PACKAGE = Pattern.compile("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+");
     private static final Pattern MEMINFO = Pattern.compile("^\\s*([\\d,]+)K: (\\S+) \\(pid \\d+");
-    private static final Pattern APPOP = Pattern.compile("^(CAMERA|RECORD_AUDIO): ([a-z]+)", Pattern.MULTILINE);
 
     private interface IsOn {
         boolean test(Map<String, String> settings);
@@ -131,6 +151,24 @@ public class MainActivity extends Activity {
         String run();
     }
 
+    /** Reads whether something is currently blocked; null when it isn't available on this phone. */
+    private interface Checker {
+        Boolean check();
+    }
+
+    /** Blocks or unblocks; returns null on success, else the error. Call off the main thread. */
+    private interface Applier {
+        String apply(boolean block);
+    }
+
+    private interface OnText {
+        void run(String value);
+    }
+
+    private interface InfoJob {
+        List<String[]> run();
+    }
+
     private interface Binder<T> {
         void bind(T item, Row row);
     }
@@ -143,6 +181,7 @@ public class MainActivity extends Activity {
     private static final class App {
         String pkg;
         String label;
+        String component;
         boolean system;
         boolean checked;
 
@@ -164,6 +203,16 @@ public class MainActivity extends Activity {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    // Thumbnails and app icons load in parallel and are cached, so lists stay fast while scrolling.
+    private final ExecutorService thumbs = Executors.newFixedThreadPool(4);
+    private final Map<String, Bitmap> thumbCache = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, Drawable> iconCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, Drawable>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Drawable> eldest) {
+                    return size() > 256;
+                }
+            });
     private final List<Toggle> toggles = new ArrayList<>();
     private final List<View> shizukuRows = new ArrayList<>();
     private final List<View> pages = new ArrayList<>();
@@ -201,6 +250,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("tinykit", MODE_PRIVATE);
+        // Warm the installed-apps cache (loading labels is the slow part) so every per-app list,
+        // picker and log opens instantly. Runs off the worker queue to not delay the first tap.
+        thumbs.execute(this::installedApps);
         LinearLayout root = vertical();
         frame = new FrameLayout(this);
         root.addView(frame, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -233,6 +285,7 @@ public class MainActivity extends Activity {
         main.removeCallbacks(startTimeout);
         unregisterReceiver(termuxResult);
         worker.shutdown();
+        thumbs.shutdownNow();
         super.onDestroy();
     }
 
@@ -335,7 +388,12 @@ public class MainActivity extends Activity {
                 ? "Not set. Tap to paste it from Shizuku's settings."
                 : "Set. Start and Stop go straight to Shizuku.");
         for (View row : shizukuRows) row.setAlpha(ready ? 1f : 0.4f);
-        if (ready) loadSettings();
+        if (ready) {
+            loadSettings();
+            // Grant TinyKit the permissions its toggles and tiles need, so they keep working
+            // when Shizuku is later turned off. Done once, off the main thread.
+            worker.execute(() -> Tweak.grantSelf(this));
+        }
     }
 
     /**
@@ -535,7 +593,118 @@ public class MainActivity extends Activity {
                                 + "any app get past that without root."), false);
         row(list, "Install Shizuku & Termux", "Recommended versions that keep running in the background.",
                 arrow(), this::showInstall, false);
-        return scroll(list);
+        return withSearch(scroll(list));
+    }
+
+    /**
+     * Wraps the home screen with a search bar over every TinyKit tool and setting. Typing swaps the
+     * home content for a results list; clearing it brings the home screen back.
+     */
+    private View withSearch(View home) {
+        LinearLayout outer = vertical();
+        EditText search = new EditText(this);
+        search.setHint("Search all settings & tools");
+        search.setSingleLine(true);
+        search.setPadding(dp(16), dp(10), dp(16), dp(10));
+        outer.addView(search);
+        FrameLayout holder = new FrameLayout(this);
+        holder.addView(home);
+        ListView results = new ListView(this);
+        results.setFastScrollEnabled(true);
+        results.setVisibility(View.GONE);
+        holder.addView(results);
+        outer.addView(holder, new LinearLayout.LayoutParams(-1, 0, 1f));
+
+        List<Feature> all = features();
+        Adapter<Feature> adapter = new Adapter<>(false, (f, row) -> {
+            row.first.setText(f.title);
+            row.second.setText(f.summary);
+        });
+        results.setAdapter(adapter);
+        results.setOnItemClickListener((parent, view, position, id) -> adapter.getItem(position).open.run());
+        search.addTextChangedListener(watcher(() -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT).trim();
+            if (q.isEmpty()) {
+                home.setVisibility(View.VISIBLE);
+                results.setVisibility(View.GONE);
+                return;
+            }
+            String[] terms = q.split("\\s+");
+            List<Feature> shown = new ArrayList<>();
+            for (Feature f : all) {
+                String hay = (f.title + " " + f.summary).toLowerCase(Locale.ROOT);
+                boolean match = true;
+                for (String term : terms) {
+                    if (!hay.contains(term)) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) shown.add(f);
+            }
+            adapter.set(shown);
+            home.setVisibility(View.GONE);
+            results.setVisibility(View.VISIBLE);
+        }));
+        return outer;
+    }
+
+    private static final class Feature {
+        final String title;
+        final String summary;
+        final Runnable open;
+
+        Feature(String title, String summary, Runnable open) {
+            this.title = title;
+            this.summary = summary;
+            this.open = open;
+        }
+    }
+
+    /** Everything searchable: pages open directly, inline toggles jump to their tab. */
+    private List<Feature> features() {
+        List<Feature> f = new ArrayList<>();
+        f.add(new Feature("Auth token", "Shizuku start and stop token", this::editToken));
+        f.add(new Feature("TinyKit tiles", "Add Quick Settings tiles", this::openTiles));
+        f.add(new Feature("Install Shizuku & Termux", "Get the recommended versions", this::showInstall));
+        f.add(new Feature("Hide developer options", "Apps see developer options as off", () -> selectTab(1)));
+        f.add(new Feature("Ad-blocking DNS", "Block ads with Private DNS", () -> selectTab(1)));
+        f.add(new Feature("Stop background scanning", "Wi-Fi and Bluetooth stop scanning", () -> selectTab(1)));
+        f.add(new Feature("Analytics & telemetry", "Huawei and Google tracking off", this::openAnalytics));
+        f.add(new Feature("Saved Wi-Fi networks", "Passwords and QR codes", this::openWifi));
+        f.add(new Feature("App permissions", "Set Real, Fake or Off per app", () -> openAppList(
+                "App permissions", "Pick an app to change its permissions and app-ops.", this::openAppPage)));
+        f.add(new Feature("Default apps", "Launcher, browser, phone and more", this::openDefaults));
+        f.add(new Feature("Hide apps", "Hide apps from the launcher", this::openHide));
+        f.add(new Feature("Unused apps", "Apps you haven't opened in a long time", this::openUnused));
+        f.add(new Feature("Storage by app", "Which apps take the most space", this::openStorage));
+        f.add(new Feature("Recent access", "Camera, mic, location, contacts, clipboard", this::openRecentAccess));
+        f.add(new Feature("Running apps", "Memory use; stop any app", this::openRunning));
+        f.add(new Feature("Stop background activity", "Per-app background block", this::openBackground));
+        f.add(new Feature("Keep apps alive", "Exempt apps from battery limits", this::openKeepAlive));
+        f.add(new Feature("Back up app as APK", "Save any app's APK", this::openBackup));
+        f.add(new Feature("Edit quick panel", "Reorder, add and remove tiles", this::openQuickPanel));
+        f.add(new Feature("Run a command", "Run a shell command via Shizuku", this::openRunCommand));
+        f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
+        f.add(new Feature("Settings backup & restore", "Save and restore all settings", this::openBackupRestore));
+        f.add(new Feature("Clear all app caches", "Free cached space", () -> selectTab(3)));
+        f.add(new Feature("Optimize apps", "Recompile apps so they open faster", () -> selectTab(3)));
+        f.add(new Feature("Trim storage", "Storage maintenance and TRIM", () -> selectTab(3)));
+        f.add(new Feature("Free hotspot", "Bypass carrier tether blocks", () -> selectTab(3)));
+        f.add(new Feature("Mobile data off on Wi-Fi", "Save battery on Wi-Fi", () -> selectTab(3)));
+        f.add(new Feature("Phone info", "Battery, memory, storage, system", this::openInfo));
+        f.add(new Feature("Network info", "IP addresses, Wi-Fi, DNS", this::openNetworkInfo));
+        f.add(new Feature("Charging info", "Power, current, voltage, health", this::openChargingInfo));
+        f.add(new Feature("Temperatures", "Every thermal sensor", this::openTemperatures));
+        f.add(new Feature("Device IDs", "Android ID, serial, MAC, build", this::openDeviceIds));
+        f.add(new Feature("Battery usage", "Top battery consumers", this::openBatteryUsage));
+        f.add(new Feature("Wake-ups", "What keeps the phone awake", this::openWakeups));
+        f.add(new Feature("Vibration log", "Recent vibrations", this::openVibration));
+        f.add(new Feature("App log", "An app's recent log output", this::openAppLog));
+        f.add(new Feature("Crash log", "Why an app crashed", this::openCrashes));
+        f.add(new Feature("Check for updates", "Get the latest version", () -> selectTab(4)));
+        f.add(new Feature("About", "About TinyKit", this::showAbout));
+        return f;
     }
 
     /** Android 13+ can add a tile with one tap; older versions need the panel's edit screen. */
@@ -579,6 +748,7 @@ public class MainActivity extends Activity {
 
     private View buildPrivacy() {
         LinearLayout list = vertical();
+        section(list, "Quick toggles");
         toggle(list, "Hide developer options",
                 "Apps see Developer options as off. adb and Shizuku keep working.",
                 s -> "0".equals(s.get("development_settings_enabled")),
@@ -594,14 +764,35 @@ public class MainActivity extends Activity {
                         && "0".equals(s.get("ble_scan_always_enabled")),
                 on -> "settings put global wifi_scan_always_enabled " + (on ? 0 : 1)
                         + "; settings put global ble_scan_always_enabled " + (on ? 0 : 1));
-        link(list, "Block camera & mic",
-                "Pick apps that can never use the camera or microphone.", this::openCameraMic);
+
+        section(list, "Tracking");
+        link(list, "Analytics & telemetry",
+                "Turn off Huawei and Google analytics, ad tracking and HiCloud.", this::openAnalytics);
+
+        section(list, "Networks");
+        link(list, "Saved Wi-Fi networks",
+                "See saved passwords and share any network with a QR code.", this::openWifi);
 
         return scroll(list);
     }
 
     private View buildApps() {
         LinearLayout list = vertical();
+        section(list, "Permissions");
+        link(list, "App permissions",
+                "Set any app's permissions to Real, Fake (looks granted, gets nothing) or Off.",
+                () -> openAppList("App permissions", "Pick an app to change its permissions and app-ops.",
+                        this::openAppPage));
+        link(list, "Default apps", "Set the default launcher, browser, phone and more.", this::openDefaults);
+
+        section(list, "Manage");
+        link(list, "Hide apps", "Hide apps from the launcher by disabling them.", this::openHide);
+        link(list, "Unused apps", "Apps you haven't opened in a long time.", this::openUnused);
+        link(list, "Storage by app", "Which apps take the most space.", this::openStorage);
+        link(list, "Recent access",
+                "Who used the camera, mic, location, contacts or clipboard lately.", this::openRecentAccess);
+
+        section(list, "Running & background");
         link(list, "Running apps", "Memory use of everything running. Stop any app.", this::openRunning);
         link(list, "Stop background activity",
                 "Pick apps that can't run or wake the phone in the background.", this::openBackground);
@@ -617,6 +808,16 @@ public class MainActivity extends Activity {
         LinearLayout list = vertical();
         section(list, "Quick panel");
         link(list, "Edit quick panel", "Reorder, add and remove tiles with one tap each.", this::openQuickPanel);
+        row(list, "TinyKit tiles", "Add any of TinyKit's own Quick Settings tiles.", arrow(),
+                this::openTiles, false);
+
+        section(list, "Tools");
+        row(list, "Run a command", "Run a shell command as the shell user through Shizuku.", arrow(),
+                this::openRunCommand, false);
+        row(list, "Recover deleted files", "Find files in every recycle bin, with thumbnails, and restore them.",
+                arrow(), this::openRecover, false);
+        row(list, "Settings backup & restore", "Save all system settings to a file and put them back.",
+                arrow(), this::openBackupRestore, false);
 
         section(list, "Clean & speed");
         action(list, "Clear all app caches", "Frees the space used by every app's cache.", () -> {
@@ -657,7 +858,18 @@ public class MainActivity extends Activity {
 
     private View buildInfo() {
         LinearLayout list = vertical();
+        section(list, "Device");
         row(list, "Phone info", "Battery, memory, storage and system details.", arrow(), this::openInfo, false);
+        link(list, "Network info", "IP addresses, Wi-Fi, DNS and connection type.", this::openNetworkInfo);
+        link(list, "Charging info", "Power, current, voltage and battery health.", this::openChargingInfo);
+        link(list, "Temperatures", "Every thermal sensor the phone reports.", this::openTemperatures);
+        link(list, "Device IDs", "Android ID, serial, MAC and build fingerprint.", this::openDeviceIds);
+
+        section(list, "Battery & logs");
+        link(list, "Battery usage", "Which apps have drained the most since the last charge.", this::openBatteryUsage);
+        link(list, "Wake-ups", "What has kept the phone awake.", this::openWakeups);
+        link(list, "Vibration log", "Recent vibrations and what asked for them.", this::openVibration);
+        link(list, "App log", "See an app's log output (Huawei hides most of it).", this::openAppLog);
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
         View[] update = new View[1];
         update[0] = row(list, "Check for updates", "You have version " + versionName(getPackageName()) + ".",
@@ -688,31 +900,6 @@ public class MainActivity extends Activity {
     }
 
     // ---- Per-app tools ----------------------------------------------------------------
-
-    private void openCameraMic() {
-        openPicker("Block camera & mic",
-                "Checked apps can never use the camera or microphone, even with permission.", true,
-                () -> packages(Shell.run("appops query-op CAMERA ignore").out),
-                (pkg, on) -> {
-                    String q = Shell.quote(pkg);
-                    if (on) {
-                        Matcher m = APPOP.matcher(Shell.run(
-                                "appops get " + q + " CAMERA; appops get " + q + " RECORD_AUDIO").out);
-                        SharedPreferences.Editor edit = prefs.edit();
-                        while (m.find()) {
-                            if (!m.group(2).equals("ignore")) edit.putString(pkg + "/" + m.group(1), m.group(2));
-                        }
-                        edit.apply();
-                        return error(Shell.run("appops set " + q + " CAMERA ignore; "
-                                + "appops set " + q + " RECORD_AUDIO ignore"));
-                    }
-                    String camera = prefs.getString(pkg + "/CAMERA", "default");
-                    String mic = prefs.getString(pkg + "/RECORD_AUDIO", "default");
-                    prefs.edit().remove(pkg + "/CAMERA").remove(pkg + "/RECORD_AUDIO").apply();
-                    return error(Shell.run("appops set " + q + " CAMERA " + camera + "; "
-                            + "appops set " + q + " RECORD_AUDIO " + mic));
-                });
-    }
 
     private void openBackground() {
         openPicker("Stop background activity",
@@ -781,9 +968,11 @@ public class MainActivity extends Activity {
         CheckBox system = new CheckBox(this);
         system.setText("Show system apps");
         page.addView(system);
+        final int[] sort = {0};
         TextView loading = text("Loading apps…", 14, false);
         page.addView(loading);
         ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
         push(title, page);
 
@@ -792,6 +981,7 @@ public class MainActivity extends Activity {
             row.first.setText(app.label);
             row.second.setText(app.pkg);
             row.check.setChecked(app.checked);
+            showIcon(row, app.pkg);
         });
         listView.setAdapter(adapter);
         Runnable filter = () -> {
@@ -803,8 +993,17 @@ public class MainActivity extends Activity {
                     shown.add(a);
                 }
             }
+            // Checked apps stay on top; the chip picks the order within each group.
+            Collections.sort(shown, (x, y) -> x.checked != y.checked ? (x.checked ? -1 : 1)
+                    : (sort[0] == 1 ? x.pkg.compareToIgnoreCase(y.pkg) : x.label.compareToIgnoreCase(y.label)));
             adapter.set(shown);
         };
+        if (checkable) {
+            page.addView(sortBar(new String[]{"Name", "Package"}, i -> {
+                sort[0] = i;
+                filter.run();
+            }), 3);
+        }
         search.addTextChangedListener(watcher(filter));
         system.setOnCheckedChangeListener((v, checked) -> filter.run());
         listView.setOnItemClickListener((parent, view, position, id) -> {
@@ -828,23 +1027,38 @@ public class MainActivity extends Activity {
             });
         });
 
-        worker.execute(() -> {
-            List<App> list = new ArrayList<>();
-            Set<String> checked = loader == null ? Collections.emptySet() : loader.load();
-            for (App a : installedApps()) {
-                App copy = a.copy();
-                copy.checked = checked.contains(a.pkg);
-                list.add(copy);
-            }
-            // Checked apps first so it's easy to see and undo what is on.
-            Collections.sort(list, (x, y) -> x.checked == y.checked
-                    ? x.label.compareToIgnoreCase(y.label) : (x.checked ? -1 : 1));
-            main.post(() -> {
-                all.addAll(list);
-                loading.setVisibility(View.GONE);
-                filter.run();
+        Runnable show = () -> {
+            all.clear();
+            for (App a : installedApps()) all.add(a.copy());
+            loading.setVisibility(View.GONE);
+            filter.run();
+        };
+        // Show the apps instantly (cache is preloaded at launch); the checkmarks fill in once the
+        // current state comes back from Shizuku, so there's no blank "loading" wait.
+        if (appsLoaded()) {
+            show.run();
+        } else {
+            worker.execute(() -> {
+                installedApps();
+                main.post(show);
             });
-        });
+        }
+        if (loader != null) {
+            loading.setText("Reading current state…");
+            loading.setVisibility(View.VISIBLE);
+            worker.execute(() -> {
+                Set<String> checked = loader.load();
+                main.post(() -> {
+                    for (App a : all) a.checked = checked.contains(a.pkg);
+                    loading.setVisibility(View.GONE);
+                    filter.run();
+                });
+            });
+        }
+    }
+
+    private synchronized boolean appsLoaded() {
+        return apps != null;
     }
 
     private synchronized List<App> installedApps() {
@@ -894,17 +1108,31 @@ public class MainActivity extends Activity {
             row.first.setText(p.label);
             row.second.setText(Formatter.formatShortFileSize(this, p.kb * 1024)
                     + (p.label.equals(p.name) ? "" : "  ·  " + p.name));
+            showIcon(row, p.name.split(":")[0]);
         });
         listView.setAdapter(adapter);
+        final List<Proc> procs = new ArrayList<>();
+        final int[] sort = {0};
+        Runnable apply = () -> {
+            if (sort[0] == 1) Collections.sort(procs, (x, y) -> x.label.compareToIgnoreCase(y.label));
+            else Collections.sort(procs, (x, y) -> Long.compare(y.kb, x.kb));
+            adapter.set(procs);
+        };
+        page.addView(sortBar(new String[]{"Memory", "Name"}, i -> {
+            sort[0] = i;
+            apply.run();
+        }), 2);
         Runnable[] load = new Runnable[1];
         load[0] = () -> worker.execute(() -> {
-            List<Proc> procs = runningProcesses();
+            List<Proc> found = runningProcesses();
             ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
             ((ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mem);
             main.post(() -> {
                 summary.setText("Memory: " + Formatter.formatShortFileSize(this, mem.totalMem - mem.availMem)
                         + " used of " + Formatter.formatShortFileSize(this, mem.totalMem));
-                adapter.set(procs);
+                procs.clear();
+                procs.addAll(found);
+                apply.run();
             });
         });
         listView.setOnItemClickListener((parent, view, position, id) -> {
@@ -957,16 +1185,25 @@ public class MainActivity extends Activity {
     // ---- Phone info -----------------------------------------------------------------------
 
     private void openInfo() {
+        infoPage("Phone info", this::phoneInfo);
+    }
+
+    /** A page of key/value rows; an item with a null value starts a new section. */
+    private void infoPage(String title, InfoJob job) {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), dp(24));
         page.addView(text("Loading…", 15, false));
         ScrollView scroll = new ScrollView(this);
         scroll.addView(page);
-        push("Phone info", scroll);
+        push(title, scroll);
         worker.execute(() -> {
-            List<String[]> info = phoneInfo();
+            List<String[]> info = job.run();
             main.post(() -> {
                 page.removeAllViews();
+                if (info.isEmpty()) {
+                    page.addView(note("Nothing to show."));
+                    return;
+                }
                 for (String[] item : info) {
                     if (item[1] == null) {
                         section(page, item[0]);
@@ -982,6 +1219,28 @@ public class MainActivity extends Activity {
                 }
             });
         });
+    }
+
+    /** A read-only, scrollable, monospace view of a shell command's output, with Refresh. */
+    private void openLog(String title, String command, String empty) {
+        LinearLayout page = vertical();
+        Button refresh = button("Refresh", null);
+        refresh.setPadding(dp(12), dp(4), dp(12), 0);
+        page.addView(refresh);
+        TextView log = text("Loading…", 12, false);
+        log.setTypeface(Typeface.MONOSPACE);
+        log.setTextIsSelectable(true);
+        log.setPadding(dp(16), dp(8), dp(16), dp(24));
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(log);
+        page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push(title, page);
+        Runnable load = () -> worker.execute(() -> {
+            String out = Shell.run(command).out;
+            main.post(() -> log.setText(out.trim().isEmpty() ? empty : out));
+        });
+        refresh.setOnClickListener(v -> load.run());
+        load.run();
     }
 
     private List<String[]> phoneInfo() {
@@ -1181,6 +1440,1684 @@ public class MainActivity extends Activity {
             load.run();
         }));
         load.run();
+    }
+
+    // ---- Tiles catalog --------------------------------------------------------------------------
+
+    private void openTiles() {
+        Object[][] catalog = {
+                {ShizukuTile.class, "Shizuku", "Turn Shizuku on and off.", R.drawable.ic_tile_shizuku},
+                {ScreenshotTile.class, "Screenshot", "Save a screenshot.", R.drawable.ic_tile_screenshot},
+                {Tiles.Caffeine.class, "Caffeine", "Keep the screen on for a while.", R.drawable.ic_tile_caffeine},
+                {Tiles.DevOptions.class, "Developer options", "Turn developer options on or off.", R.drawable.ic_tile_dev},
+                {Tiles.UsbDebug.class, "USB debugging", "Turn USB debugging on or off.", R.drawable.ic_tile_usb},
+                {Tiles.KillForeground.class, "Close app", "Close the app on screen.", R.drawable.ic_tile_kill},
+                {Tiles.Timeout.class, "Screen timeout", "Cycle 30 s to never.", R.drawable.ic_tile_timeout},
+                {Tiles.Grayscale.class, "Grayscale", "Grey out the whole screen.", R.drawable.ic_tile_grayscale},
+                {Tiles.AdBlock.class, "Ad-block DNS", "Block ads with Private DNS.", R.drawable.ic_tile_adblock},
+                {Tiles.HideDev.class, "Hide dev options", "Hide developer options from apps.", R.drawable.ic_tile_hidedev},
+                {Tiles.ExtraDim.class, "Extra dim", "Dim below the usual minimum.", R.drawable.ic_tile_dim},
+                {Tiles.ClearCaches.class, "Clear caches", "Free every app's cached space.", R.drawable.ic_tile_cache},
+                {Tiles.MicCam.class, "Mic & camera off", "Block the mic and camera for every app.", R.drawable.ic_tile_miccam},
+                {Tiles.Memory.class, "Free RAM", "Stop background apps.", R.drawable.ic_tile_ram},
+                {Tiles.ScreenRecord.class, "Screen record", "Record the screen to Movies.", R.drawable.ic_tile_record}};
+        LinearLayout list = vertical();
+        list.addView(note("Tap a tile to add it to your quick panel. On Android 13+ that's one tap; "
+                + "on older phones TinyKit shows where to drag it."));
+        for (Object[] t : catalog) {
+            Class<?> service = (Class<?>) t[0];
+            String name = (String) t[1];
+            String about = (String) t[2];
+            int icon = (Integer) t[3];
+            TextView add = text("Add", 14, true);
+            add.setTextColor(attrColor(android.R.attr.colorAccent));
+            add.setPadding(dp(12), 0, dp(8), 0);
+            row(list, name, about, add, () -> addTile(service, name, icon, about), false);
+        }
+        push("TinyKit tiles", scroll(list));
+    }
+
+    // ---- Run a command --------------------------------------------------------------------------
+
+    private void openRunCommand() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        page.addView(note("Runs as the shell (adb) user through Shizuku. Output and exit code show below."));
+        EditText input = new EditText(this);
+        input.setHint("e.g. getprop ro.product.model");
+        input.setSingleLine(false);
+        input.setTypeface(Typeface.MONOSPACE);
+        page.addView(input);
+        Button run = button("Run", null);
+        LinearLayout.LayoutParams full = new LinearLayout.LayoutParams(-1, -2);
+        full.setMargins(dp(4), dp(4), dp(4), dp(4));
+        page.addView(run, full);
+        TextView output = text("", 12, false);
+        output.setTypeface(Typeface.MONOSPACE);
+        output.setTextIsSelectable(true);
+        output.setPadding(dp(16), dp(8), dp(16), dp(24));
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(output);
+        page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Run a command", page);
+        run.setOnClickListener(v -> {
+            String cmd = input.getText().toString().trim();
+            if (cmd.isEmpty()) return;
+            if (!Shell.ready()) {
+                toast("Start Shizuku and allow TinyKit first.");
+                return;
+            }
+            output.setText("Running…");
+            worker.execute(() -> {
+                Shell.Result r = Shell.run(cmd);
+                main.post(() -> output.setText((r.out.isEmpty() ? "(no output)" : r.out)
+                        + "\n\n[exit " + r.code + "]"));
+            });
+        });
+    }
+
+    // ---- Recover deleted files ------------------------------------------------------------------
+
+    private static final String RECOVER_DIR = "/sdcard/Download/TinyKit/Recovered";
+    private static final String BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    private static final long THUMB_MAX = 16L * 1024 * 1024;
+    private static final Set<String> IMAGE_EXT = new HashSet<>(Arrays.asList(
+            "jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "dng"));
+
+    private static final class Deleted {
+        String path;
+        String name;
+        String source;
+        String sizeText;
+        String date;
+        long bytes;
+        long mtime;
+        boolean image;
+    }
+
+    private void openRecover() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Files found in every recycle bin and trash, with thumbnails. "
+                + "Tap one to restore it to Download/TinyKit/Recovered. Largest first.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        TextView loading = text("Searching…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Recover files", page);
+
+        RecoverAdapter adapter = new RecoverAdapter();
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            Deleted item = adapter.getItem(position);
+            new AlertDialog.Builder(this)
+                    .setTitle("Restore this file?")
+                    .setMessage(item.name + "\n\nCopied to Download/TinyKit/Recovered. The original stays in the bin.")
+                    .setPositiveButton("Restore", (d, w) -> restoreFile(item))
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+        final List<Deleted> items = new ArrayList<>();
+        final int[] sort = {0};
+        Runnable apply = () -> {
+            if (sort[0] == 1) Collections.sort(items, (x, y) -> Long.compare(y.mtime, x.mtime));
+            else if (sort[0] == 2) Collections.sort(items, (x, y) -> x.name.compareToIgnoreCase(y.name));
+            else Collections.sort(items, (x, y) -> Long.compare(y.bytes, x.bytes));
+            adapter.set(items);
+        };
+        page.addView(sortBar(new String[]{"Size", "Date", "Name"}, i -> {
+            sort[0] = i;
+            apply.run();
+        }), 1);
+        worker.execute(() -> {
+            List<Deleted> found = scanRecoverable();
+            main.post(() -> {
+                loading.setVisibility(found.isEmpty() ? View.VISIBLE : View.GONE);
+                if (found.isEmpty()) loading.setText("Nothing found in any recycle bin or trash.");
+                items.clear();
+                items.addAll(found);
+                apply.run();
+            });
+        });
+    }
+
+    /** One fast pass with {@code find -printf} over every trash location. */
+    private List<Deleted> scanRecoverable() {
+        String find = "find /sdcard/ -type f \\( -path '*/.Gallery2/recycle/*' "
+                + "-o -path '*/.File_Recycle/*' -o -path '*/.fvTrash/*' -o -path '*/.thumbnails/*' "
+                + "-o -path '*/LOST.DIR/*' -o -name '.trashed-*' \\) -printf '%s|%T@|%p\\n' 2>/dev/null";
+        long now = System.currentTimeMillis();
+        List<Deleted> items = new ArrayList<>();
+        for (String line : Shell.run(find).out.split("\n")) {
+            String[] parts = line.split("\\|", 3);
+            if (parts.length < 3) continue;
+            long bytes;
+            try {
+                bytes = Long.parseLong(parts[0].trim());
+            } catch (NumberFormatException e) {
+                continue;
+            }
+            if (bytes <= 0) continue;
+            long mtime = 0;
+            try {
+                mtime = (long) (Double.parseDouble(parts[1].trim()) * 1000);
+            } catch (NumberFormatException ignored) {
+            }
+            String path = parts[2];
+            String base = path.substring(path.lastIndexOf('/') + 1);
+            Deleted d = new Deleted();
+            d.path = path;
+            d.bytes = bytes;
+            d.mtime = mtime;
+            d.sizeText = Formatter.formatShortFileSize(this, bytes);
+            d.date = mtime > 0 ? DateUtils.getRelativeTimeSpanString(mtime, now, DateUtils.DAY_IN_MILLIS).toString() : "";
+            if (path.contains("/.Gallery2/recycle/")) {
+                d.source = "Gallery recycle bin";
+                String decoded = decodeGalleryName(base);
+                d.name = decoded != null ? decoded : base;
+                d.image = true;
+            } else if (base.startsWith(".trashed-")) {
+                d.source = "Trash";
+                d.name = base.replaceFirst("^\\.trashed-\\d+-", "");
+            } else if (path.contains("/.File_Recycle/")) {
+                d.source = "File recycle bin";
+                d.name = base;
+            } else if (path.contains("/.fvTrash/")) {
+                d.source = "Trash";
+                d.name = base;
+            } else if (path.contains("/LOST.DIR/")) {
+                d.source = "Recovered fragments";
+                d.name = base;
+            } else {
+                d.source = "Thumbnail cache";
+                d.name = base.isEmpty() ? "thumbnail" : base;
+            }
+            if (!d.image) d.image = IMAGE_EXT.contains(extensionOf(d.name));
+            items.add(d);
+            if (items.size() >= 6000) break;
+        }
+        Collections.sort(items, (x, y) -> Long.compare(y.bytes, x.bytes));
+        return items;
+    }
+
+    private static String extensionOf(String name) {
+        int dot = name.lastIndexOf('.');
+        return dot < 0 ? "" : name.substring(dot + 1).toLowerCase(Locale.ROOT);
+    }
+
+    /** Rows with a lazily-loaded thumbnail for images and a file icon otherwise. */
+    private final class RecoverAdapter extends BaseAdapter {
+        private List<Deleted> items = new ArrayList<>();
+
+        void set(List<Deleted> list) {
+            items = list;
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public int getCount() {
+            return items.size();
+        }
+
+        @Override
+        public Deleted getItem(int position) {
+            return items.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ImageView icon;
+            TextView name, sub;
+            View row;
+            if (convertView == null) {
+                LinearLayout line = new LinearLayout(MainActivity.this);
+                line.setGravity(Gravity.CENTER_VERTICAL);
+                line.setPadding(dp(16), dp(8), dp(16), dp(8));
+                icon = new ImageView(MainActivity.this);
+                icon.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(dp(48), dp(48));
+                ip.setMargins(0, 0, dp(14), 0);
+                line.addView(icon, ip);
+                LinearLayout texts = vertical();
+                name = text("", 15, false);
+                name.setMaxLines(1);
+                name.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+                sub = text("", 12, false);
+                sub.setAlpha(0.65f);
+                texts.addView(name);
+                texts.addView(sub);
+                line.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
+                line.setTag(new Object[]{icon, name, sub});
+                row = line;
+            } else {
+                row = convertView;
+                Object[] tag = (Object[]) row.getTag();
+                icon = (ImageView) tag[0];
+                name = (TextView) tag[1];
+                sub = (TextView) tag[2];
+            }
+            Deleted d = items.get(position);
+            name.setText(d.name);
+            sub.setText(d.source + "  ·  " + d.sizeText + (d.date.isEmpty() ? "" : "  ·  " + d.date));
+            icon.setTag(d.path);
+            Bitmap cached = thumbCache.get(d.path);
+            if (cached != null) {
+                icon.setImageBitmap(cached);
+            } else {
+                icon.setImageResource(d.image ? R.drawable.ic_image : R.drawable.ic_file);
+                if (d.image && d.bytes <= THUMB_MAX) loadThumb(d, icon);
+            }
+            return row;
+        }
+    }
+
+    private void loadThumb(Deleted d, ImageView icon) {
+        thumbs.execute(() -> {
+            if (thumbCache.containsKey(d.path)) return;
+            Bitmap bitmap = makeThumb(d.path);
+            if (bitmap == null) return;
+            thumbCache.put(d.path, bitmap);
+            main.post(() -> {
+                if (d.path.equals(icon.getTag())) icon.setImageBitmap(bitmap);
+            });
+        });
+    }
+
+    /**
+     * Reads a file's bytes as the shell user through Shizuku (base64, so it survives the pipe) and
+     * decodes a small thumbnail. This works for files in trash that the app can't open directly.
+     */
+    private Bitmap makeThumb(String path) {
+        Shell.Result r = Shell.run("base64 " + Shell.quote(path) + " 2>/dev/null");
+        if (!r.ok() || r.out.isEmpty()) return null;
+        try {
+            byte[] bytes = android.util.Base64.decode(r.out.replaceAll("\\s", ""), android.util.Base64.NO_WRAP);
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            if (bounds.outHeight <= 0) return null;
+            int sample = 1;
+            while (bounds.outHeight / sample > 160 || bounds.outWidth / sample > 160) sample *= 2;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = sample;
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+        } catch (RuntimeException | OutOfMemoryError e) {
+            return null;
+        }
+    }
+
+    /** Gallery2 names files as Base32 of "…|name|.ext|mime|…"; decode and rebuild the real name. */
+    private static String decodeGalleryName(String base32) {
+        try {
+            String cleaned = base32.toUpperCase(Locale.ROOT).replaceAll("[^A-Z2-7]", "");
+            if (cleaned.length() < 8) return null;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            int buffer = 0, bits = 0;
+            for (char c : cleaned.toCharArray()) {
+                buffer = (buffer << 5) | BASE32.indexOf(c);
+                bits += 5;
+                if (bits >= 8) {
+                    bits -= 8;
+                    out.write((buffer >> bits) & 0xFF);
+                }
+            }
+            String decoded = new String(out.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+            if (!decoded.contains("|")) return null;
+            String[] fields = decoded.split("\\|");
+            String name = null, ext = "";
+            for (String f : fields) {
+                if (f.contains("/") || f.equals("null") || f.isEmpty()) continue;
+                if (f.startsWith(".") && f.length() <= 6) {
+                    ext = f;
+                } else if (f.matches(".*[A-Za-z].*") && !f.matches("\\d+")) {
+                    // Prefer the longest field with letters: the real base name, not an id.
+                    if (name == null || f.length() > name.length()) name = f.trim();
+                }
+            }
+            if (name == null) return null;
+            return name.contains(".") ? name : name + ext;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private void restoreFile(Deleted item) {
+        toast("Restoring " + item.name + "…");
+        worker.execute(() -> {
+            String dest = RECOVER_DIR + "/" + fileName(item.name);
+            Shell.Result r = Shell.run("mkdir -p " + RECOVER_DIR + "; cp " + Shell.quote(item.path)
+                    + " " + Shell.quote(dest) + " && echo ok");
+            main.post(() -> {
+                if (r.ok()) {
+                    MediaScannerConnection.scanFile(this, new String[]{dest}, null, null);
+                    toast("Restored to Download/TinyKit/Recovered");
+                } else {
+                    toast(r.out.isEmpty() ? "Couldn't restore it." : r.out);
+                }
+            });
+        });
+    }
+
+    // ---- Settings backup & restore --------------------------------------------------------------
+
+    private void openBackupRestore() {
+        LinearLayout list = vertical();
+        list.addView(note("Backs up global, secure and system settings to Download/TinyKit. Restoring "
+                + "puts them back; some keys are read-only and are skipped."));
+        action(list, "Back up settings now", "Save all settings to a file.", () -> {
+            Shell.Result r = Shell.run("d=" + BACKUP_DIR + "; mkdir -p $d; f=$d/settings-$(date +%Y%m%d_%H%M%S).txt; "
+                    + "{ for t in global secure system; do settings list $t 2>/dev/null | sed \"s/^/$t /\"; done; } "
+                    + "> $f && wc -l < $f");
+            if (!r.ok()) return "Failed: " + (r.out.isEmpty() ? "couldn't write the file." : r.out);
+            return "Saved " + r.out.trim() + " settings to Download/TinyKit.";
+        });
+        link(list, "Restore settings", "Pick a backup file and apply it.", this::openRestore);
+        push("Settings backup & restore", scroll(list));
+    }
+
+    private void openRestore() {
+        worker.execute(() -> {
+            String out = Shell.run("ls -1t " + BACKUP_DIR + "/settings-*.txt 2>/dev/null").out;
+            List<String> files = new ArrayList<>();
+            for (String line : out.split("\n")) if (!line.trim().isEmpty()) files.add(line.trim());
+            main.post(() -> {
+                if (files.isEmpty()) {
+                    toast("No backups yet. Back up first.");
+                    return;
+                }
+                String[] names = new String[files.size()];
+                for (int i = 0; i < names.length; i++) {
+                    names[i] = files.get(i).substring(files.get(i).lastIndexOf('/') + 1);
+                }
+                new AlertDialog.Builder(this)
+                        .setTitle("Restore which backup?")
+                        .setItems(names, (d, which) -> confirmRestore(files.get(which)))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        });
+    }
+
+    private void confirmRestore(String file) {
+        new AlertDialog.Builder(this)
+                .setTitle("Restore settings?")
+                .setMessage("This writes the saved settings back. Read-only keys are skipped. "
+                        + "Some changes may need a restart.")
+                .setPositiveButton("Restore", (d, w) -> worker.execute(() -> {
+                    Shell.Result r = Shell.run("while read t rest; do key=${rest%%=*}; val=${rest#*=}; "
+                            + "[ -n \"$key\" ] && settings put $t \"$key\" \"$val\" 2>/dev/null; done < "
+                            + Shell.quote(file) + "; echo done");
+                    main.post(() -> toast(r.ok() ? "Settings restored." : "Failed: " + r.out));
+                }))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    // ---- Network, charging, temperatures, device IDs --------------------------------------------
+
+    private void openNetworkInfo() {
+        infoPage("Network info", () -> {
+            List<String[]> info = new ArrayList<>();
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            Network network = cm.getActiveNetwork();
+            NetworkCapabilities caps = network == null ? null : cm.getNetworkCapabilities(network);
+            LinkProperties lp = network == null ? null : cm.getLinkProperties(network);
+            info.add(new String[]{"Connection", null});
+            String type = "Offline";
+            if (caps != null) {
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) type = "Wi-Fi";
+                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) type = "Mobile data";
+                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) type = "Ethernet";
+                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) type = "VPN";
+                else type = "Other";
+            }
+            info.add(new String[]{"Type", type});
+            if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                WifiInfo wi = wm == null ? null : wm.getConnectionInfo();
+                if (wi != null) {
+                    String ssid = wi.getSSID();
+                    if (ssid != null && !ssid.contains("unknown")) {
+                        info.add(new String[]{"SSID", ssid.replace("\"", "")});
+                    }
+                    if (wi.getLinkSpeed() > 0) info.add(new String[]{"Link speed", wi.getLinkSpeed() + " Mbps"});
+                    info.add(new String[]{"Signal", wi.getRssi() + " dBm"});
+                }
+            }
+            if (lp != null) {
+                info.add(new String[]{"Addresses", null});
+                if (lp.getInterfaceName() != null) info.add(new String[]{"Interface", lp.getInterfaceName()});
+                for (LinkAddress la : lp.getLinkAddresses()) {
+                    info.add(new String[]{"IP", la.getAddress().getHostAddress()});
+                }
+                for (InetAddress dns : lp.getDnsServers()) {
+                    info.add(new String[]{"DNS", dns.getHostAddress()});
+                }
+                if (Build.VERSION.SDK_INT >= 28 && lp.getPrivateDnsServerName() != null) {
+                    info.add(new String[]{"Private DNS", lp.getPrivateDnsServerName()});
+                }
+            }
+            return info;
+        });
+    }
+
+    private void openChargingInfo() {
+        infoPage("Charging info", () -> {
+            List<String[]> info = new ArrayList<>();
+            Intent battery = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
+            info.add(new String[]{"Now", null});
+            if (battery != null) {
+                int status = battery.getIntExtra(BatteryManager.EXTRA_STATUS, 1);
+                info.add(new String[]{"Status", batteryStatus(status)});
+                int plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+                String source = plugged == BatteryManager.BATTERY_PLUGGED_AC ? "AC charger"
+                        : plugged == BatteryManager.BATTERY_PLUGGED_USB ? "USB"
+                        : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "Wireless" : "Not plugged in";
+                info.add(new String[]{"Power source", source});
+                int level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+                info.add(new String[]{"Charge", level * 100 / Math.max(scale, 1) + "%"});
+                info.add(new String[]{"Health", batteryHealth(battery.getIntExtra(BatteryManager.EXTRA_HEALTH, 1))});
+                int volt = battery.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
+                info.add(new String[]{"Voltage", volt + " mV"});
+                int current = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+                if (current != 0 && current != Integer.MIN_VALUE) {
+                    int ma = Math.abs(current) > 20_000 ? current / 1000 : current;
+                    info.add(new String[]{"Current", ma + " mA"});
+                    if (volt > 0) {
+                        info.add(new String[]{"Power", String.format(Locale.ROOT, "%.2f W",
+                                Math.abs(ma) * volt / 1_000_000f)});
+                    }
+                }
+                info.add(new String[]{"Temperature", String.format(Locale.ROOT, "%.1f °C",
+                        battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10f)});
+                String tech = battery.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY);
+                if (!TextUtils.isEmpty(tech)) info.add(new String[]{"Technology", tech});
+            }
+            if (Shell.ready()) {
+                for (String line : Shell.run("dumpsys batterystats | grep -m3 -iE "
+                        + "'Estimated battery capacity|learned battery capacity'").out.split("\n")) {
+                    int colon = line.indexOf(':');
+                    if (colon > 0) info.add(new String[]{line.substring(0, colon).trim(),
+                            line.substring(colon + 1).trim()});
+                }
+            }
+            return info;
+        });
+    }
+
+    private void openTemperatures() {
+        infoPage("Temperatures", () -> {
+            List<String[]> info = new ArrayList<>();
+            Intent battery = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (battery != null) {
+                info.add(new String[]{"Battery", String.format(Locale.ROOT, "%.1f °C",
+                        battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10f)});
+            }
+            if (Shell.ready()) {
+                String cmd = "for z in /sys/class/thermal/thermal_zone*; do t=$(cat $z/type 2>/dev/null); "
+                        + "v=$(cat $z/temp 2>/dev/null); [ -n \"$t\" ] && printf '%s\\t%s\\n' \"$t\" \"$v\"; done";
+                for (String line : Shell.run(cmd).out.split("\n")) {
+                    int tab = line.indexOf('\t');
+                    if (tab <= 0) continue;
+                    String zone = line.substring(0, tab).trim();
+                    try {
+                        float raw = Float.parseFloat(line.substring(tab + 1).trim());
+                        float c = Math.abs(raw) > 1000 ? raw / 1000f : raw;
+                        if (c > -40 && c < 200) info.add(new String[]{zone, String.format(Locale.ROOT, "%.1f °C", c)});
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+            if (info.size() <= 1) info.add(new String[]{"Sensors", "This phone doesn't expose thermal zones."});
+            return info;
+        });
+    }
+
+    private void openDeviceIds() {
+        infoPage("Device IDs", () -> {
+            List<String[]> info = new ArrayList<>();
+            info.add(new String[]{"Identifiers", null});
+            info.add(new String[]{"Android ID",
+                    Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID)});
+            if (Shell.ready()) {
+                String serial = Shell.run("getprop ro.serialno").out.trim();
+                if (!serial.isEmpty()) info.add(new String[]{"Serial", serial});
+                String mac = Shell.run("cat /sys/class/net/wlan0/address 2>/dev/null").out.trim();
+                if (!mac.isEmpty()) info.add(new String[]{"Wi-Fi MAC", mac});
+            }
+            info.add(new String[]{"IMEI", "Dial *#06# to view"});
+            info.add(new String[]{"Build", null});
+            info.add(new String[]{"Fingerprint", Build.FINGERPRINT});
+            info.add(new String[]{"Bootloader", Build.BOOTLOADER});
+            String radio = Build.getRadioVersion();
+            if (!TextUtils.isEmpty(radio)) info.add(new String[]{"Baseband", radio});
+            info.add(new String[]{"Brand / model", Build.BRAND + " " + Build.MODEL});
+            return info;
+        });
+    }
+
+    // ---- Battery usage, wake-ups, vibration, app log --------------------------------------------
+
+    private void openBatteryUsage() {
+        rowsPage("Battery usage", "Estimated drain since the last full charge, biggest first.",
+                "Couldn't read battery stats on this phone.", this::batteryUsage);
+    }
+
+    private List<String[]> batteryUsage() {
+        List<String[]> rows = new ArrayList<>();
+        String out = Shell.run("dumpsys batterystats --charged | sed -n '/Estimated power use/,/^$/p'").out;
+        Pattern line = Pattern.compile("^(.+?): ([0-9][0-9.]*)");
+        Set<String> skip = new HashSet<>(Arrays.asList("Capacity", "Computed drain", "actual drain"));
+        List<float[]> order = new ArrayList<>();
+        for (String raw : out.split("\n")) {
+            Matcher m = line.matcher(raw.trim());
+            if (!m.find()) continue;
+            String who = m.group(1).trim();
+            if (skip.contains(who)) continue;
+            float mah;
+            try {
+                mah = Float.parseFloat(m.group(2));
+            } catch (NumberFormatException e) {
+                continue;
+            }
+            if (mah < 0.01f) continue;
+            String pkg = "";
+            if (who.regionMatches(true, 0, "uid ", 0, 4)) {
+                String token = who.substring(4).trim();
+                String p = uidPackage(token);
+                pkg = p != null ? p : "";
+                who = p != null ? label(p) : token;
+            } else {
+                who = who.replace('_', ' ');
+                who = who.substring(0, 1).toUpperCase(Locale.ROOT) + who.substring(1);
+            }
+            rows.add(new String[]{who, String.format(Locale.ROOT, "%.2f mAh", mah), pkg});
+            order.add(new float[]{rows.size() - 1, mah});
+        }
+        Collections.sort(order, (x, y) -> Float.compare(y[1], x[1]));
+        List<String[]> sorted = new ArrayList<>();
+        for (float[] o : order) sorted.add(rows.get((int) o[0]));
+        return sorted;
+    }
+
+    private String uidLabel(String token) {
+        String pkg = uidPackage(token);
+        return pkg != null ? label(pkg) : token;
+    }
+
+    /** First package sharing a batterystats uid token like "u0a162" or "1000", or null. */
+    private String uidPackage(String token) {
+        int uid = -1;
+        Matcher app = Pattern.compile("u(\\d+)a(\\d+)").matcher(token);
+        if (app.find()) {
+            uid = Integer.parseInt(app.group(1)) * 100000 + 10000 + Integer.parseInt(app.group(2));
+        } else if (token.matches("\\d+")) {
+            uid = Integer.parseInt(token);
+        }
+        if (uid >= 0) {
+            String[] pkgs = getPackageManager().getPackagesForUid(uid);
+            if (pkgs != null && pkgs.length > 0) return pkgs[0];
+        }
+        return null;
+    }
+
+    private void openWakeups() {
+        rowsPage("Wake-ups", "What has held the phone awake since the last charge, longest first.",
+                "Nothing recorded since the last charge, or this phone hides it.", this::wakeups);
+    }
+
+    private List<String[]> wakeups() {
+        List<String[]> rows = new ArrayList<>();
+        String out = Shell.run("dumpsys batterystats --charged | sed -n '/All partial wake locks/,/^$/p'").out;
+        Pattern p = Pattern.compile("Wake lock (\\S+) (.+?): ([0-9hms ]+?) \\((\\d+) times\\)");
+        for (String line : out.split("\n")) {
+            Matcher m = p.matcher(line.trim());
+            if (!m.find()) continue;
+            String pkg = uidPackage(m.group(1));
+            String who = pkg != null ? label(pkg) : m.group(1);
+            String detail = "Held " + m.group(3).trim() + "  ·  " + m.group(4) + " times  ·  " + m.group(2);
+            rows.add(new String[]{who, detail, pkg != null ? pkg : ""});
+        }
+        return rows;
+    }
+
+    private void openVibration() {
+        rowsPage("Vibration log", "Recent vibrations, most recent first.",
+                "No vibrations recorded since the phone started.", this::vibrations);
+    }
+
+    private List<String[]> vibrations() {
+        String out = Shell.run("dumpsys vibrator_manager 2>/dev/null | sed -n '/Previous vibrations for usage/,$p'").out;
+        if (out.trim().isEmpty()) {
+            out = Shell.run("dumpsys vibrator 2>/dev/null | sed -n '/Previous vibrations/,$p'").out;
+        }
+        Pattern usageP = Pattern.compile("Previous vibrations for usage (\\w+)");
+        Pattern timeP = Pattern.compile("(?:start|create)Time: ([\\d-]+ [\\d:.]+)");
+        Pattern pkgP = Pattern.compile("opPkg[=:] ?([a-zA-Z0-9_.]+)");
+        Pattern effP = Pattern.compile("effect=([A-Z_]+)");
+        List<String[]> rows = new ArrayList<>();
+        String usage = "";
+        for (String raw : out.split("\n")) {
+            String line = raw.trim();
+            Matcher um = usageP.matcher(line);
+            if (um.find()) {
+                usage = capitalize(um.group(1));
+                continue;
+            }
+            if (!line.contains("Time:")) continue;
+            Matcher tm = timeP.matcher(line);
+            Matcher pm = pkgP.matcher(line);
+            Matcher em = effP.matcher(line);
+            String when = tm.find() ? tm.group(1) : "";
+            String pkg = pm.find() ? pm.group(1) : "";
+            String who = pkg.isEmpty() ? "System" : label(pkg);
+            String effect = em.find() ? capitalize(em.group(1).replace('_', ' ')) : "Vibration";
+            String detail = (usage.isEmpty() ? "" : usage + "  ·  ") + effect + (when.isEmpty() ? "" : "  ·  " + when);
+            rows.add(new String[]{who, detail, when, pkg});
+        }
+        Collections.sort(rows, (a, b) -> b[2].compareTo(a[2]));
+        List<String[]> out2 = new ArrayList<>();
+        for (String[] r : rows) out2.add(new String[]{r[0], r[1], r[3]});
+        return out2;
+    }
+
+    private static String capitalize(String value) {
+        value = value.toLowerCase(Locale.ROOT);
+        return value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1);
+    }
+
+    /** A simple two-line list page backed by a worker job that returns {line1, line2} rows. */
+    private void rowsPage(String title, String help, String empty, InfoJob job) {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView helpView = text(help, 13, false);
+        helpView.setAlpha(0.7f);
+        page.addView(helpView);
+        TextView loading = text("Loading…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push(title, page);
+        Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(a[0]);
+            row.second.setText(a[1]);
+            if (a.length > 2 && a[2] != null && a[2].contains(".")) showIcon(row, a[2]);
+        });
+        listView.setAdapter(adapter);
+        final List<String[]> original = new ArrayList<>();
+        final int[] sort = {0};
+        Runnable apply = () -> {
+            List<String[]> shown = new ArrayList<>(original);
+            if (sort[0] == 1) Collections.sort(shown, (x, y) -> x[0].compareToIgnoreCase(y[0]));
+            adapter.set(shown);
+        };
+        page.addView(sortBar(new String[]{"Default", "Name"}, i -> {
+            sort[0] = i;
+            apply.run();
+        }), 1);
+        worker.execute(() -> {
+            List<String[]> rows = job.run();
+            main.post(() -> {
+                loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
+                if (rows.isEmpty()) loading.setText(empty);
+                original.clear();
+                original.addAll(rows);
+                apply.run();
+            });
+        });
+    }
+
+    private void openAppLog() {
+        openAppList("App log", "Pick an app to see its recent log output.", pkg -> openLog(label(pkg),
+                "pid=$(pidof -s " + Shell.quote(pkg) + " 2>/dev/null); "
+                        + "if [ -n \"$pid\" ]; then logcat -d -v time --pid=$pid -t 500; "
+                        + "else logcat -d -v time -t 3000 | grep -F " + Shell.quote(pkg) + " | tail -500; fi",
+                "No log output. The app may not be running, or this phone hides app logs."));
+    }
+
+    // ---- Apps: permissions & app-ops ------------------------------------------------------------
+
+    /** Sensitive ops the per-app page offers, as {op, name, matching runtime permission}. */
+    private static final String[][] PERMISSION_OPS = {
+            {"COARSE_LOCATION", "Approximate location", "android.permission.ACCESS_COARSE_LOCATION"},
+            {"FINE_LOCATION", "Precise location", "android.permission.ACCESS_FINE_LOCATION"},
+            {"CAMERA", "Camera", "android.permission.CAMERA"},
+            {"RECORD_AUDIO", "Microphone", "android.permission.RECORD_AUDIO"},
+            {"READ_CONTACTS", "Read contacts", "android.permission.READ_CONTACTS"},
+            {"WRITE_CONTACTS", "Modify contacts", "android.permission.WRITE_CONTACTS"},
+            {"READ_CALENDAR", "Calendar", "android.permission.READ_CALENDAR"},
+            {"READ_CALL_LOG", "Call log", "android.permission.READ_CALL_LOG"},
+            {"READ_PHONE_STATE", "Phone", "android.permission.READ_PHONE_STATE"},
+            {"READ_SMS", "SMS", "android.permission.READ_SMS"},
+            {"READ_EXTERNAL_STORAGE", "Read storage", "android.permission.READ_EXTERNAL_STORAGE"},
+            {"WRITE_EXTERNAL_STORAGE", "Write storage", "android.permission.WRITE_EXTERNAL_STORAGE"},
+            {"BODY_SENSORS", "Body sensors", "android.permission.BODY_SENSORS"},
+            {"ACTIVITY_RECOGNITION", "Physical activity", "android.permission.ACTIVITY_RECOGNITION"},
+            {"POST_NOTIFICATION", "Notifications", "android.permission.POST_NOTIFICATIONS"}};
+
+    /** Quieter ops most settings screens hide, as {op, name}. */
+    private static final String[][] HIDDEN_OPS = {
+            {"READ_CLIPBOARD", "Read clipboard"},
+            {"WRITE_CLIPBOARD", "Write clipboard"},
+            {"RUN_ANY_IN_BACKGROUND", "Run in background"},
+            {"WAKE_LOCK", "Keep device awake"},
+            {"SYSTEM_ALERT_WINDOW", "Draw over other apps"},
+            {"GET_USAGE_STATS", "Read app usage"},
+            {"MANAGE_EXTERNAL_STORAGE", "All files access"},
+            {"START_FOREGROUND", "Foreground service"},
+            {"VIBRATE", "Vibrate"}};
+
+    /** Lists installed apps and calls {@code onPick} with the one tapped. */
+    private void openAppList(String title, String help, OnText onPick) {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView helpView = text(help, 14, false);
+        helpView.setAlpha(0.8f);
+        page.addView(helpView);
+        EditText search = new EditText(this);
+        search.setHint("Search apps");
+        search.setSingleLine(true);
+        page.addView(search);
+        CheckBox system = new CheckBox(this);
+        system.setText("Show system apps");
+        page.addView(system);
+        final int[] sort = {0};
+        TextView loading = text("Loading apps…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push(title, page);
+
+        List<App> all = new ArrayList<>();
+        Adapter<App> adapter = new Adapter<>(false, (app, row) -> {
+            row.first.setText(app.label);
+            row.second.setText(app.pkg);
+            showIcon(row, app.pkg);
+        });
+        listView.setAdapter(adapter);
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            List<App> shown = new ArrayList<>();
+            for (App a : all) {
+                if ((system.isChecked() || !a.system)
+                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) {
+                    shown.add(a);
+                }
+            }
+            Collections.sort(shown, (x, y) -> sort[0] == 1
+                    ? x.pkg.compareToIgnoreCase(y.pkg) : x.label.compareToIgnoreCase(y.label));
+            adapter.set(shown);
+        };
+        page.addView(sortBar(new String[]{"Name", "Package"}, i -> {
+            sort[0] = i;
+            filter.run();
+        }), 3);
+        search.addTextChangedListener(watcher(filter));
+        system.setOnCheckedChangeListener((v, checked) -> filter.run());
+        listView.setOnItemClickListener((parent, view, position, id) -> onPick.run(adapter.getItem(position).pkg));
+        Runnable show = () -> {
+            all.clear();
+            for (App a : installedApps()) all.add(a.copy());
+            loading.setVisibility(View.GONE);
+            filter.run();
+        };
+        // Instant when the cache is warm (it's preloaded at launch); otherwise load once off-thread.
+        if (appsLoaded()) {
+            show.run();
+        } else {
+            worker.execute(() -> {
+                installedApps();
+                main.post(show);
+            });
+        }
+    }
+
+    /**
+     * One app's permissions and app-ops, each settable to Real, Fake or Off.
+     *
+     * Camera, microphone and location are controlled at the UID level on Android 12+, so they use
+     * {@code appops set --uid} and a real "Off" revokes the permission; the quieter ops are plain
+     * package-level app-ops.
+     */
+    private void openAppPage(String pkg) {
+        LinearLayout list = vertical();
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPadding(dp(16), dp(16), dp(16), dp(4));
+        ImageView appIc = new ImageView(this);
+        appIc.setImageResource(android.R.drawable.sym_def_app_icon);
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(dp(52), dp(52));
+        hp.setMargins(0, 0, dp(14), 0);
+        head.addView(appIc, hp);
+        LinearLayout htext = vertical();
+        htext.addView(text(label(pkg), 20, true));
+        TextView sub = text(pkg, 12, false);
+        sub.setAlpha(0.6f);
+        htext.addView(sub);
+        head.addView(htext);
+        list.addView(head);
+        thumbs.execute(() -> {
+            Drawable d = appIcon(pkg);
+            if (d != null) main.post(() -> appIc.setImageDrawable(d));
+        });
+        list.addView(note("Tap Real, Fake or Off for each permission. Fake shows the app the "
+                + "permission as granted while it actually gets nothing."));
+        TextView loading = text("Reading permissions…", 14, false);
+        loading.setPadding(dp(16), dp(8), dp(16), 0);
+        list.addView(loading);
+        push(label(pkg), scroll(list));
+
+        worker.execute(() -> {
+            Set<String> granted = grantedPermissions(pkg);
+            Set<String> requested = requestedPermissions(pkg);
+            Map<String, String> modes = opModes(pkg);
+            main.post(() -> {
+                list.removeView(loading);
+                section(list, "Permissions");
+                boolean any = false;
+                for (String[] op : PERMISSION_OPS) {
+                    if (requested.contains(op[2]) || granted.contains(op[2])) {
+                        opRow(list, pkg, op, true, stateOf(true, granted.contains(op[2]), modes.get(op[0])));
+                        any = true;
+                    }
+                }
+                if (!any) list.addView(note("This app requests no sensitive permissions."));
+                section(list, "Hidden app-ops");
+                for (String[] op : HIDDEN_OPS) {
+                    opRow(list, pkg, op, false, stateOf(false, false, modes.get(op[0])));
+                }
+            });
+        });
+    }
+
+    /** A permission with an inline Real / Fake / Off segmented control — one tap to change. */
+    private void opRow(LinearLayout list, String pkg, String[] op, boolean permission, String initial) {
+        final String[] state = {initial};
+        LinearLayout block = vertical();
+        block.setPadding(dp(16), dp(10), dp(16), dp(6));
+        block.addView(text(op[1], 16, false));
+        LinearLayout seg = new LinearLayout(this);
+        seg.setPadding(0, dp(8), 0, 0);
+        final String[] keys = {"Real", "Fake", "Off"};
+        final TextView[] pills = new TextView[3];
+        final Runnable render = () -> {
+            for (int i = 0; i < 3; i++) stylePill(pills[i], keys[i], keys[i].equals(state[0]));
+        };
+        for (int i = 0; i < 3; i++) {
+            final String target = keys[i];
+            TextView pill = text(target, 13, true);
+            pill.setGravity(Gravity.CENTER);
+            pill.setPadding(0, dp(9), 0, dp(9));
+            pill.setOnClickListener(v -> {
+                if (!Shell.ready()) {
+                    toast("Start Shizuku and allow TinyKit first.");
+                    return;
+                }
+                if (target.equals(state[0])) return;
+                state[0] = target;
+                render.run();
+                worker.execute(() -> {
+                    String err = setOp(pkg, op, permission, target);
+                    String now = readState(pkg, op, permission);
+                    main.post(() -> {
+                        state[0] = now;
+                        render.run();
+                        if (err != null) toast(err);
+                    });
+                });
+            });
+            pills[i] = pill;
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+            lp.setMargins(i == 0 ? 0 : dp(4), 0, i == 2 ? 0 : dp(4), 0);
+            seg.addView(pill, lp);
+        }
+        block.addView(seg);
+        render.run();
+        list.addView(block);
+    }
+
+    private void stylePill(TextView pill, String key, boolean selected) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setCornerRadius(dp(8));
+        shape.setColor(selected ? stateColor(key) : 0xFF1C1C1C);
+        pill.setBackground(shape);
+        pill.setTextColor(selected ? 0xFF000000 : 0xFFBDBDBD);
+    }
+
+    private int stateColor(String state) {
+        switch (state) {
+            case "Fake": return attrColor(android.R.attr.colorAccent);
+            case "Off": return 0xFFE57373;
+            default: return 0xFF66BB6A;
+        }
+    }
+
+    private static String stateOf(boolean permission, boolean granted, String mode) {
+        if (permission) {
+            if (!granted) return "Off";
+            return "ignore".equals(mode) ? "Fake" : "Real";
+        }
+        if ("ignore".equals(mode)) return "Fake";
+        if ("deny".equals(mode)) return "Off";
+        return "Real";
+    }
+
+    private String setOp(String pkg, String[] op, boolean permission, String target) {
+        String q = Shell.quote(pkg);
+        if (permission) {
+            String perm = op[2];
+            switch (target) {
+                case "Real":
+                    return error(Shell.run("pm grant " + q + " " + perm + " 2>/dev/null; "
+                            + "appops set --uid " + q + " " + op[0] + " allow"));
+                case "Fake":
+                    return error(Shell.run("pm grant " + q + " " + perm + " 2>/dev/null; "
+                            + "appops set --uid " + q + " " + op[0] + " ignore"));
+                default:
+                    return error(Shell.run("pm revoke " + q + " " + perm + " 2>/dev/null; "
+                            + "appops set --uid " + q + " " + op[0] + " ignore"));
+            }
+        }
+        String mode = target.equals("Real") ? "allow" : target.equals("Fake") ? "ignore" : "deny";
+        return error(Shell.run("appops set " + q + " " + op[0] + " " + mode));
+    }
+
+    /** Reads one op's live state after a change. Call off the main thread. */
+    private String readState(String pkg, String[] op, boolean permission) {
+        if (permission) {
+            boolean granted = getPackageManager().checkPermission(op[2], pkg) == PackageManager.PERMISSION_GRANTED;
+            return stateOf(true, granted, opMode(pkg, op[0], true));
+        }
+        return stateOf(false, false, opMode(pkg, op[0], false));
+    }
+
+    /**
+     * Current mode of every op the page shows, in one shell round-trip. Permission ops are read at
+     * the UID level, the hidden ops at the package level; their names never overlap.
+     */
+    private Map<String, String> opModes(String pkg) {
+        String q = Shell.quote(pkg);
+        StringBuilder cmd = new StringBuilder();
+        for (String[] op : PERMISSION_OPS) {
+            cmd.append("echo \"").append(op[0]).append("=$(appops get --uid ").append(q).append(' ')
+                    .append(op[0]).append(" 2>/dev/null)\"; ");
+        }
+        for (String[] op : HIDDEN_OPS) {
+            cmd.append("echo \"").append(op[0]).append("=$(appops get ").append(q).append(' ')
+                    .append(op[0]).append(" 2>/dev/null)\"; ");
+        }
+        Map<String, String> modes = new HashMap<>();
+        for (String line : Shell.run(cmd.toString()).out.split("\n")) {
+            int eq = line.indexOf('=');
+            if (eq <= 0) continue;
+            modes.put(line.substring(0, eq), extractMode(line.substring(eq + 1)));
+        }
+        return modes;
+    }
+
+    private String opMode(String pkg, String op, boolean uid) {
+        return extractMode(Shell.run("appops get " + (uid ? "--uid " : "")
+                + Shell.quote(pkg) + " " + op + " 2>/dev/null").out);
+    }
+
+    private static String extractMode(String text) {
+        Matcher m = Pattern.compile("\\b(allow|ignore|deny|foreground|default)\\b").matcher(text);
+        return m.find() ? m.group(1) : "default";
+    }
+
+    private Set<String> requestedPermissions(String pkg) {
+        Set<String> set = new HashSet<>();
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(pkg, PackageManager.GET_PERMISSIONS);
+            if (info.requestedPermissions != null) Collections.addAll(set, info.requestedPermissions);
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
+        return set;
+    }
+
+    private Set<String> grantedPermissions(String pkg) {
+        Set<String> set = new HashSet<>();
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(pkg, PackageManager.GET_PERMISSIONS);
+            if (info.requestedPermissions != null) {
+                for (int i = 0; i < info.requestedPermissions.length; i++) {
+                    if ((info.requestedPermissionsFlags[i]
+                            & PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0) {
+                        set.add(info.requestedPermissions[i]);
+                    }
+                }
+            }
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
+        return set;
+    }
+
+    // ---- Apps: hide, defaults, usage, storage, recent access ------------------------------------
+
+    private void openHide() {
+        openPicker("Hide apps",
+                "Checked apps are disabled: they leave the launcher and stop running. Uncheck to "
+                        + "bring one back. On this phone only disabling works to hide an app.", true,
+                this::disabledPackages,
+                (pkg, on) -> error(Shell.run(on
+                        ? "pm disable-user --user 0 " + Shell.quote(pkg)
+                        : "pm enable " + Shell.quote(pkg))));
+    }
+
+    /** Roles the "Default apps" page offers, as {role, name}. */
+    private static final String[][] ROLES = {
+            {"android.app.role.HOME", "Launcher"},
+            {"android.app.role.BROWSER", "Browser"},
+            {"android.app.role.DIALER", "Phone"},
+            {"android.app.role.SMS", "SMS"},
+            {"android.app.role.ASSISTANT", "Assistant"}};
+
+    /** Common file types the "File types" section can set a default app for, as {name, mime}. */
+    private static final String[][] FILE_TYPES = {
+            {"PDF", "application/pdf"},
+            {"Images", "image/*"},
+            {"Video", "video/*"},
+            {"Audio", "audio/*"},
+            {"Plain text", "text/plain"},
+            {"Web page (HTML)", "text/html"},
+            {"ZIP archive", "application/zip"},
+            {"eBook (EPUB)", "application/epub+zip"},
+            {"Word document", "application/msword"},
+            {"Excel sheet", "application/vnd.ms-excel"},
+            {"Markdown", "text/markdown"},
+            {"CSV", "text/csv"}};
+
+    private void openDefaults() {
+        LinearLayout list = vertical();
+        list.addView(note("Tap a default to change it. Some phones only allow certain apps for a role."));
+        section(list, "Roles");
+        for (String[] role : ROLES) {
+            View[] holder = new View[1];
+            holder[0] = row(list, role[1], "…", arrow(),
+                    () -> openAppList("Set " + role[1],
+                            "Pick the app to use as the default " + role[1].toLowerCase(Locale.ROOT) + ".",
+                            pkg -> {
+                                onBackPressed();
+                                worker.execute(() -> {
+                                    String err = error(Shell.run("cmd role add-role-holder "
+                                            + role[0] + " " + Shell.quote(pkg)));
+                                    main.post(() -> {
+                                        if (err != null) toast(err);
+                                        refreshRole(role, holder[0]);
+                                    });
+                                });
+                            }), true);
+            refreshRole(role, holder[0]);
+        }
+
+        section(list, "File types");
+        list.addView(note("The app that opens each kind of file. Tap to see every app that can "
+                + "open it (Android needs root to pin a file-type default directly)."));
+        for (String[] type : FILE_TYPES) {
+            View[] holder = new View[1];
+            holder[0] = row(list, type[0], "…", arrow(), () -> pickForType(type, holder[0]), true);
+            refreshType(type, holder[0]);
+        }
+    }
+
+    /** Shows the apps that can open this type and the current default. */
+    private void pickForType(String[] type, View row) {
+        worker.execute(() -> {
+            List<App> handlers = handlersFor(type[1]);
+            main.post(() -> {
+                StringBuilder msg = new StringBuilder();
+                if (handlers.isEmpty()) {
+                    msg.append("No installed app handles this type.");
+                } else {
+                    msg.append("Apps that can open ").append(type[0]).append(':');
+                    for (App h : handlers) msg.append("\n•  ").append(h.label);
+                    msg.append("\n\nAndroid only lets the system pin a file-type default, so to set "
+                            + "one, open a ").append(type[0]).append(" file and choose \"Always\". "
+                            + "TinyKit shows the current default above.");
+                }
+                new AlertDialog.Builder(this)
+                        .setTitle(type[0])
+                        .setMessage(msg.toString())
+                        .setPositiveButton("OK", null)
+                        .show();
+            });
+        });
+    }
+
+    /** Apps (with their handling component) that can open a content type, as default-launchable. */
+    private List<App> handlersFor(String mime) {
+        Intent intent = new Intent(Intent.ACTION_VIEW).setType(mime);
+        List<App> result = new ArrayList<>();
+        PackageManager pm = getPackageManager();
+        for (ResolveInfo info : pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)) {
+            if (info.activityInfo == null) continue;
+            App a = new App();
+            a.pkg = info.activityInfo.packageName;
+            a.component = info.activityInfo.name;
+            a.label = String.valueOf(info.loadLabel(pm));
+            result.add(a);
+        }
+        return result;
+    }
+
+    private void refreshType(String[] type, View row) {
+        TextView sub = (TextView) row.getTag();
+        worker.execute(() -> {
+            String out = Shell.run("cmd package resolve-activity --brief -a android.intent.action.VIEW -t "
+                    + Shell.quote(type[1]) + " 2>/dev/null").out;
+            Matcher m = PACKAGE.matcher(out);
+            String pkg = m.find() ? m.group() : null;
+            String text;
+            if (pkg == null || out.contains("ResolverActivity") || out.toLowerCase(Locale.ROOT).contains("none")) {
+                text = "Ask every time";
+            } else {
+                text = label(pkg);
+            }
+            main.post(() -> sub.setText(text));
+        });
+    }
+
+    private void refreshRole(String[] role, View row) {
+        TextView sub = (TextView) row.getTag();
+        worker.execute(() -> {
+            // Stock Android has get-role-holders; EMUI doesn't, so read dumpsys role instead.
+            String out = Shell.run("cmd role get-role-holders " + role[0]).out;
+            if (out.contains("Unknown command") || out.trim().isEmpty()) {
+                out = Shell.run("dumpsys role | grep -A3 'name=" + role[0] + "' | grep -m1 holders=").out;
+            }
+            Matcher m = PACKAGE.matcher(out);
+            String holder = m.find() ? m.group() : null;
+            String text = holder == null ? "None set" : label(holder);
+            main.post(() -> sub.setText(text));
+        });
+    }
+
+    private void openUnused() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Longest-unused apps first. Tap one to open its settings.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        TextView loading = text("Reading usage…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Unused apps", page);
+
+        Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(a[1]);
+            row.second.setText(a[2]);
+            showIcon(row, a[0]);
+        });
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> openAppInfo(adapter.getItem(position)[0]));
+        final List<String[]> rows = new ArrayList<>();
+        final int[] sort = {0};
+        Runnable apply = () -> {
+            if (sort[0] == 1) {
+                Collections.sort(rows, (x, y) -> x[1].compareToIgnoreCase(y[1]));
+            } else {
+                Collections.sort(rows, (x, y) -> Long.compare(Long.parseLong(x[3]), Long.parseLong(y[3])));
+            }
+            adapter.set(rows);
+        };
+        page.addView(sortBar(new String[]{"Least used", "Name"}, i -> {
+            sort[0] = i;
+            apply.run();
+        }), 2);
+        worker.execute(() -> {
+            if (!Tweak.usageAllowed(this)) Tweak.grantSelf(this);
+            Map<String, Long> used = lastUsed();
+            List<String[]> found = new ArrayList<>();
+            long now = System.currentTimeMillis();
+            for (App a : launchableApps()) {
+                long last = used.containsKey(a.pkg) ? used.get(a.pkg) : 0L;
+                String when = last == 0 ? "Never opened"
+                        : "Last opened " + DateUtils.getRelativeTimeSpanString(last, now, DateUtils.DAY_IN_MILLIS);
+                found.add(new String[]{a.pkg, a.label, when, String.valueOf(last)});
+            }
+            main.post(() -> {
+                loading.setVisibility(found.isEmpty() ? View.VISIBLE : View.GONE);
+                if (found.isEmpty()) loading.setText("Couldn't read usage. Start Shizuku so TinyKit can turn it on.");
+                rows.clear();
+                rows.addAll(found);
+                apply.run();
+            });
+        });
+    }
+
+    private Map<String, Long> lastUsed() {
+        Map<String, Long> map = new HashMap<>();
+        try {
+            UsageStatsManager usm = (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+            long now = System.currentTimeMillis();
+            List<UsageStats> stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_YEARLY,
+                    now - 365L * 24 * 3600 * 1000, now);
+            if (stats != null) {
+                for (UsageStats s : stats) {
+                    Long prev = map.get(s.getPackageName());
+                    if (prev == null || s.getLastTimeUsed() > prev) map.put(s.getPackageName(), s.getLastTimeUsed());
+                }
+            }
+        } catch (RuntimeException ignored) {
+        }
+        return map;
+    }
+
+    private List<App> launchableApps() {
+        List<App> list = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        Intent launcher = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        PackageManager pm = getPackageManager();
+        for (ResolveInfo info : pm.queryIntentActivities(launcher, 0)) {
+            String pkg = info.activityInfo.packageName;
+            if (pkg.equals(getPackageName()) || !seen.add(pkg)) continue;
+            App a = new App();
+            a.pkg = pkg;
+            a.label = String.valueOf(info.activityInfo.applicationInfo.loadLabel(pm));
+            list.add(a);
+        }
+        return list;
+    }
+
+    private void openStorage() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView summary = text("Measuring…", 15, true);
+        page.addView(summary);
+        ListView listView = new ListView(this);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Storage by app", page);
+
+        Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(a[1]);
+            row.second.setText(a[2]);
+            showIcon(row, a[0]);
+        });
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> openAppInfo(adapter.getItem(position)[0]));
+        final List<String[]> rows = new ArrayList<>();
+        final int[] sort = {0};
+        Runnable apply = () -> {
+            if (sort[0] == 1) {
+                Collections.sort(rows, (x, y) -> x[1].compareToIgnoreCase(y[1]));
+            } else {
+                Collections.sort(rows, (x, y) -> Long.compare(Long.parseLong(y[3]), Long.parseLong(x[3])));
+            }
+            adapter.set(rows);
+        };
+        page.addView(sortBar(new String[]{"Size", "Name"}, i -> {
+            sort[0] = i;
+            apply.run();
+        }), 1);
+        worker.execute(() -> {
+            if (!Tweak.usageAllowed(this)) Tweak.grantSelf(this);
+            StorageStatsManager ssm = (StorageStatsManager) getSystemService(STORAGE_STATS_SERVICE);
+            List<String[]> found = new ArrayList<>();
+            long total = 0;
+            for (App a : installedApps()) {
+                try {
+                    StorageStats s = ssm.queryStatsForPackage(StorageManager.UUID_DEFAULT, a.pkg,
+                            Process.myUserHandle());
+                    long bytes = s.getAppBytes() + s.getDataBytes() + s.getCacheBytes();
+                    total += bytes;
+                    found.add(new String[]{a.pkg, a.label, Formatter.formatShortFileSize(this, bytes),
+                            String.valueOf(bytes)});
+                } catch (Exception ignored) {
+                }
+            }
+            long used = total;
+            main.post(() -> {
+                summary.setText(found.isEmpty()
+                        ? "Couldn't measure storage. Start Shizuku so TinyKit can turn usage access on."
+                        : "Apps use " + Formatter.formatShortFileSize(this, used) + " in total");
+                rows.clear();
+                rows.addAll(found);
+                apply.run();
+            });
+        });
+    }
+
+    private void openRecentAccess() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Most recent first, from the system's app-ops record.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        TextView loading = text("Reading…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Recent access", page);
+
+        Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(a[0]);
+            row.second.setText(a[1] + "  ·  " + a[2]);
+            showIcon(row, a[3]);
+        });
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> openAppInfo(adapter.getItem(position)[3]));
+        worker.execute(() -> {
+            List<String[]> rows = recentAccess();
+            main.post(() -> {
+                loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
+                if (rows.isEmpty()) loading.setText("This phone doesn't record recent access, or nothing recent.");
+                adapter.set(rows);
+            });
+        });
+    }
+
+    private static final String[][] ACCESS_OPS = {
+            {"CAMERA", "Camera"}, {"RECORD_AUDIO", "Microphone"},
+            {"FINE_LOCATION", "Location"}, {"COARSE_LOCATION", "Location"},
+            {"READ_CONTACTS", "Contacts"}, {"READ_CLIPBOARD", "Clipboard"}};
+
+    /** Parses {@code dumpsys appops} for recent use of sensitive ops. Best-effort across phones. */
+    private List<String[]> recentAccess() {
+        Map<String, String> friendly = new HashMap<>();
+        for (String[] op : ACCESS_OPS) friendly.put(op[0], op[1]);
+        Pattern pkgLine = Pattern.compile("Package ([a-zA-Z0-9_.]+):");
+        Pattern opLine = Pattern.compile("^([A-Z_]+) \\(");
+        Pattern when = Pattern.compile("(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2})");
+        List<String[]> rows = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        String pkg = null, op = null;
+        for (String raw : Shell.run("dumpsys appops").out.split("\n")) {
+            String line = raw.trim();
+            Matcher pm = pkgLine.matcher(line);
+            if (pm.find()) {
+                pkg = pm.group(1);
+                op = null;
+                continue;
+            }
+            Matcher om = opLine.matcher(line);
+            if (om.find()) {
+                op = om.group(1);
+                continue;
+            }
+            if (pkg != null && op != null && friendly.containsKey(op) && line.startsWith("Access:")) {
+                Matcher wm = when.matcher(line);
+                if (wm.find() && seen.add(pkg + "/" + op)) {
+                    rows.add(new String[]{label(pkg), friendly.get(op), wm.group(1), pkg});
+                }
+                op = null;
+            }
+        }
+        Collections.sort(rows, (x, y) -> y[2].compareTo(x[2]));
+        return rows;
+    }
+
+    private void openAppInfo(String pkg) {
+        try {
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + pkg)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (RuntimeException e) {
+            toast("Couldn't open app settings.");
+        }
+    }
+
+    // ---- Privacy: analytics & tracking ----------------------------------------------------------
+
+    /** Huawei's background diagnostics and telemetry packages (matched by name). Never com.huawei.hwid. */
+    private static final String[] HUAWEI_DIAG = {
+            "com.huawei.hiview", "hiviewtunnel", "huawei.android.chr", "hwdetectrepair", "hwdiagnosis",
+            "recsys", "huawei.magazine"};
+    private static final String[] HICLOUD = {"hicloud"};
+
+    private void openAnalytics() {
+        LinearLayout list = vertical();
+        list.addView(note("\"Blocked\" stops the service; turn it back on here any time. "
+                + "TinyKit never touches your Huawei ID sign-in."));
+        section(list, "Huawei");
+        privacySwitch(list, "User Experience Programme",
+                "Stops Huawei usage analytics and app analytics.",
+                () -> "0".equals(sget("secure", "user_experience_involved"))
+                        && "0".equals(sget("secure", "hw_app_analytics_state")),
+                block -> error(Shell.run("settings put secure user_experience_involved " + (block ? 0 : 1)
+                        + "; settings put secure hw_app_analytics_state " + (block ? 0 : 1))));
+        privacySwitch(list, "Diagnostics & telemetry",
+                "Disables Huawei's background logging and reporting apps.",
+                pkgChecker(HUAWEI_DIAG), pkgApplier(HUAWEI_DIAG));
+        privacySwitch(list, "HiCloud",
+                "Disables HiCloud sync services. Your Huawei ID sign-in stays.",
+                pkgChecker(HICLOUD), pkgApplier(HICLOUD));
+        section(list, "Google");
+        privacySwitch(list, "Limit ad personalisation",
+                "Asks apps not to use the Google advertising ID for targeting.",
+                () -> "1".equals(sget("secure", "limit_ad_tracking")),
+                block -> error(Shell.run("settings put secure limit_ad_tracking " + (block ? 1 : 0))));
+        push("Analytics & telemetry", scroll(list));
+    }
+
+    /** A switch backed by a worker-thread check and change, used for the analytics toggles. */
+    private void privacySwitch(LinearLayout list, String title, String summary, Checker checker, Applier applier) {
+        Switch view = new Switch(this);
+        view.setClickable(false);
+        view.setFocusable(false);
+        View row = row(list, title, summary, view, () -> {
+            boolean block = !view.isChecked();
+            view.setChecked(block);
+            view.setEnabled(false);
+            worker.execute(() -> {
+                String err = applier.apply(block);
+                Boolean now = checker.check();
+                main.post(() -> {
+                    view.setEnabled(true);
+                    if (now != null) view.setChecked(now);
+                    if (err != null) toast(err);
+                });
+            });
+        }, true);
+        TextView sub = (TextView) row.getTag();
+        worker.execute(() -> {
+            Boolean state = checker.check();
+            main.post(() -> {
+                if (state == null) {
+                    row.setEnabled(false);
+                    row.setAlpha(0.4f);
+                    view.setEnabled(false);
+                    sub.setText(summary + "  ·  Not on this phone");
+                } else {
+                    view.setChecked(state);
+                }
+            });
+        });
+    }
+
+    private Checker pkgChecker(String[] patterns) {
+        return () -> {
+            List<String> pkgs = matchingPackages(patterns);
+            if (pkgs.isEmpty()) return null;
+            Set<String> disabled = disabledPackages();
+            for (String pkg : pkgs) {
+                if (!disabled.contains(pkg)) return false;
+            }
+            return true;
+        };
+    }
+
+    private Applier pkgApplier(String[] patterns) {
+        return block -> {
+            StringBuilder cmd = new StringBuilder();
+            for (String pkg : matchingPackages(patterns)) {
+                cmd.append(block ? "pm disable-user --user 0 " : "pm enable ").append(Shell.quote(pkg)).append("; ");
+            }
+            if (cmd.length() == 0) return null;
+            return error(Shell.run(cmd.toString()));
+        };
+    }
+
+    /** Installed packages whose name contains one of the patterns, never the Huawei ID package. */
+    private List<String> matchingPackages(String[] patterns) {
+        List<String> result = new ArrayList<>();
+        for (App a : installedApps()) {
+            if (a.pkg.contains("hwid")) continue;
+            for (String pattern : patterns) {
+                if (a.pkg.contains(pattern)) {
+                    result.add(a.pkg);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    private Set<String> disabledPackages() {
+        Set<String> set = new HashSet<>();
+        for (String line : Shell.run("pm list packages -d | sed 's/^package://'").out.split("\n")) {
+            String pkg = line.trim();
+            if (!pkg.isEmpty()) set.add(pkg);
+        }
+        return set;
+    }
+
+    private String sget(String table, String key) {
+        return Shell.run("settings get " + table + " " + key).out.trim();
+    }
+
+    // ---- Privacy: saved Wi-Fi --------------------------------------------------------------------
+
+    private void openWifi() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Tap a network to see its password and a QR code to share it.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        EditText search = new EditText(this);
+        search.setHint("Search networks");
+        search.setSingleLine(true);
+        page.addView(search);
+        TextView loading = text("Reading saved networks…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Saved Wi-Fi", page);
+
+        Adapter<String[]> adapter = new Adapter<>(false, (n, row) -> {
+            row.first.setText(n[0]);
+            row.second.setText("nopass".equals(n[1]) ? "Open network"
+                    : n[2].isEmpty() ? n[1] : n[1] + "  ·  " + n[2]);
+        });
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> showWifi(adapter.getItem(position)));
+        List<String[]> all = new ArrayList<>();
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            List<String[]> shown = new ArrayList<>();
+            for (String[] n : all) if (n[0].toLowerCase(Locale.ROOT).contains(q)) shown.add(n);
+            adapter.set(shown);
+        };
+        search.addTextChangedListener(watcher(filter));
+        worker.execute(() -> {
+            List<String[]> nets = readWifi();
+            main.post(() -> {
+                all.addAll(nets);
+                filter.run();
+                loading.setVisibility(nets.isEmpty() ? View.VISIBLE : View.GONE);
+                if (nets.isEmpty()) {
+                    loading.setText("No saved networks, or this phone doesn't allow reading them.");
+                }
+            });
+        });
+    }
+
+    /** Runs {@link WifiDump} as the shell user through Shizuku and parses its lines. */
+    private List<String[]> readWifi() {
+        String apk = Shell.run("pm path " + getPackageName() + " | head -1 | sed 's/^package://'").out.trim();
+        List<String[]> nets = new ArrayList<>();
+        if (apk.isEmpty()) return nets;
+        Shell.Result r = Shell.run("CLASSPATH=" + Shell.quote(apk)
+                + " app_process /system/bin io.github.order52.tinykit.WifiDump");
+        if (!r.ok()) return nets;
+        for (String line : r.out.split("\n")) {
+            String[] parts = line.split("\t", -1);
+            if (parts.length >= 3 && !parts[0].trim().isEmpty()) {
+                nets.add(new String[]{parts[0], parts[1], parts[2]});
+            }
+        }
+        Collections.sort(nets, (a, b) -> a[0].compareToIgnoreCase(b[0]));
+        return nets;
+    }
+
+    private void showWifi(String[] net) {
+        String ssid = net[0], type = net[1], password = net[2];
+        LinearLayout box = vertical();
+        box.setPadding(dp(24), dp(12), dp(24), 0);
+        box.setGravity(Gravity.CENTER_HORIZONTAL);
+        Bitmap qr = qrBitmap(wifiQr(ssid, type, password), dp(240));
+        if (qr != null) {
+            ImageView image = new ImageView(this);
+            image.setImageBitmap(qr);
+            box.addView(image, new LinearLayout.LayoutParams(dp(240), dp(240)));
+        }
+        TextView detail = text("nopass".equals(type) ? "Open network — no password" : "Password: " + password, 16, false);
+        detail.setTextIsSelectable(true);
+        detail.setPadding(0, dp(16), 0, 0);
+        detail.setGravity(Gravity.CENTER);
+        box.addView(detail);
+        new AlertDialog.Builder(this)
+                .setTitle(ssid)
+                .setView(box)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Copy password", "nopass".equals(type) ? null : (d, w) -> {
+                    ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+                            .setPrimaryClip(android.content.ClipData.newPlainText("Wi-Fi password", password));
+                    toast("Password copied");
+                })
+                .show();
+    }
+
+    /** The WIFI: payload a phone camera reads to join a network. */
+    private static String wifiQr(String ssid, String type, String password) {
+        String auth = "nopass".equals(type) ? "nopass" : "WEP".equals(type) ? "WEP" : "WPA";
+        return "WIFI:T:" + auth + ";S:" + qrEscape(ssid) + ";P:" + qrEscape(password) + ";;";
+    }
+
+    private static String qrEscape(String value) {
+        StringBuilder out = new StringBuilder();
+        for (char c : value.toCharArray()) {
+            if (c == '\\' || c == ';' || c == ',' || c == ':' || c == '"') out.append('\\');
+            out.append(c);
+        }
+        return out.toString();
+    }
+
+    /** Renders a QR code to a square bitmap with a white quiet zone, or null if it won't fit. */
+    private Bitmap qrBitmap(String text, int sizePx) {
+        Qr qr = Qr.encode(text);
+        if (qr == null) return null;
+        int quiet = 4;
+        int modules = qr.size + quiet * 2;
+        int scale = Math.max(1, sizePx / modules);
+        int dim = modules * scale;
+        Bitmap bitmap = Bitmap.createBitmap(dim, dim, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+        Paint paint = new Paint();
+        paint.setColor(Color.BLACK);
+        for (int y = 0; y < qr.size; y++) {
+            for (int x = 0; x < qr.size; x++) {
+                if (qr.get(x, y)) {
+                    float px = (x + quiet) * scale;
+                    float py = (y + quiet) * scale;
+                    canvas.drawRect(px, py, px + scale, py + scale, paint);
+                }
+            }
+        }
+        return bitmap;
     }
 
     // ---- Quick panel editor ---------------------------------------------------------------------
@@ -1820,6 +3757,31 @@ public class MainActivity extends Activity {
         return view;
     }
 
+    /**
+     * A generic "Sort" control: shows the current choice and opens a menu of options when tapped,
+     * calling onSelect with the chosen index. Reused by every sortable list.
+     */
+    private View sortBar(String[] options, OnPage onSelect) {
+        final int[] sel = {0};
+        TextView button = text("", 13, true);
+        button.setTextColor(attrColor(android.R.attr.colorAccent));
+        button.setPadding(dp(16), dp(10), dp(16), dp(8));
+        button.setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
+        Runnable render = () -> button.setText("Sort:  " + options[sel[0]] + "  ▾");
+        button.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Sort by")
+                .setSingleChoiceItems(options, sel[0], (d, which) -> {
+                    d.dismiss();
+                    sel[0] = which;
+                    render.run();
+                    onSelect.run(which);
+                })
+                .setNegativeButton("Cancel", null)
+                .show());
+        render.run();
+        return button;
+    }
+
     // ---- Rows and widgets ---------------------------------------------------------------------------
 
     private void section(LinearLayout list, String title) {
@@ -1912,6 +3874,7 @@ public class MainActivity extends Activity {
     /** A list row with up to three lines and an optional checkbox. */
     private final class Row {
         final LinearLayout view = new LinearLayout(MainActivity.this);
+        final ImageView icon = new ImageView(MainActivity.this);
         final TextView first = text("", 16, false);
         final TextView second = text("", 13, false);
         final TextView third = text("", 14, false);
@@ -1920,6 +3883,10 @@ public class MainActivity extends Activity {
         Row(boolean checkable) {
             view.setGravity(Gravity.CENTER_VERTICAL);
             view.setPadding(dp(16), dp(10), dp(8), dp(10));
+            icon.setVisibility(View.GONE);
+            LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(dp(40), dp(40));
+            ip.setMargins(0, 0, dp(14), 0);
+            view.addView(icon, ip);
             LinearLayout texts = vertical();
             second.setAlpha(0.7f);
             texts.addView(first);
@@ -1930,6 +3897,34 @@ public class MainActivity extends Activity {
             check.setFocusable(false);
             if (checkable) view.addView(check);
             view.setTag(this);
+        }
+    }
+
+    /** Shows an app's icon in a row, loaded off the main thread and cached. */
+    private void showIcon(Row row, String pkg) {
+        row.icon.setVisibility(View.VISIBLE);
+        row.icon.setTag(pkg);
+        Drawable cached = iconCache.get(pkg);
+        if (cached != null) {
+            row.icon.setImageDrawable(cached);
+            return;
+        }
+        row.icon.setImageResource(android.R.drawable.sym_def_app_icon);
+        thumbs.execute(() -> {
+            Drawable d = appIcon(pkg);
+            if (d == null) return;
+            iconCache.put(pkg, d);
+            main.post(() -> {
+                if (pkg.equals(row.icon.getTag())) row.icon.setImageDrawable(d);
+            });
+        });
+    }
+
+    private Drawable appIcon(String pkg) {
+        try {
+            return getPackageManager().getApplicationIcon(pkg);
+        } catch (PackageManager.NameNotFoundException | RuntimeException e) {
+            return null;
         }
     }
 
@@ -1967,6 +3962,8 @@ public class MainActivity extends Activity {
         public View getView(int position, View convertView, ViewGroup parent) {
             Row row = convertView == null ? new Row(checkable) : (Row) convertView.getTag();
             row.third.setText("");
+            row.icon.setVisibility(View.GONE);
+            row.icon.setTag(null);
             binder.bind(getItem(position), row);
             row.second.setVisibility(TextUtils.isEmpty(row.second.getText()) ? View.GONE : View.VISIBLE);
             row.third.setVisibility(TextUtils.isEmpty(row.third.getText()) ? View.GONE : View.VISIBLE);

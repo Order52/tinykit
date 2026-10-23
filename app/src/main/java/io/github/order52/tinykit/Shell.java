@@ -47,6 +47,16 @@ final class Shell {
         return running() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
     }
 
+    /**
+     * Waits up to two seconds for Shizuku's binder to connect, then reports whether the shell is
+     * usable. Tiles run when the quick panel opens, which can be before the binder arrives, so they
+     * call this off the main thread instead of giving up straight away.
+     */
+    static boolean await() {
+        for (int i = 0; i < 20 && !ready(); i++) android.os.SystemClock.sleep(100);
+        return ready();
+    }
+
     /** Runs {@code command} with sh; stdout and stderr are merged. */
     static Result run(String command) {
         if (!ready()) return new Result(-1, "Shizuku is not available.");

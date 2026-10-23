@@ -10,8 +10,22 @@
     <!-- Only used when "Check for updates" is tapped. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Network info page reads the active connection's addresses and Wi-Fi state. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
     <!-- Start Shizuku by asking Termux to run the shizuku-termux command (granted by the user). -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+    <!-- Unused apps and recent access read usage stats; the appop is granted through Shizuku. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Toggles and tiles keep working with Shizuku off: granted once through Shizuku. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="false"
@@ -57,6 +71,56 @@
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
+        </service>
+
+        <!-- The rest of the Quick Settings tiles. All share one base class. -->
+        <service android:name=".Tiles$Caffeine" android:exported="true" android:icon="@drawable/ic_tile_caffeine" android:label="Caffeine" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$DevOptions" android:exported="true" android:icon="@drawable/ic_tile_dev" android:label="Developer options" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$UsbDebug" android:exported="true" android:icon="@drawable/ic_tile_usb" android:label="USB debugging" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$KillForeground" android:exported="true" android:icon="@drawable/ic_tile_kill" android:label="Close app" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".Tiles$Timeout" android:exported="true" android:icon="@drawable/ic_tile_timeout" android:label="Screen timeout" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".Tiles$Grayscale" android:exported="true" android:icon="@drawable/ic_tile_grayscale" android:label="Grayscale" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$AdBlock" android:exported="true" android:icon="@drawable/ic_tile_adblock" android:label="Ad-block DNS" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$HideDev" android:exported="true" android:icon="@drawable/ic_tile_hidedev" android:label="Hide dev options" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$ExtraDim" android:exported="true" android:icon="@drawable/ic_tile_dim" android:label="Extra dim" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$ClearCaches" android:exported="true" android:icon="@drawable/ic_tile_cache" android:label="Clear caches" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".Tiles$MicCam" android:exported="true" android:icon="@drawable/ic_tile_miccam" android:label="Mic &amp; camera off" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$Memory" android:exported="true" android:icon="@drawable/ic_tile_ram" android:label="Free RAM" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".Tiles$ScreenRecord" android:exported="true" android:icon="@drawable/ic_tile_record" android:label="Screen record" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
 
         <!-- Termux's reply to a tile tap. -->
