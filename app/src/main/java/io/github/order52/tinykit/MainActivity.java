@@ -74,7 +74,10 @@ public class MainActivity extends Activity {
 
     private static final int REQUEST_SHIZUKU = 1;
     private static final String SHIZUKU_PKG = "moe.shizuku.privileged.api";
-    private static final String SHIZUKU_DOWNLOAD = "https://shizuku.rikka.app/download/";
+    // thedjchi's fork adds a Watchdog that restarts Shizuku when Android kills it.
+    private static final String SHIZUKU_DOWNLOAD = "https://github.com/thedjchi/Shizuku/releases/latest";
+    private static final String SHIZUKU_ORIGINAL = "https://shizuku.rikka.app/download/";
+    private static final String TERMUX_DOWNLOAD = "https://f-droid.org/packages/com.termux/";
     private static final String SHIZUKU_TERMUX = "https://github.com/Order52/shizuku-termux";
     private static final String REPO = "https://github.com/Order52/tinykit";
     private static final String TERMUX = "com.termux";
@@ -297,7 +300,7 @@ public class MainActivity extends Activity {
         if (!installed) {
             shizukuText.setText("Shizuku is not installed");
             shizukuButton.setText("Get Shizuku");
-            shizukuButton.setOnClickListener(v -> openUrl(SHIZUKU_DOWNLOAD));
+            shizukuButton.setOnClickListener(v -> showInstall());
         } else if (running && !ready) {
             shizukuText.setText("Shizuku is running. Allow TinyKit to use it.");
             shizukuButton.setText("Allow");
@@ -506,7 +509,45 @@ public class MainActivity extends Activity {
         help.setAlpha(0.6f);
         help.setPadding(dp(16), dp(8), dp(16), 0);
         list.addView(help);
+
+        section(list, "Quick Settings");
+        row(list, "Shizuku tile", "Turn Shizuku on and off from the quick panel with one tap.",
+                arrow(), this::addTile, false);
+        row(list, "Install Shizuku & Termux", "Recommended versions that keep running in the background.",
+                arrow(), this::showInstall, false);
         return scroll(list);
+    }
+
+    /** Android 13+ can add the tile with one tap; older versions need the panel's edit screen. */
+    private void addTile() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            getSystemService(android.app.StatusBarManager.class).requestAddTileService(
+                    new android.content.ComponentName(this, ShizukuTile.class), "Shizuku",
+                    android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_tile_shizuku),
+                    getMainExecutor(), result -> {
+                    });
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Add the Shizuku tile")
+                .setMessage("1. Pull down the quick panel.\n2. Tap the edit (pencil) button.\n"
+                        + "3. Drag \"Shizuku\" into your tiles.\n\nOne tap turns Shizuku on or off. "
+                        + "It uses the auth token when it's set, otherwise Termux with shizuku-termux.")
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    private void showInstall() {
+        new AlertDialog.Builder(this)
+                .setTitle("Install")
+                .setItems(new String[]{
+                        "Shizuku (thedjchi's fork, recommended): its Watchdog restarts Shizuku if Android kills it",
+                        "Termux from F-Droid: needed to start Shizuku without a computer",
+                        "shizuku-termux: the one-line setup for Termux",
+                        "Original Shizuku"}, (d, which) -> openUrl(new String[]{
+                        SHIZUKU_DOWNLOAD, TERMUX_DOWNLOAD, SHIZUKU_TERMUX, SHIZUKU_ORIGINAL}[which]))
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private View scroll(LinearLayout list) {

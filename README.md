@@ -2,11 +2,11 @@
 
 [![Release](https://img.shields.io/github/v/release/Order52/tinykit?label=release)](https://github.com/Order52/tinykit/releases/latest)
 [![Android 7+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
-[![APK size](https://img.shields.io/badge/APK-39%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
+[![APK size](https://img.shields.io/badge/APK-42%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Small but useful Android tweaks in one clean menu, powered by [Shizuku](https://shizuku.rikka.app/).**
-No root, no ads or tracking, nothing running in the background. 39 KB.
+No root, no ads or tracking, nothing running in the background. 42 KB.
 Pure black theme, with everything one tap away in the bottom bar: Shizuku, Privacy, Apps, System, Info.
 
 ## Features
@@ -15,6 +15,11 @@ Pure black theme, with everything one tap away in the bottom bar: Shizuku, Priva
 - **Start** and **Stop** Shizuku from TinyKit. With Shizuku's auth token set (from Shizuku's
   settings), both go straight to Shizuku, and Stop works with its Watchdog. Without it, Start uses
   Termux with [shizuku-termux](https://github.com/Order52/shizuku-termux).
+- **Shizuku Quick Settings tile**: one tap turns Shizuku on or off and the tile shows whether it's
+  running. Termux is only used for that moment; nothing stays running afterwards.
+- **Install** links: [thedjchi's Shizuku fork](https://github.com/thedjchi/Shizuku/releases/latest)
+  (its Watchdog restarts Shizuku if Android kills it) and
+  [Termux from F-Droid](https://f-droid.org/packages/com.termux/).
 
 **Privacy**
 - **Hide developer options**: apps see Developer options as off; adb and Shizuku keep working.
@@ -49,7 +54,8 @@ Everything is a normal system setting or app-ops change, so it can be undone fro
 ## Requirements
 
 - Android 7.0 or newer.
-- [Shizuku](https://shizuku.rikka.app/download/).
+- Shizuku: [thedjchi's fork](https://github.com/thedjchi/Shizuku/releases/latest) (recommended)
+  or the [original](https://shizuku.rikka.app/download/).
 - To start Shizuku from the phone with the **Start Shizuku** button: Termux with
   [shizuku-termux](https://github.com/Order52/shizuku-termux) installed. The first time, allow
   *Run commands in Termux environment*.
