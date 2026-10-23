@@ -51,6 +51,8 @@ A search bar on the home screen jumps straight to any tool.
   `.File_Recycle`, `.fvTrash`, Android `.trashed-*`, thumbnail caches), shows thumbnails and
   restores to `Download/TinyKit/Recovered`.
 - **Settings backup & restore**: save all system settings to a file and put them back.
+- **Force dark on all apps**: dark-themes apps that have no dark mode (Android's force-dark),
+  with nothing running in the background.
 - **Clean & speed**: Clear all app caches, Optimize apps, Trim storage.
 - **Network & battery**: Free hotspot, Mobile data off on Wi-Fi.
 

@@ -686,6 +686,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Stop background activity", "Per-app background block", this::openBackground));
         f.add(new Feature("Keep apps alive", "Exempt apps from battery limits", this::openKeepAlive));
         f.add(new Feature("Back up app as APK", "Save any app's APK", this::openBackup));
+        f.add(new Feature("Force dark on all apps", "Dark-theme apps that have no dark mode", () -> selectTab(3)));
         f.add(new Feature("Edit quick panel", "Reorder, add and remove tiles", this::openQuickPanel));
         f.add(new Feature("Run a command", "Run a shell command via Shizuku", this::openRunCommand));
         f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
@@ -811,6 +812,16 @@ public class MainActivity extends Activity {
 
     private View buildSystem() {
         LinearLayout list = vertical();
+        section(list, "Display");
+        privacySwitch(list, "Force dark on all apps",
+                "Dark-themes apps that have no dark mode (Android's force-dark). Takes effect as each "
+                        + "app is re-opened. Resets on reboot; just turn it on again.",
+                () -> "true".equals(Shell.run("getprop debug.hwui.force_dark").out.trim()),
+                block -> error(Shell.run("setprop debug.hwui.force_dark " + (block ? "true" : "false")
+                        + " && (settings put secure op_force_dark_entire_world " + (block ? 1 : 0)
+                        + " 2>/dev/null; settings put secure aosp_force_dark_mode " + (block ? 1 : 0)
+                        + " 2>/dev/null; true)")));
+
         section(list, "Quick panel");
         link(list, "Edit quick panel", "Reorder, add and remove tiles with one tap each.", this::openQuickPanel);
         row(list, "TinyKit tiles", "Add any of TinyKit's own Quick Settings tiles.", arrow(),
