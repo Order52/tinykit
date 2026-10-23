@@ -3900,28 +3900,42 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * A generic "Sort" control: shows the current choice and opens a menu of options when tapped,
-     * calling onSelect with the chosen index. Reused by every sortable list.
+     * A generic "Sort" control: an outlined chip showing the current choice that opens a menu of
+     * options when tapped, calling onSelect with the chosen index. Reused by every sortable list.
      */
     private View sortBar(String[] options, OnPage onSelect) {
         final int[] sel = {0};
-        TextView button = text("", 13, true);
-        button.setTextColor(attrColor(android.R.attr.colorAccent));
-        button.setPadding(dp(16), dp(10), dp(16), dp(8));
-        button.setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
-        Runnable render = () -> button.setText("Sort:  " + options[sel[0]] + "  ▾");
-        button.setOnClickListener(v -> new AlertDialog.Builder(this)
-                .setTitle("Sort by")
-                .setSingleChoiceItems(options, sel[0], (d, which) -> {
-                    d.dismiss();
-                    sel[0] = which;
-                    render.run();
-                    onSelect.run(which);
-                })
-                .setNegativeButton("Cancel", null)
-                .show());
+        LinearLayout bar = new LinearLayout(this);
+        bar.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        bar.setPadding(dp(12), dp(8), dp(12), dp(4));
+        TextView chip = text("", 13, true);
+        chip.setGravity(Gravity.CENTER);
+        chip.setPadding(dp(16), dp(8), dp(16), dp(8));
+        chip.setTextColor(attrColor(android.R.attr.colorAccent));
+        GradientDrawable shape = new GradientDrawable();
+        shape.setCornerRadius(dp(22));
+        shape.setColor(0xFF161616);
+        shape.setStroke(dp(1), 0x40FFFFFF);
+        chip.setBackground(shape);
+        Runnable render = () -> chip.setText("↕  Sort: " + options[sel[0]]);
+        chip.setOnClickListener(v -> {
+            String[] items = new String[options.length];
+            for (int i = 0; i < options.length; i++) {
+                items[i] = (i == sel[0] ? "●  " : "○  ") + options[i];
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("Sort by")
+                    .setItems(items, (d, which) -> {
+                        sel[0] = which;
+                        render.run();
+                        onSelect.run(which);
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
         render.run();
-        return button;
+        bar.addView(chip);
+        return bar;
     }
 
     // ---- Rows and widgets ---------------------------------------------------------------------------
