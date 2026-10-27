@@ -15,10 +15,16 @@ every reboot.
   `shizuku-termux` is installed. Exit code 127 means the `shizuku` command wasn't found.
 - *"Termux doesn't allow other apps to run commands"*: run the shizuku-termux install command
   in Termux. It enables `allow-external-apps`.
+- *Start opens the Shizuku app*: that's expected with the standard Shizuku app and no Termux.
+  Tap **Start** in Shizuku, then go back to TinyKit. See
+  [Getting started](getting-started.md#with-the-standard-shizuku-app).
+- *Termux asked for permission, then nothing happened*: fixed in 1.10.2. Update TinyKit and
+  tap Start again.
 
 **Stop works, then Shizuku comes straight back.**
-That's Shizuku's Watchdog. Save the auth token in TinyKit, so Stop uses Shizuku's own stop
-intent, which the Watchdog respects.
+That's the Watchdog in thedjchi's fork. Save the auth token in TinyKit, so Stop uses Shizuku's
+own stop intent, which the Watchdog respects. The standard Shizuku app has no Watchdog, so Stop
+ends it for good.
 
 **A tile says *"Start Shizuku once so TinyKit can change this."***
 TinyKit grants itself `WRITE_SECURE_SETTINGS` the first time Shizuku is ready. Start Shizuku
