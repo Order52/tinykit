@@ -76,7 +76,7 @@ On an emulator you can start Shizuku over adb (see [Getting started](getting-sta
 2. Add `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` with the user-facing
    changes.
 3. Commit, then tag the commit `v<versionName>` (for example `v1.8.0`) and push the tag.
-4. Build the signed release APK, rename it `TinyKit.apk`, and attach it to a GitHub release for
+4. Build the signed release APK, rename it `TinyKit-<versionName>.apk`, and attach it to a GitHub release for
    the tag. TinyKit's **Check for updates** reads the latest GitHub release.
 5. F-Droid picks up new tags by itself (`UpdateCheckMode: Tags`,
    `AutoUpdateMode: Version v%v`). The recipe is in `fdroid/io.github.order52.tinykit.yml`, and

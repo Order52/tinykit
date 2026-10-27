@@ -1,0 +1,3 @@
+- Free up RAM: frees memory safely by closing only cached apps and asking running apps to release memory. Works without Shizuku on Android 13 and older. The Free RAM tile uses it too.
+- Rows that need Shizuku now say "Requires Shizuku" while it's off. Network info, Charging info, Temperatures, Device IDs and Notification history open without Shizuku.
+- New documentation and screenshots.

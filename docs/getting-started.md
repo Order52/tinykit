@@ -59,7 +59,7 @@ button and the **Shizuku** tile can start Shizuku for you. See
 
 ## 3. Install TinyKit
 
-Download `TinyKit.apk` from the
+Download `TinyKit-<version>.apk` from the
 [latest release](https://github.com/Order52/tinykit/releases/latest) and open it. You may need
 to allow your browser or file manager to install apps.
 

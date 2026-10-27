@@ -190,7 +190,7 @@ The [feature reference](docs/features.md) lists the exact command behind every t
 ## Installation
 
 1. Install and start [Shizuku](#requirements).
-2. Download `TinyKit.apk` from the [latest release](https://github.com/Order52/tinykit/releases/latest)
+2. Download `TinyKit-<version>.apk` from the [latest release](https://github.com/Order52/tinykit/releases/latest)
    and install it.
 3. Open TinyKit and tap **Allow** when it asks for Shizuku access.
 
