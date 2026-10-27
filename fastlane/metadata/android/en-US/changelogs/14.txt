@@ -1,0 +1,3 @@
+- Start and Stop Shizuku now work with the standard Shizuku app, not just forks: without an auth token or Termux, Start opens Shizuku on its Start button and TinyKit connects as soon as it runs.
+- Stop ends the standard Shizuku app right away.
+- Starting through Termux no longer fails right after you allow the Termux permission.
