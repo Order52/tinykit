@@ -1,6 +1,5 @@
 package io.github.order52.tinykit;
 
-import android.app.ActivityManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -319,23 +318,14 @@ public abstract class Tiles extends TileService {
     public static final class Memory extends Tiles {
         @Override
         Object[] state() {
-            return state(false, Formatter.formatShortFileSize(this, available()) + " free");
+            return state(false, Formatter.formatShortFileSize(this, Ram.available(this)) + " free");
         }
 
         @Override
         void tap(boolean active) {
-            if (!shizuku()) return;
-            long before = available();
-            Shell.run("am kill-all");
-            SystemClock.sleep(800);
-            long freed = Math.max(0, available() - before);
-            toast("Stopped background apps. Freed " + Formatter.formatShortFileSize(this, freed) + ".");
-        }
-
-        private long available() {
-            ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
-            getSystemService(ActivityManager.class).getMemoryInfo(mem);
-            return mem.availMem;
+            if (Ram.needsShizuku() && !shizuku()) return;
+            if (!Ram.needsShizuku()) Shell.await();
+            toast(Ram.free(this));
         }
     }
 

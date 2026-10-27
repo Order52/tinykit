@@ -227,6 +227,7 @@ public class MainActivity extends Activity {
             });
     private final List<Toggle> toggles = new ArrayList<>();
     private final List<View> shizukuRows = new ArrayList<>();
+    private final List<View> shizukuLabels = new ArrayList<>();
     private final List<View> pages = new ArrayList<>();
     private final List<CharSequence> titles = new ArrayList<>();
     private final Map<String, String> labels = new HashMap<>();
@@ -416,6 +417,7 @@ public class MainActivity extends Activity {
                 ? "Not set. Tap to paste it from Shizuku's settings."
                 : "Set. Start and Stop go straight to Shizuku.");
         for (View row : shizukuRows) row.setAlpha(ready ? 1f : 0.4f);
+        for (View label : shizukuLabels) label.setVisibility(ready ? View.GONE : View.VISIBLE);
         if (ready) {
             loadSettings();
             // Grant TinyKit the permissions its toggles and tiles need, so they keep working
@@ -720,6 +722,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
         f.add(new Feature("Settings backup & restore", "Save and restore all settings", this::openBackupRestore));
         f.add(new Feature("Advanced reboot", "Reboot, recovery, bootloader, soft reboot", this::openReboot));
+        f.add(new Feature("Free up RAM", "Free memory and speed up the phone", () -> selectTab(3)));
         f.add(new Feature("Clear all app caches", "Free cached space", () -> selectTab(3)));
         f.add(new Feature("Optimize apps", "Recompile apps so they open faster", () -> selectTab(3)));
         f.add(new Feature("Trim storage", "Storage maintenance and TRIM", () -> selectTab(3)));
@@ -766,9 +769,8 @@ public class MainActivity extends Activity {
                 .setItems(new String[]{
                         "Shizuku (thedjchi's fork, recommended): its Watchdog restarts Shizuku if Android kills it",
                         "Termux from F-Droid: needed to start Shizuku without a computer",
-                        "shizuku-termux: the one-line setup for Termux",
                         "Original Shizuku"}, (d, which) -> openUrl(new String[]{
-                        SHIZUKU_DOWNLOAD, TERMUX_DOWNLOAD, SHIZUKU_TERMUX, SHIZUKU_ORIGINAL}[which]))
+                        SHIZUKU_DOWNLOAD, TERMUX_DOWNLOAD, SHIZUKU_ORIGINAL}[which]))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
@@ -877,16 +879,19 @@ public class MainActivity extends Activity {
                 this::openTiles, false);
 
         section(list, "Tools");
-        row(list, "Run a command", "Run a shell command as the shell user through Shizuku.", arrow(),
-                this::openRunCommand, false);
-        row(list, "Recover deleted files", "Find files in every recycle bin, with thumbnails, and restore them.",
-                arrow(), this::openRecover, false);
-        row(list, "Settings backup & restore", "Save all system settings to a file and put them back.",
-                arrow(), this::openBackupRestore, false);
+        link(list, "Run a command", "Run a shell command as the shell user through Shizuku.",
+                this::openRunCommand);
+        link(list, "Recover deleted files", "Find files in every recycle bin, with thumbnails, and restore them.",
+                this::openRecover);
+        link(list, "Settings backup & restore", "Save all system settings to a file and put them back.",
+                this::openBackupRestore);
         link(list, "Advanced reboot", "Reboot, recovery, bootloader or a soft (userspace) reboot.",
                 this::openReboot);
 
         section(list, "Clean & speed");
+        action(list, "Free up RAM", "Closes apps Android keeps cached and asks running apps to free memory, "
+                + "so the phone feels faster. Nothing you're using is closed.", Ram.needsShizuku(),
+                () -> Ram.free(this));
         action(list, "Clear all app caches", "Frees the space used by every app's cache.", () -> {
             String free = "df -k /data | tail -1 | awk '{print $4}'";
             Shell.Result r = Shell.run("a=$(" + free + "); pm trim-caches 999G; b=$(" + free + "); "
@@ -927,10 +932,13 @@ public class MainActivity extends Activity {
         LinearLayout list = vertical();
         section(list, "Device");
         row(list, "Phone info", "Battery, memory, storage and system details.", arrow(), this::openInfo, false);
-        link(list, "Network info", "IP addresses, Wi-Fi, DNS and connection type.", this::openNetworkInfo);
-        link(list, "Charging info", "Power, current, voltage and battery health.", this::openChargingInfo);
-        link(list, "Temperatures", "Every thermal sensor the phone reports.", this::openTemperatures);
-        link(list, "Device IDs", "Android ID, serial, MAC and build fingerprint.", this::openDeviceIds);
+        // These pages show what Android gives any app, and add more details when Shizuku is on.
+        row(list, "Network info", "IP addresses, Wi-Fi, DNS and connection type.", arrow(),
+                this::openNetworkInfo, false);
+        row(list, "Charging info", "Power, current, voltage and battery health.", arrow(),
+                this::openChargingInfo, false);
+        row(list, "Temperatures", "Every thermal sensor the phone reports.", arrow(), this::openTemperatures, false);
+        row(list, "Device IDs", "Android ID, serial, MAC and build fingerprint.", arrow(), this::openDeviceIds, false);
 
         section(list, "Battery & logs");
         link(list, "Battery usage", "Which apps have drained the most since the last charge.", this::openBatteryUsage);
@@ -938,8 +946,9 @@ public class MainActivity extends Activity {
         link(list, "Vibration log", "Recent vibrations and what asked for them.", this::openVibration);
         link(list, "App log", "See an app's log output (Huawei hides most of it).", this::openAppLog);
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
-        link(list, "Notification history", "Save notifications and what they said, per app.",
-                this::openNotifications);
+        // Saved notifications can be read without Shizuku; saving new ones needs it.
+        row(list, "Notification history", "Save notifications and what they said, per app.", arrow(),
+                this::openNotifications, false);
         View[] update = new View[1];
         update[0] = row(list, "Check for updates", "You have version " + versionName(getPackageName()) + ".",
                 null, () -> checkForUpdate(update[0]), false);
@@ -1537,13 +1546,13 @@ public class MainActivity extends Activity {
                         Shell.Result r = Shell.run("settings put secure notification_history_enabled " + (on ? 1 : 0));
                         return r.ok() ? null : "Couldn't change it.";
                     });
-            link(header, "Open Android's history", "See the last 24 hours of notifications.", () -> {
+            row(header, "Open Android's history", "See the last 24 hours of notifications.", arrow(), () -> {
                 try {
                     startActivity(new Intent("android.settings.NOTIFICATION_HISTORY"));
                 } catch (RuntimeException e) {
                     toast("This phone doesn't have a notification history screen.");
                 }
-            });
+            }, false);
         }
         View[] filterRow = new View[1];
         filterRow[0] = row(header, "Apps to save", notifFilterSummary(), arrow(),
@@ -4649,6 +4658,10 @@ public class MainActivity extends Activity {
 
     /** A row that runs a job and shows its result in place of the description. */
     private void action(LinearLayout list, String title, String summary, Job job) {
+        action(list, title, summary, true, job);
+    }
+
+    private void action(LinearLayout list, String title, String summary, boolean needsShizuku, Job job) {
         View[] holder = new View[1];
         holder[0] = row(list, title, summary, null, () -> {
             TextView status = (TextView) holder[0].getTag();
@@ -4662,7 +4675,7 @@ public class MainActivity extends Activity {
                     status.setText(result);
                 });
             });
-        }, true);
+        }, needsShizuku);
     }
 
     private View row(LinearLayout list, String title, String summary, View end, Runnable onClick,
@@ -4676,6 +4689,15 @@ public class MainActivity extends Activity {
         TextView sub = text(summary, 13, false);
         sub.setAlpha(0.7f);
         texts.addView(sub);
+        if (needsShizuku) {
+            // Shown only while Shizuku isn't usable, so rows that work without it stay plain.
+            TextView label = text("Requires Shizuku", 12, true);
+            label.setTextColor(attrColor(android.R.attr.colorAccent));
+            label.setPadding(0, dp(2), 0, 0);
+            label.setVisibility(Shell.ready() ? View.GONE : View.VISIBLE);
+            texts.addView(label);
+            shizukuLabels.add(label);
+        }
         row.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
         if (end != null) row.addView(end);
         row.setTag(sub);
