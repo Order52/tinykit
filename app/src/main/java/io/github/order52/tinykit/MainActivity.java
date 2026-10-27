@@ -3,8 +3,12 @@ package io.github.order52.tinykit;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.usage.StorageStats;
+import android.appwidget.AppWidgetManager;
 import android.app.usage.StorageStatsManager;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
@@ -125,6 +129,8 @@ public class MainActivity extends Activity {
     private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
     private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
     private static final int REQUEST_RUN_COMMAND = 2;
+    private static final int REQUEST_NOTIFICATIONS = 3;
+    private static final String UPDATE_CHANNEL = "updates";
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
     private static final String BACKUP_DIR = "/sdcard/Download/TinyKit";
@@ -228,6 +234,7 @@ public class MainActivity extends Activity {
     private final List<Toggle> toggles = new ArrayList<>();
     private final List<View> shizukuRows = new ArrayList<>();
     private final List<View> shizukuLabels = new ArrayList<>();
+    private Switch updateSwitch;
     private final List<View> pages = new ArrayList<>();
     private final List<CharSequence> titles = new ArrayList<>();
     private final Map<String, String> labels = new HashMap<>();
@@ -284,6 +291,8 @@ public class MainActivity extends Activity {
         } else {
             registerReceiver(termuxResult, filter);
         }
+        // Not on rotation or other re-creations: only when TinyKit is actually opened.
+        if (savedInstanceState == null) autoCheckForUpdate();
     }
 
     @Override
@@ -555,6 +564,16 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        if (requestCode == REQUEST_NOTIFICATIONS) {
+            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+                autoCheckForUpdate();
+            } else {
+                prefs.edit().putBoolean("update_on_start", false).apply();
+                if (updateSwitch != null) updateSwitch.setChecked(false);
+                toast("Allow notifications so TinyKit can tell you about updates.");
+            }
+            return;
+        }
         if (requestCode != REQUEST_RUN_COMMAND) return;
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
             startShizuku();
@@ -723,6 +742,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Settings backup & restore", "Save and restore all settings", this::openBackupRestore));
         f.add(new Feature("Advanced reboot", "Reboot, recovery, bootloader, soft reboot", this::openReboot));
         f.add(new Feature("Free up RAM", "Free memory and speed up the phone", () -> selectTab(3)));
+        f.add(new Feature("Speed-up widget", "One-tap RAM and cache cleaner", this::addBoostWidget));
         f.add(new Feature("Clear all app caches", "Free cached space", () -> selectTab(3)));
         f.add(new Feature("Optimize apps", "Recompile apps so they open faster", () -> selectTab(3)));
         f.add(new Feature("Trim storage", "Storage maintenance and TRIM", () -> selectTab(3)));
@@ -892,6 +912,8 @@ public class MainActivity extends Activity {
         action(list, "Free up RAM", "Closes apps Android keeps cached and asks running apps to free memory, "
                 + "so the phone feels faster. Nothing you're using is closed.", Ram.needsShizuku(),
                 () -> Ram.free(this));
+        row(list, "Speed-up widget", "Add a home screen widget that frees RAM and clears app caches in one "
+                + "tap, without opening TinyKit.", arrow(), this::addBoostWidget, false);
         action(list, "Clear all app caches", "Frees the space used by every app's cache.", () -> {
             String free = "df -k /data | tail -1 | awk '{print $4}'";
             Shell.Result r = Shell.run("a=$(" + free + "); pm trim-caches 999G; b=$(" + free + "); "
@@ -952,6 +974,24 @@ public class MainActivity extends Activity {
         View[] update = new View[1];
         update[0] = row(list, "Check for updates", "You have version " + versionName(getPackageName()) + ".",
                 null, () -> checkForUpdate(update[0]), false);
+        updateSwitch = new Switch(this);
+        updateSwitch.setChecked(prefs.getBoolean("update_on_start", false));
+        updateSwitch.setClickable(false);
+        updateSwitch.setFocusable(false);
+        row(list, "Check for updates on start", "When you open TinyKit, ask GitHub for a new version and "
+                + "send a notification if there is one.", updateSwitch, () -> {
+                    boolean on = !updateSwitch.isChecked();
+                    updateSwitch.setChecked(on);
+                    prefs.edit().putBoolean("update_on_start", on).remove("update_checked").apply();
+                    if (!on) return;
+                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                            != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},
+                                REQUEST_NOTIFICATIONS);
+                    } else {
+                        autoCheckForUpdate();
+                    }
+                }, false);
         row(list, "About", "Made by Ali Alakbar", arrow(), this::showAbout, false);
         return scroll(list);
     }
@@ -1404,38 +1444,100 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Asks GitHub for the latest release. Runs only when tapped; nothing checks in the background. */
+    /**
+     * Asks GitHub for the latest release: {version, APK download link}, or null if GitHub can't be
+     * reached. Called when "Check for updates" is tapped, or when TinyKit opens with "Check for
+     * updates on start" on; nothing checks in the background.
+     */
+    private String[] latestRelease() {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(
+                    "https://api.github.com/repos/Order52/tinykit/releases/latest").openConnection();
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(10_000);
+            conn.setRequestProperty("Accept", "application/vnd.github+json");
+            String body;
+            try (InputStream in = conn.getInputStream()) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                body = out.toString("UTF-8");
+            }
+            Matcher tag = Pattern.compile("\"tag_name\"\\s*:\\s*\"v?([^\"]+)\"").matcher(body);
+            if (!tag.find()) return null;
+            Matcher url = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").matcher(body);
+            return new String[]{tag.group(1), url.find() ? url.group(1) : REPO + "/releases/latest"};
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * With "Check for updates on start" on, checks when TinyKit opens (at most once an hour) and
+     * posts one notification per new version, so it never nags about the same update twice.
+     */
+    private void autoCheckForUpdate() {
+        long now = System.currentTimeMillis();
+        if (!prefs.getBoolean("update_on_start", false)
+                || Math.abs(now - prefs.getLong("update_checked", 0)) < 3_600_000) return;
+        prefs.edit().putLong("update_checked", now).apply();
+        thumbs.execute(() -> {
+            String[] latest = latestRelease();
+            if (latest == null || compareVersions(latest[0], versionName(getPackageName())) <= 0
+                    || latest[0].equals(prefs.getString("update_notified", ""))) return;
+            prefs.edit().putString("update_notified", latest[0]).apply();
+            notifyUpdate(latest[0], latest[1]);
+        });
+    }
+
+    private void notifyUpdate(String version, String download) {
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null) return;
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(new NotificationChannel(UPDATE_CHANNEL, "App updates",
+                    NotificationManager.IMPORTANCE_DEFAULT));
+            builder = new Notification.Builder(this, UPDATE_CHANNEL);
+        } else {
+            builder = new Notification.Builder(this);
+        }
+        PendingIntent open = PendingIntent.getActivity(this, 0,
+                new Intent(Intent.ACTION_VIEW, Uri.parse(download)), PendingIntent.FLAG_IMMUTABLE);
+        nm.notify(1, builder
+                .setSmallIcon(R.drawable.ic_notify_update)
+                .setContentTitle("TinyKit " + version + " is available")
+                .setContentText("You have " + versionName(getPackageName()) + ". Tap to download it.")
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build());
+    }
+
+    /** Asks the launcher to place the speed-up widget (Android 8+); otherwise explains how to add it. */
+    private void addBoostWidget() {
+        AppWidgetManager manager = getSystemService(AppWidgetManager.class);
+        if (Build.VERSION.SDK_INT >= 26 && manager != null && manager.isRequestPinAppWidgetSupported()
+                && manager.requestPinAppWidget(new ComponentName(this, BoostWidget.class), null, null)) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Add the widget")
+                .setMessage("Touch and hold an empty spot on your home screen, tap Widgets, then drag "
+                        + "TinyKit's \"Speed up\" widget onto the screen.")
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
     private void checkForUpdate(View row) {
         TextView status = (TextView) row.getTag();
         if (!row.isEnabled()) return;
         row.setEnabled(false);
         status.setText("Checking…");
         worker.execute(() -> {
-            String latest = null;
-            String apk = null;
-            try {
-                HttpURLConnection conn = (HttpURLConnection) new URL(
-                        "https://api.github.com/repos/Order52/tinykit/releases/latest").openConnection();
-                conn.setConnectTimeout(10_000);
-                conn.setReadTimeout(10_000);
-                conn.setRequestProperty("Accept", "application/vnd.github+json");
-                String body;
-                try (InputStream in = conn.getInputStream()) {
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                    body = out.toString("UTF-8");
-                }
-                Matcher tag = Pattern.compile("\"tag_name\"\\s*:\\s*\"v?([^\"]+)\"").matcher(body);
-                if (tag.find()) latest = tag.group(1);
-                Matcher url = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").matcher(body);
-                if (url.find()) apk = url.group(1);
-            } catch (Exception ignored) {
-            }
+            String[] latest = latestRelease();
             String current = versionName(getPackageName());
-            String found = latest;
-            String download = apk != null ? apk : REPO + "/releases/latest";
+            String found = latest == null ? null : latest[0];
+            String download = latest == null ? null : latest[1];
             main.post(() -> {
                 row.setEnabled(true);
                 if (found == null) {

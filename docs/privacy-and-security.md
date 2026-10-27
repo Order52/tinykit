@@ -19,6 +19,7 @@ what it actually does, and what it never does.
 | --- | --- |
 | `QUERY_ALL_PACKAGES` | App pickers list every installed app |
 | `INTERNET` | Check for updates, and the public IP on Network info, only when you use them |
+| `POST_NOTIFICATIONS` | The update notification, only if you turn on **Check for updates on start**. Android asks you first. |
 | `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE` | Network info reads the active connection's details |
 | `com.termux.permission.RUN_COMMAND` | Start Shizuku through Termux. Android asks you first. |
 | `KILL_BACKGROUND_PROCESSES` | Free up RAM without Shizuku on Android 13 and older. Closes only cached apps. |
@@ -60,7 +61,7 @@ never copy its private files, including the auth token and saved notifications.
 
 | Request | Sent to | Contains | When |
 | --- | --- | --- | --- |
-| Update check | `api.github.com` | A standard GET; no identifiers | Only when you tap **Check for updates** |
+| Update check | `api.github.com` | A standard GET; no identifiers | When you tap **Check for updates**, or when TinyKit opens (at most hourly) if **Check for updates on start** is on |
 | Public IP | `api.ipify.org` (fallback `ifconfig.me`) | A standard GET with `User-Agent: TinyKit` | When **Network info** opens with a connection |
 
 **Ad-blocking DNS** sends your DNS queries to AdGuard (`dns.adguard-dns.com`) while it's on.

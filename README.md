@@ -34,9 +34,10 @@ and more. It uses [Shizuku](https://shizuku.rikka.app/) to get shell-level acces
 rooting your phone.
 
 - **No root.** Everything runs through Shizuku with ADB-level permissions.
-- **Nothing in the background.** No services, no wake-locks. TinyKit only works while it is open.
+- **Nothing in the background.** No services, no wake-locks. TinyKit only works while it is
+  open, or when you tap one of its tiles or its widget.
 - **No ads, no analytics, no tracking.** It only goes online when you check for updates
-  (GitHub) or open Network info (public IP lookup).
+  (GitHub, by tap or optionally when TinyKit opens) or open Network info (public IP lookup).
 - **Small.** About 110 KB, with a single dependency (the Shizuku API).
 - **Reversible.** Every change is a standard system setting or app-op, and you undo it from
   the same screen.
@@ -162,6 +163,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Force dark on all apps** | Turns on Android's built-in force-dark for apps that have no dark mode. |
 | **Animation speed** | Turns system animations off, or makes them faster or slower. |
 | **Advanced reboot** | Reboots normally, or into recovery or the bootloader, or does a soft (userspace) reboot. |
+| **Speed-up widget** | A home screen widget: one tap frees RAM and clears app caches without opening TinyKit, and shows how much it freed. |
 | **Free up RAM** | Frees memory and speeds the phone up safely: closes only the apps Android has already cached and asks running apps to release memory. Nothing you're using is closed. Works without Shizuku on Android 13 and older. |
 | **Clean & speed** | Clear all app caches · Optimize apps · Trim storage |
 | **Network & battery** | Free hotspot · Turn off mobile data while on Wi-Fi |
@@ -175,7 +177,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Network info** | Shows IP addresses, Wi-Fi details, DNS and your public IP. *Open router settings* opens your default gateway's page. |
 | **Notification history** | Saves notifications and their text, grouped by app, with search, and keeps them after they are dismissed. You can save every app, only the apps you pick, or every app except those. TinyKit has no background service, so it saves what's in the notification shade each time you open this page. It can also turn on Android's own 24-hour notification history. |
 | **Usage logs** | Battery usage · Wake-ups · Vibration log, as plain readable lists |
-| **Diagnostics** | App log · Crash log · Check for updates · About |
+| **Diagnostics** | App log · Crash log · Check for updates (by tap, or optionally on start with a notification) · About |
 
 The [feature reference](docs/features.md) lists the exact command behind every tool.
 

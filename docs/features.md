@@ -320,6 +320,13 @@ own processes, so on Android 14 and newer the row shows **Requires Shizuku**.
 > RAM helps most right before a heavy game or app, or when the phone feels sluggish after many
 > apps were opened.
 
+**Speed-up widget** puts this on your home screen. One tap runs **Free up RAM** and **Clear all
+app caches** together without opening TinyKit, and the widget then shows the result, for
+example *"Freed 61 MB RAM + 3 MB cache · 1.8 GB free"*. Tap **Speed-up widget** in this section
+to place it (Android 8+), or add it from your launcher's widget list. Without Shizuku it frees
+RAM only (Android 13 and older) and says that clearing caches needs Shizuku. The widget never
+updates on its own and runs nothing until you tap it.
+
 ### Network & battery
 
 | Toggle | What it does | Command |
@@ -384,8 +391,14 @@ ongoing notifications and group summaries, and removes duplicates.
 
 ### Check for updates 📶
 
-Asks the GitHub API for the latest TinyKit release, **only when you tap it**, and offers the
-APK download if there's a newer version.
+Asks the GitHub API for the latest TinyKit release when you tap it, and offers the APK download
+if there's a newer version.
+
+**Check for updates on start** (off by default) does the same check each time you open TinyKit,
+at most once an hour, and posts a notification when a new version is out. Tapping the
+notification downloads it. You get one notification per version, never repeats. On Android 13
+and newer, turning it on asks for permission to send notifications; without it, the option
+turns itself back off. Nothing checks while TinyKit is closed.
 
 ### About
 

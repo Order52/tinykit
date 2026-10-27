@@ -24,7 +24,7 @@ These are the rules the code follows. Changes should keep them.
 
 1. **Nothing in the background.** No services that keep running, no alarms, no jobs, no
    receivers waiting for system events. TinyKit runs only while it's on screen or while a tile
-   is being tapped.
+   or the widget is being tapped.
 2. **Only Android's own mechanisms.** Every change is a `settings` key, an app-op, a package
    manager call or a system service call that `adb shell` could make. No patching, no root, no
    Xposed.
@@ -50,7 +50,8 @@ tinykit/
 │       │   ├── Tiles.java          14 Quick Settings tiles on one base class
 │       │   ├── ShizukuTile.java    Shizuku on/off tile (token, Termux or kill)
 │       │   ├── ScreenshotTile.java Screenshot tile
-│       │   ├── Ram.java            Free up RAM, shared by the app and the Free RAM tile
+│       │   ├── Ram.java            Free up RAM, shared by the app, the Free RAM tile and the widget
+│       │   ├── BoostWidget.java    Home screen widget: one tap frees RAM and clears caches
 │       │   ├── Sensors.java        app_process helper: all-sensors privacy
 │       │   ├── WifiDump.java       app_process helper: saved Wi-Fi credentials
 │       │   └── Qr.java             Small QR encoder for Wi-Fi codes
@@ -204,7 +205,7 @@ TinyKit declares `INTERNET` for two features, both of which run only when you us
 
 | Feature | Endpoint | When |
 | --- | --- | --- |
-| Check for updates | `api.github.com/repos/Order52/tinykit/releases/latest` | When you tap it |
+| Check for updates | `api.github.com/repos/Order52/tinykit/releases/latest` | When you tap it, or when TinyKit opens if *Check for updates on start* is on (at most hourly, one notification per version) |
 | Network info → Public IP | `api.ipify.org`, falling back to `ifconfig.me/ip` | Each time the page opens |
 
 There are no analytics, crash reporting or ads. See [Privacy & security](privacy-and-security.md).
