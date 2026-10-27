@@ -1,0 +1,2 @@
+- Speed-up widget: one tap on your home screen frees RAM and clears app caches without opening TinyKit, and shows how much it freed.
+- Check for updates on start (optional, off by default): get a notification when a new TinyKit version is out.
