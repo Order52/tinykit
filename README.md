@@ -114,7 +114,7 @@ Find it under **Apps → App permissions**.
 
 | Tool | What it does |
 | --- | --- |
-| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly, and Stop works with its Watchdog. Without the token, Start goes through Termux with [shizuku-termux](https://github.com/Order52/shizuku-termux). |
+| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly, and Stop works with its Watchdog. Without the token, Start goes through Termux with [shizuku-termux](https://github.com/Order52/shizuku-termux), or opens Shizuku so you tap its Start button. Works with the standard Shizuku app and its forks. |
 | **Search** | Find any TinyKit setting or tool from the top of the home screen. |
 
 ### Quick Settings tiles

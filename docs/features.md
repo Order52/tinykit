@@ -27,11 +27,17 @@ user through Shizuku. `<pkg>` stands for an app's package name.
 Shows whether Shizuku is installed, running, and allowed for TinyKit, with one button for
 whatever comes next: **Get Shizuku**, **Allow** or **Open Shizuku**.
 
-- **Start** uses Shizuku's auth token if one is saved (`moe.shizuku.privileged.api.START`
-  broadcast). Otherwise it uses Termux (`shizuku start` via Termux's `RUN_COMMAND` service).
-  It gives up after 60 seconds and shows Termux's error if something went wrong.
-- **Stop** uses the token (`…STOP` broadcast) if one is saved. Otherwise it asks for
-  confirmation, then ends `shizuku_server`.
+Start and Stop work with the standard Shizuku app and with forks such as thedjchi's:
+
+- **Start** uses Shizuku's auth token if one is saved and your Shizuku has a start intent
+  (`moe.shizuku.privileged.api.START` broadcast, in thedjchi's fork). Otherwise it uses Termux
+  (`shizuku start` via Termux's `RUN_COMMAND` service). It gives up after 60 seconds and shows
+  Termux's error if something went wrong. Without Termux or shizuku-termux, it opens Shizuku
+  so you tap its own **Start** button, and TinyKit connects by itself once Shizuku is running.
+  That's the only way to start the standard Shizuku app without root or a computer.
+- **Stop** uses the token (`…STOP` broadcast) on forks that have it. With the standard app it
+  ends `shizuku_server` straight away. On forks without a saved token it asks first, because
+  their Watchdog may start Shizuku again.
 
 See [Getting started → Starting Shizuku from TinyKit](getting-started.md#starting-shizuku-from-tinykit).
 

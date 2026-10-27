@@ -122,7 +122,6 @@ public class MainActivity extends Activity {
     private static final String SHIZUKU_DOWNLOAD = "https://github.com/thedjchi/Shizuku/releases/latest";
     private static final String SHIZUKU_ORIGINAL = "https://shizuku.rikka.app/download/";
     private static final String TERMUX_DOWNLOAD = "https://f-droid.org/packages/com.termux/";
-    private static final String SHIZUKU_TERMUX = "https://github.com/Order52/shizuku-termux";
     private static final String REPO = "https://github.com/Order52/tinykit";
     private static final String TERMUX = "com.termux";
     private static final String TERMUX_BIN = "/data/data/com.termux/files/usr/bin/";
@@ -262,7 +261,14 @@ public class MainActivity extends Activity {
     private final BroadcastReceiver termuxResult = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String message = termuxMessage(intent.getBundleExtra("result"));
+            Bundle result = intent.getBundleExtra("result");
+            if (result != null && result.getInt("exitCode", -1) == 127) {
+                // Termux is there but shizuku-termux isn't: use Shizuku's own Start button.
+                startFinished(null);
+                openShizukuToStart();
+                return;
+            }
+            String message = termuxMessage(result);
             // Shizuku's binder can arrive a moment after the command returns.
             main.postDelayed(() -> startFinished(message), 1500);
         }
@@ -436,12 +442,14 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Starts Shizuku without a computer by asking Termux to run the shizuku-termux command,
-     * the same way the Shizuku Termux app does. The result comes back to {@link #termuxResult}.
+     * Starts Shizuku without a computer: through its start intent when an auth token is saved and
+     * the installed Shizuku has one, otherwise by asking Termux to run the shizuku-termux command
+     * (the result comes back to {@link #termuxResult}). The standard Shizuku app has neither, so
+     * TinyKit opens it on its Start button and connects as soon as it's running.
      */
     private void startShizuku() {
         if (starting) return;
-        if (!token().isEmpty()) {
+        if (!token().isEmpty() && hasStartIntent()) {
             sendBroadcast(new Intent(SHIZUKU_PKG + ".START").setPackage(SHIZUKU_PKG)
                     .putExtra("auth", token()));
             starting = true;
@@ -452,8 +460,7 @@ public class MainActivity extends Activity {
         try {
             getPackageManager().getPackageInfo(TERMUX, 0);
         } catch (PackageManager.NameNotFoundException e) {
-            toast("Starting from the phone needs Termux with shizuku-termux installed.");
-            openUrl(SHIZUKU_TERMUX);
+            openShizukuToStart();
             return;
         }
         if (Build.VERSION.SDK_INT >= 23
@@ -474,7 +481,10 @@ public class MainActivity extends Activity {
                 .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
                 .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", result);
         try {
-            startService(intent);
+            // Termux's own docs ask for this on Android 8+: a plain start is refused whenever
+            // TinyKit isn't counted as in front, e.g. right after the permission dialog closes.
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
+            else startService(intent);
         } catch (RuntimeException e) {
             toast("Could not reach Termux. Open Termux once, then try again.");
             return;
@@ -485,11 +495,34 @@ public class MainActivity extends Activity {
     }
 
     /**
+     * Whether the installed Shizuku has start and stop intents (thedjchi's fork and others based on
+     * it). The standard app from shizuku.rikka.app has none and ignores them.
+     */
+    private boolean hasStartIntent() {
+        return !getPackageManager().queryBroadcastReceivers(
+                new Intent(SHIZUKU_PKG + ".START").setPackage(SHIZUKU_PKG), 0).isEmpty();
+    }
+
+    /**
+     * The standard Shizuku app can only be started from its own screen (or a computer), so open
+     * it there. TinyKit's binder listener refreshes this screen as soon as Shizuku is running.
+     */
+    private void openShizukuToStart() {
+        Intent launch = getPackageManager().getLaunchIntentForPackage(SHIZUKU_PKG);
+        if (launch == null) {
+            toast("Install Shizuku first.");
+            return;
+        }
+        toast("Tap Start in Shizuku. TinyKit connects by itself once it's running.");
+        startActivity(launch);
+    }
+
+    /**
      * With the auth token this uses Shizuku's own stop intent, which its Watchdog respects.
      * Without it the server process is ended, and the Watchdog may start it again.
      */
     private void stopShizuku() {
-        if (!token().isEmpty()) {
+        if (!token().isEmpty() && hasStartIntent()) {
             sendBroadcast(new Intent(SHIZUKU_PKG + ".STOP").setPackage(SHIZUKU_PKG)
                     .putExtra("auth", token()));
             toast("Stopping Shizuku…");
@@ -497,7 +530,14 @@ public class MainActivity extends Activity {
             return;
         }
         if (!Shell.ready()) {
-            toast("Set the auth token first (below), or allow TinyKit in Shizuku.");
+            toast("Allow TinyKit in Shizuku first, or set the auth token below.");
+            return;
+        }
+        if (!hasStartIntent()) {
+            // The standard Shizuku app has no Watchdog, so ending the server stops it for good.
+            worker.execute(() -> Shell.run("pkill -f shizuku_server || killall shizuku_server"));
+            toast("Stopping Shizuku…");
+            main.postDelayed(this::refreshShizuku, 1500);
             return;
         }
         new AlertDialog.Builder(this)
@@ -626,7 +666,8 @@ public class MainActivity extends Activity {
         row(list, "Auth token", "", arrow(), this::editToken, false);
         tokenText = (TextView) list.getChildAt(list.getChildCount() - 1).getTag();
         TextView help = text("Start uses the auth token when it's set, otherwise Termux with "
-                + "shizuku-termux. Set the token if you use Shizuku's Watchdog, so Stop really stops it.", 13, false);
+                + "shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Set the token "
+                + "if you use a Shizuku fork with Watchdog, so Stop really stops it.", 13, false);
         help.setAlpha(0.6f);
         help.setPadding(dp(16), dp(8), dp(16), 0);
         list.addView(help);
