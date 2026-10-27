@@ -1,0 +1,3 @@
+- Free up RAM frees more memory and runs faster: all apps get the request at once, and background apps get a stronger one.
+- Clear all app caches now reports the right amount on every Android version, including Android 7.
+- The speed-up widget clears caches first, then frees RAM.

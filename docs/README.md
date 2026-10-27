@@ -44,4 +44,4 @@
   <img src="images/screenshots/system.png" width="260" alt="System tab">
 </p>
 
-<p align="center"><sub>TinyKit 1.10.0 · Android 7.0+ · <a href="../LICENSE">MIT</a></sub></p>
+<p align="center"><sub>TinyKit 1.10.1 · Android 7.0+ · <a href="../LICENSE">MIT</a></sub></p>
