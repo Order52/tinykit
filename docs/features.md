@@ -292,8 +292,8 @@ some changes need a restart.
 
 | Action | Command | Notes |
 | --- | --- | --- |
-| **Free up RAM** | `am kill-all`, then `am send-trim-memory <process> RUNNING_LOW` for each app still running | See below. Works without Shizuku on Android 13 and older. |
-| **Clear all app caches** | `pm trim-caches 999G` | Reports how many MB came back |
+| **Free up RAM** | `am kill-all`, then `cmd activity send-trim-memory <process> MODERATE` (or `RUNNING_LOW`) for each app still running | See below. Works without Shizuku on Android 13 and older. |
+| **Clear all app caches** | `pm trim-caches 999G` | Reports how much space came back |
 | **Optimize apps** | `cmd package bg-dexopt-job` | Compiles apps ahead of time so they open faster. Runs for about 10 minutes and keeps going if you close TinyKit. |
 | **Trim storage** | `sm fstrim; sm idle-maint run` | Storage maintenance and TRIM |
 
@@ -304,8 +304,14 @@ time:
    that Android keeps around in case you come back. The app on screen, music, navigation,
    anything showing a notification and anything running a service are never touched.
 2. It asks every app that's still running to release its own caches, sending the same
-   "memory is low" signal Android sends (`TRIM_MEMORY_RUNNING_LOW`). SystemUI is left alone so
-   the status bar never redraws.
+   signals Android sends when memory runs low: `TRIM_MEMORY_MODERATE` to background apps, and
+   `TRIM_MEMORY_RUNNING_LOW` to apps in use, which only free what they can rebuild. All apps
+   get the signal at once, so it takes about two seconds. SystemUI is left alone so the status
+   bar never redraws.
+
+It's built to behave the same from Android 7 to the newest version and on every brand: it only
+uses commands every Android has, and measures memory and storage through Android's own APIs
+instead of reading command output, which differs between versions and manufacturers.
 
 The result shows how much memory came back, how many cached apps were closed, and how much is
 free now, for example *"Freed 82 MB and closed 10 cached apps. 1.9 GB free now."* Closed apps

@@ -44,10 +44,11 @@ public class BoostWidget extends AppWidgetProvider {
                     status = "Start Shizuku first";
                     message = "Start Shizuku first.";
                 } else {
+                    // Caches first: "pm" itself takes some memory, which the RAM step then frees.
+                    String caches = shizuku ? Ram.clearCaches(app) : null;
                     long before = Ram.available(app);
                     String ram = Ram.free(app);
                     String freed = Formatter.formatShortFileSize(app, Math.max(0, Ram.available(app) - before));
-                    String caches = shizuku ? Tiles.clearCaches() : null;
                     boolean cleared = caches != null && caches.startsWith("Freed ");
                     // The widget line carries the result: Android hides toasts from apps in the
                     // background when their notifications aren't allowed.

@@ -83,20 +83,6 @@ public abstract class Tiles extends TileService {
 
     // ---- Shared with the app ---------------------------------------------------------------
 
-    /** Clears every app's cache and says how much space came back. Call off the main thread. */
-    static String clearCaches() {
-        String free = "df -k /data | tail -1 | awk '{print $4}'";
-        Shell.Result r = Shell.run("a=$(" + free + "); pm trim-caches 999G; b=$(" + free + "); "
-                + "echo $(( (b - a) / 1024 ))");
-        if (!r.ok()) return "Failed: " + r.out;
-        long mb = 0;
-        try {
-            mb = Math.max(0, Long.parseLong(r.out.trim()));
-        } catch (NumberFormatException ignored) {
-        }
-        return "Freed " + mb + " MB";
-    }
-
     // ---- Settings toggles ----------------------------------------------------------------------
 
     /** A tile that flips one {@link Tweak}. */
@@ -310,7 +296,7 @@ public abstract class Tiles extends TileService {
         @Override
         void tap(boolean active) {
             if (!shizuku()) return;
-            last = clearCaches();
+            last = Ram.clearCaches(this);
         }
     }
 

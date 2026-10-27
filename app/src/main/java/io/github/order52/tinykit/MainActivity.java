@@ -914,18 +914,8 @@ public class MainActivity extends Activity {
                 () -> Ram.free(this));
         row(list, "Speed-up widget", "Add a home screen widget that frees RAM and clears app caches in one "
                 + "tap, without opening TinyKit.", arrow(), this::addBoostWidget, false);
-        action(list, "Clear all app caches", "Frees the space used by every app's cache.", () -> {
-            String free = "df -k /data | tail -1 | awk '{print $4}'";
-            Shell.Result r = Shell.run("a=$(" + free + "); pm trim-caches 999G; b=$(" + free + "); "
-                    + "echo $(( (b - a) / 1024 ))");
-            if (!r.ok()) return "Failed: " + r.out;
-            long mb = 0;
-            try {
-                mb = Math.max(0, Long.parseLong(r.out.trim()));
-            } catch (NumberFormatException ignored) {
-            }
-            return "Freed " + mb + " MB.";
-        });
+        action(list, "Clear all app caches", "Frees the space used by every app's cache.",
+                () -> Ram.clearCaches(this) + ".");
         action(list, "Optimize apps",
                 "Compiles apps so they open faster. Runs in the background for about 10 minutes.", () -> {
             Shell.Result r = Shell.run("(cmd package bg-dexopt-job >/dev/null 2>&1 &)");
