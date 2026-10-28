@@ -10,7 +10,10 @@ PKG=io.github.order52.tinykit
 fails=0
 pass() { echo "ok   $*"; }
 bad() { echo "FAIL $*"; fails=$((fails + 1)); }
-check() { name=$1; shift; if "$@" >/dev/null 2>&1; then pass "$name"; else bad "$name"; fi; }
+check() {
+  name=$1; shift
+  if out=$("$@" 2>&1); then pass "$name"; else bad "$name"; echo "$out" | head -5 | sed 's/^/       /'; fi
+}
 sh_() { adb shell "$@"; }
 sdk=$(sh_ getprop ro.build.version.sdk | tr -d '\r')
 echo "Android API $sdk"
@@ -29,7 +32,8 @@ clickable() {
     | sed -E 's/bounds="\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\]"/\1 \2 \3 \4/' \
     | while read -r a b c d; do echo "$(((a + c) / 2)) $(((b + d) / 2))"; done
 }
-crashed() { adb logcat -d -b crash 2>/dev/null | grep -q "$PKG"; }
+# A crash of TinyKit's own process (not an app_process helper that threw).
+crashed() { adb logcat -d -b crash 2>/dev/null | grep -A3 "FATAL EXCEPTION" | grep -q "Process: $PKG"; }
 foreground() { sh_ dumpsys window 2>/dev/null | grep -m1 mFocusedApp | grep -q "$PKG"; }
 open_app() { sh_ am start -n $PKG/.MainActivity >/dev/null 2>&1; sleep 3; }
 
@@ -60,10 +64,11 @@ open_app; foreground && pass "app opens again after the crawl" || bad "app does 
 
 # ---- Features, at the command level ---------------------------------------------------------
 # Speed up phone
-check "trim memory" sh_ "cmd activity help | grep -q send-trim-memory"
-if [ "$sdk" -ge 30 ]; then check "compact system" sh_ "cmd activity compact system"; fi
-check "idle maintenance" sh_ "sm idle-maint run"
-check "trim caches" sh_ "pm trim-caches 1G"
+# The app probes each of these the same way and skips what the Android version lacks.
+sh_ "cmd activity help 2>/dev/null | grep -q send-trim-memory" && pass "trim memory" || echo "skip trim memory (older Android; the app only kills cached apps there)"
+if sh_ "cmd activity help 2>/dev/null | grep -q 'compact system'"; then check "compact system" sh_ "cmd activity compact system"; else echo "skip compact system"; fi
+if sh_ "sm 2>&1 | grep -q idle-maint"; then check "idle maintenance" sh_ "sm idle-maint run"; else echo "skip idle maintenance"; fi
+if sh_ "pm 2>&1 | grep -q trim-caches"; then check "trim caches" sh_ "pm trim-caches 1G"; else echo "skip trim caches"; fi
 check "process list" sh_ "ps -A | grep -q ."
 
 # Settings toggles round-trip (what the tiles and System tab write)
@@ -115,8 +120,8 @@ for c in "dumpsys battery" "dumpsys batterystats --charged" "dumpsys thermalserv
          "logcat -d -t 20" "logcat -b crash -d"; do
   check "info: $c" sh_ "$c"
 done
-check "role holders" sh_ "cmd role get-role-holders --user 0 android.app.role.HOME"
-check "default apps" sh_ "dumpsys role | grep -q ."
+# Default apps: "cmd role" where it exists, otherwise the app falls back to dumpsys / pm.
+check "default apps" sh_ "cmd role get-role-holders --user 0 android.app.role.HOME 2>/dev/null || dumpsys role 2>/dev/null | grep -q . || pm resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME | grep -q ."
 
 # Run a command, backup and restore of settings, recovery paths
 check "run a command" sh_ "echo hello | grep -q hello"
@@ -129,8 +134,10 @@ check "screenshot and record tools" sh_ "which screencap screenrecord"
 # app_process helpers: the same classes Shizuku runs for TinyKit
 base=$(sh_ pm path $PKG | tr -d '\r' | sed 's/package://' | head -1)
 helper() { sh_ "CLASSPATH=$base app_process /system/bin io.github.order52.tinykit.$*"; }
-out=$(helper Sensors state 2>&1 | tr -d '\r' | tail -1)
-case $out in true|false) pass "sensor privacy helper ($out)";; *) bad "sensor privacy helper: $out";; esac
+if [ "$sdk" -ge 31 ]; then
+  out=$(helper Sensors state 2>&1 | tr -d '\r' | tail -1)
+  case $out in true|false) pass "sensor privacy helper ($out)";; *) bad "sensor privacy helper: $out";; esac
+fi
 helper WifiDump >/dev/null 2>&1; pass "Wi-Fi helper runs (rc $?)"
 if [ "$sdk" -ge 34 ]; then
   uid=$(sh_ pm list packages -U $PKG | tr -d '\r' | sed 's/.*uid://')
