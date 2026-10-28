@@ -95,6 +95,40 @@ Items that don't apply to your phone are greyed out with *Not on this phone*.
 > Any package containing `hwid` is always skipped, so your **Huawei ID sign-in is never
 > touched**.
 
+### Block internet per app
+
+Pick apps and cut them off **Wi-Fi and mobile data**. Needs **Android 14 or newer**.
+
+TinyKit sets the rule once, through Android's own per-app firewall (the same kernel-level rule
+Data Saver and Battery Saver use), and then does nothing. There's no VPN, no service and no
+background work: Android enforces the block in the network stack, so it holds even when TinyKit
+is closed or Shizuku is stopped, and it costs no memory or CPU. The rule uses one of Android's
+`OEM_DENY` firewall chains, which no system feature uses, and leaves Doze and Data Saver alone.
+
+- Changes take effect at once. Apps that were connected lose their connection.
+- It blocks every network at the same time; Android has no per-app switch for Wi-Fi only or
+  mobile data only.
+- Android clears these rules when the phone restarts. TinyKit remembers your choices and puts
+  them back the next time you open it, so after a restart the apps stay online until then.
+- Apps from one developer can share an ID and are blocked together. TinyKit tells you which.
+- Parts of Android itself (shared system ID) can't be blocked on their own, which protects
+  you from cutting off the system by accident.
+
+```sh
+# what the helper calls (as the shell user, via app_process)
+IConnectivityManager.setUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_3, uid, DENY)
+```
+
+### Clipboard guard
+
+Checked apps can't read what you copy, even while they're open. Android already stops apps from
+reading the clipboard in the background, so this closes the rest. Don't check your keyboard, or
+its paste suggestions stop working. ♻️
+
+```sh
+appops set <pkg> READ_CLIPBOARD ignore   # unchecking sets it back to default
+```
+
 ### Saved Wi-Fi networks
 
 Lists every saved network with its security type and password, with search. Tap a network to
@@ -188,14 +222,18 @@ can't be stopped and are labelled as such.
 
 ### Stop background activity
 
-Checked apps can't run or hold wake locks in the background:
+Checked apps are restricted the same way as in Settings → Battery → *Restricted*: no background
+work, alarms or wake locks until you open them, and Android moves them to its lowest standby
+priority:
 
 ```sh
+am set-standby-bucket <pkg> restricted     # Android 9+; unchecking sets it back to active
 appops set <pkg> RUN_ANY_IN_BACKGROUND ignore
 appops set <pkg> WAKE_LOCK ignore
 ```
 
-Notifications from checked apps may arrive late, so leave messengers unchecked. ♻️
+Notifications from checked apps may arrive late, so leave messengers unchecked. Android never
+restricts some system components, so a checked system app may keep its standby priority. ♻️
 
 ### Keep apps alive
 
@@ -207,6 +245,30 @@ Shizuku itself. ♻️
 dumpsys deviceidle whitelist +<pkg>
 appops set <pkg> RUN_ANY_IN_BACKGROUND allow
 appops set <pkg> WAKE_LOCK allow
+```
+
+### Install APK files
+
+Installs `.apk` files, and apps that come in several parts: `.apks`, `.xapk`, `.apkm`, or
+several `.apk` files picked together in the file picker. It uses Android's own package
+installer through Shizuku, so there's no per-install "Install unknown apps" prompt.
+
+- **Streams, doesn't unpack.** Each part is piped into the install session straight from the
+  file, so a big game isn't copied or extracted first. (A file that can't be opened in place,
+  such as one on cloud storage, is copied to the cache once and deleted afterwards.)
+- **Installs only what this phone needs:** the base, feature splits, the processor splits that
+  match your phone, your screen density and your languages.
+- **Game data.** `.xapk` files with `Android/obb/<package>/*.obb` get it copied to
+  `Android/obb/<package>`.
+- **Updates over an installed app** with the same signing key. Android won't install an older
+  version over a newer one, or an app signed with a different key; TinyKit says so in plain
+  words and what to do.
+- Old apps that Android 14 would normally refuse (built for Android 5 and older) are allowed.
+
+```sh
+pm install-create -r -S <bytes>              # one session
+pm install-write -S <bytes> <id> pN.apk -    # each part, from stdin
+pm install-commit <id>
 ```
 
 ### Back up app as APK

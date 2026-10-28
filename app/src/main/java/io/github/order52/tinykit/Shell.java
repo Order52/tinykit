@@ -3,7 +3,9 @@ package io.github.order52.tinykit;
 import android.content.pm.PackageManager;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
 
 import rikka.shizuku.Shizuku;
@@ -59,6 +61,11 @@ final class Shell {
 
     /** Runs {@code command} with sh; stdout and stderr are merged. */
     static Result run(String command) {
+        return run(command, null);
+    }
+
+    /** Like {@link #run(String)}, with {@code stdin} streamed to the command (e.g. {@code cat > file}). */
+    static Result run(String command, InputStream stdin) {
         if (!ready()) return new Result(-1, "Shizuku is not available.");
         try {
             // Shizuku keeps newProcess private in favour of UserService, which is much heavier
@@ -70,7 +77,17 @@ final class Shell {
             }
             Process process = (Process) newProcess.invoke(
                     null, new String[]{"sh", "-c", "exec 2>&1\n" + command}, null, null);
-            process.getOutputStream().close();
+            if (stdin != null) {
+                try (OutputStream to = process.getOutputStream()) {
+                    byte[] chunk = new byte[64 * 1024];
+                    int n;
+                    while ((n = stdin.read(chunk)) != -1) to.write(chunk, 0, n);
+                } catch (IOException e) {
+                    // The command may stop reading early (e.g. pm rejecting the file); its output says why.
+                }
+            } else {
+                process.getOutputStream().close();
+            }
             String out = read(process.getInputStream());
             int code = process.waitFor();
             return new Result(code, out.trim());

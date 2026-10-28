@@ -136,6 +136,8 @@ single tap. Eight of them keep working with Shizuku stopped.
 | --- | --- |
 | **Analytics & telemetry** | Turns off Huawei's User Experience Programme, its background diagnostics apps and HiCloud, and limits Google ad personalisation. Your Huawei ID sign-in is never touched. |
 | **All sensors off** | Blocks every sensor, including motion, microphone and camera, for all apps. It works like the hidden *Sensors off* developer tile. |
+| **Block internet per app** | Cuts chosen apps off Wi-Fi and mobile data (Android 14+) with Android's own per-app firewall. Nothing runs in the background: the system enforces it. |
+| **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
 | **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code. |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |
 
@@ -150,7 +152,8 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Storage by app** | Shows how much space each app uses. |
 | **Recent access** | Shows which apps used the camera, microphone, location, contacts or clipboard, and when. |
 | **Mixed audio** | Lets several apps play audio at once, or mutes a single app. Android's audio system enforces this, so TinyKit doesn't need to keep running. |
-| **More** | Running apps (stop any of them) · Stop background activity · Keep apps alive · Back up an app as an APK |
+| **Install APK files** | Installs `.apk`, `.apks`, `.xapk` and `.apkm` files, including apps split into parts and game data. Streams the files, installs only the parts your phone needs. |
+| **More** | Running apps (stop any of them) · Stop background activity (full Restricted mode) · Keep apps alive · Back up an app as an APK |
 
 ### System
 

@@ -53,6 +53,8 @@ tinykit/
 │       │   ├── Ram.java            Free up RAM, shared by the app, the Free RAM tile and the widget
 │       │   ├── BoostWidget.java    Home screen widget: one tap frees RAM and clears caches
 │       │   ├── Sensors.java        app_process helper: all-sensors privacy
+│       │   ├── Firewall.java       app_process helper: block an app's internet (Android 14+)
+│       │   ├── ApkInstaller.java   Installs .apk, .apks, .xapk and .apkm through pm, streaming
 │       │   ├── WifiDump.java       app_process helper: saved Wi-Fi credentials
 │       │   └── Qr.java             Small QR encoder for Wi-Fi codes
 │       └── res/
@@ -125,7 +127,7 @@ tiles work with Shizuku stopped.
 
 ## app_process helpers
 
-Two features need hidden system APIs that only privileged callers may use. Rather than adding a
+Three features need hidden system APIs that only privileged callers may use. Rather than adding a
 Shizuku `UserService`, TinyKit runs a class **from its own APK** as the `shell` user:
 
 ```sh
@@ -136,8 +138,9 @@ CLASSPATH=/data/app/…/base.apk app_process /system/bin io.github.order52.tinyk
 | --- | --- | --- |
 | `WifiDump` | `IWifiManager.getPrivilegedConfiguredNetworks("com.android.shell", …)`, adding an `AttributionSource` on Android 12+ | One `SSID⇥type⇥password` line per network |
 | `Sensors` | `ISensorPrivacyManager.setSensorPrivacy(…)` and `isSensorPrivacyEnabled()` | `OK`, or `true`/`false` |
+| `Firewall` | `IConnectivityManager.setUidFirewallRule(…)` and `getUidFirewallRule(…)` on `FIREWALL_CHAIN_OEM_DENY_3` | `OK`, or the blocked user IDs. It exits at once; the kernel keeps the rule. |
 
-Both look up their service through `ServiceManager.getService` and pick the matching method by
+All three look up their service through `ServiceManager.getService` and pick the matching method by
 reflection, so they keep working across Android versions with different signatures. Their
 `main` methods are kept by `proguard-rules.pro`.
 
@@ -195,7 +198,7 @@ re-reads it.
 
 | Store | Contents |
 | --- | --- |
-| `SharedPreferences("tinykit")` | Last tab, Shizuku auth token, previous Private DNS (to restore it), Caffeine's previous timeout, notification filter, known quick panel tiles, original panel layout, icon setting |
+| `SharedPreferences("tinykit")` | Last tab, apps blocked from the internet (re-applied after a restart), Shizuku auth token, previous Private DNS (to restore it), Caffeine's previous timeout, notification filter, known quick panel tiles, original panel layout, icon setting |
 | `files/notifications.tsv` | Saved notifications as `time⇥package⇥title⇥text`, escaped, capped at 3,000 |
 | Android | Everything else: settings, app-ops, permissions, disabled packages, roles |
 

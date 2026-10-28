@@ -15,6 +15,7 @@ import android.app.usage.UsageStatsManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -129,6 +130,8 @@ public class MainActivity extends Activity {
     private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
     private static final int REQUEST_RUN_COMMAND = 2;
     private static final int REQUEST_NOTIFICATIONS = 3;
+    private static final int REQUEST_PICK_APK = 4;
+    private static final String PREF_BLOCKED = "fw_blocked";
     private static final String UPDATE_CHANNEL = "updates";
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
@@ -251,6 +254,7 @@ public class MainActivity extends Activity {
     private Button startButton;
     private Button stopButton;
     private boolean starting;
+    private boolean firewallRestored;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
@@ -438,6 +442,7 @@ public class MainActivity extends Activity {
             // Grant TinyKit the permissions its toggles and tiles need, so they keep working
             // when Shizuku is later turned off. Done once, off the main thread.
             worker.execute(() -> Tweak.grantSelf(this));
+            restoreFirewall();
         }
     }
 
@@ -775,6 +780,9 @@ public class MainActivity extends Activity {
         f.add(new Feature("Stop background activity", "Per-app background block", this::openBackground));
         f.add(new Feature("Keep apps alive", "Exempt apps from battery limits", this::openKeepAlive));
         f.add(new Feature("Back up app as APK", "Save any app's APK", this::openBackup));
+        f.add(new Feature("Install APK files", "Install .apk, .apks, .xapk and split apps", this::pickApks));
+        f.add(new Feature("Clipboard guard", "Stop apps from reading your clipboard", this::openClipboardGuard));
+        f.add(new Feature("Block internet per app", "Cut an app off Wi-Fi and mobile data", this::openFirewall));
         f.add(new Feature("Force dark on all apps", "Dark-theme apps that have no dark mode", () -> selectTab(3)));
         f.add(new Feature("Animation speed", "Off, faster or slower system animations", () -> selectTab(3)));
         f.add(new Feature("Edit quick panel", "Reorder, add and remove tiles", this::openQuickPanel));
@@ -872,8 +880,16 @@ public class MainActivity extends Activity {
                 "Turn off Huawei and Google analytics, ad tracking and HiCloud.", this::openAnalytics);
 
         section(list, "Networks");
+        link(list, "Block internet per app",
+                Build.VERSION.SDK_INT >= 34
+                        ? "Cut chosen apps off Wi-Fi and mobile data. Nothing runs in the background."
+                        : "Needs Android 14 or newer.", this::openFirewall);
         link(list, "Saved Wi-Fi networks",
                 "See saved passwords and share any network with a QR code.", this::openWifi);
+
+        section(list, "Clipboard");
+        link(list, "Clipboard guard",
+                "Pick apps that can't read what you copy, like passwords and codes.", this::openClipboardGuard);
 
         return scroll(list);
     }
@@ -904,6 +920,9 @@ public class MainActivity extends Activity {
                 "Pick apps Android must never kill or delay, like Termux or messengers.",
                 this::openKeepAlive);
         link(list, "Back up app as APK", "Save any app's APK to Download/TinyKit.", this::openBackup);
+        link(list, "Install APK files",
+                "Install .apk, .apks, .xapk and .apkm files, including apps split into several parts.",
+                this::pickApks);
 
         return scroll(list);
     }
@@ -1052,13 +1071,17 @@ public class MainActivity extends Activity {
 
     private void openBackground() {
         openPicker("Stop background activity",
-                "Checked apps can't run or keep the phone awake in the background. Their "
-                        + "notifications may arrive late, so leave messengers unchecked.", true,
+                "Checked apps are restricted like Settings > Battery > Restricted: no background work, "
+                        + "alarms or wake-locks until you open them. Their notifications may arrive late, "
+                        + "so leave messengers unchecked.", true,
                 () -> packages(Shell.run("appops query-op RUN_ANY_IN_BACKGROUND ignore").out),
                 (pkg, on) -> {
                     String q = Shell.quote(pkg);
                     String mode = on ? "ignore" : "allow";
-                    return error(Shell.run("appops set " + q + " RUN_ANY_IN_BACKGROUND " + mode
+                    // The standby bucket is Android 9+; where it's missing the command just fails, so
+                    // it goes first and the app-ops below decide the result.
+                    return error(Shell.run("am set-standby-bucket " + q + (on ? " restricted" : " active")
+                            + " >/dev/null 2>&1; appops set " + q + " RUN_ANY_IN_BACKGROUND " + mode
                             + "; appops set " + q + " WAKE_LOCK " + mode));
                 });
     }
@@ -1083,6 +1106,146 @@ public class MainActivity extends Activity {
                                     + "; appops set " + q + " WAKE_LOCK allow"
                             : "dumpsys deviceidle whitelist -" + q));
                 });
+    }
+
+    // ---- Clipboard guard ------------------------------------------------------------------
+
+    private void openClipboardGuard() {
+        openPicker("Clipboard guard",
+                "Checked apps can't read what you copy, even when they're open. Android already stops "
+                        + "apps from reading it in the background. Don't check your keyboard, or pasting "
+                        + "suggestions stop working.", true,
+                () -> packages(Shell.run("appops query-op READ_CLIPBOARD ignore").out),
+                (pkg, on) -> error(Shell.run("appops set " + Shell.quote(pkg) + " READ_CLIPBOARD "
+                        + (on ? "ignore" : "default"))));
+    }
+
+    // ---- Block internet per app ---------------------------------------------------------------
+
+    private static String firewallCmd(Context c, String args) {
+        return "CLASSPATH=" + c.getPackageCodePath()
+                + " app_process /system/bin io.github.order52.tinykit.Firewall " + args;
+    }
+
+    /** Package name to user id for every app, from one pm call. */
+    private static Map<String, String> userIds() {
+        Map<String, String> ids = new HashMap<>();
+        for (String line : Shell.run("pm list packages -U").out.split("\n")) {
+            int at = line.indexOf(" uid:");
+            if (line.startsWith("package:") && at > 0) ids.put(line.substring(8, at), line.substring(at + 5).trim());
+        }
+        return ids;
+    }
+
+    private void openFirewall() {
+        if (Build.VERSION.SDK_INT < 34) {
+            toast("Blocking an app's internet needs Android 14 or newer.");
+            return;
+        }
+        openPicker("Block internet per app",
+                "Checked apps can't use Wi-Fi or mobile data. It takes effect at once, is enforced by "
+                        + "Android itself so TinyKit doesn't need to keep running, and lasts until you "
+                        + "uncheck the app or restart the phone (TinyKit puts it back the next time you "
+                        + "open it).", true,
+                () -> {
+                    Map<String, String> ids = userIds();
+                    Set<String> saved = prefs.getStringSet(PREF_BLOCKED, Collections.emptySet());
+                    String all = TextUtils.join(" ", ids.values());
+                    Set<String> blocked = new HashSet<>(Arrays.asList(
+                            Shell.run(firewallCmd(this, "query " + all)).out.split("\\s+")));
+                    Set<String> checked = new HashSet<>();
+                    List<String> lost = new ArrayList<>();
+                    for (Map.Entry<String, String> e : ids.entrySet()) {
+                        boolean now = blocked.contains(e.getValue());
+                        if (now || saved.contains(e.getKey())) checked.add(e.getKey());
+                        if (!now && saved.contains(e.getKey())) lost.add(e.getValue());
+                    }
+                    // The phone was restarted since: the rules are gone but the choice is kept.
+                    if (!lost.isEmpty()) Shell.run(firewallCmd(this, "block " + TextUtils.join(" ", lost)));
+                    return checked;
+                },
+                (pkg, on) -> {
+                    Map<String, String> ids = userIds();
+                    String uid = ids.get(pkg);
+                    if (uid == null) return "Couldn't find " + pkg + ".";
+                    if (Integer.parseInt(uid) < 10000) {
+                        return "This is part of Android itself, so it can't be blocked on its own.";
+                    }
+                    String error = error(Shell.run(firewallCmd(this, (on ? "block " : "allow ") + uid)));
+                    if (error != null) return error;
+                    Set<String> saved = new HashSet<>(prefs.getStringSet(PREF_BLOCKED, Collections.emptySet()));
+                    if (on) saved.add(pkg); else saved.remove(pkg);
+                    prefs.edit().putStringSet(PREF_BLOCKED, saved).apply();
+                    // Apps from one developer can share an id, and the rule covers all of them.
+                    List<String> same = new ArrayList<>();
+                    for (Map.Entry<String, String> e : ids.entrySet()) {
+                        if (e.getValue().equals(uid) && !e.getKey().equals(pkg)) same.add(label(e.getKey()));
+                    }
+                    if (!same.isEmpty()) {
+                        main.post(() -> toast((on ? "Also blocked: " : "Also allowed: ")
+                                + TextUtils.join(", ", same)));
+                    }
+                    return null;
+                });
+    }
+
+    /** Puts back the rules chosen earlier after a restart. Once per launch, and only if any were chosen. */
+    private void restoreFirewall() {
+        if (firewallRestored || Build.VERSION.SDK_INT < 34) return;
+        firewallRestored = true;
+        Set<String> saved = prefs.getStringSet(PREF_BLOCKED, Collections.emptySet());
+        if (saved.isEmpty()) return;
+        worker.execute(() -> {
+            Map<String, String> ids = userIds();
+            List<String> uids = new ArrayList<>();
+            for (String pkg : saved) if (ids.containsKey(pkg)) uids.add(ids.get(pkg));
+            if (!uids.isEmpty()) Shell.run(firewallCmd(this, "block " + TextUtils.join(" ", uids)));
+        });
+    }
+
+    // ---- Install APK files ----------------------------------------------------------------
+
+    private void pickApks() {
+        if (!Shell.ready()) {
+            toast("Start Shizuku and allow TinyKit first.");
+            return;
+        }
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("*/*").putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        try {
+            startActivityForResult(pick, REQUEST_PICK_APK);
+        } catch (ActivityNotFoundException e) {
+            toast("No file picker found on this phone.");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_PICK_APK || resultCode != RESULT_OK || data == null) return;
+        List<Uri> uris = new ArrayList<>();
+        if (data.getClipData() != null) {
+            for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                uris.add(data.getClipData().getItemAt(i).getUri());
+            }
+        } else if (data.getData() != null) {
+            uris.add(data.getData());
+        }
+        if (uris.isEmpty()) return;
+        TextView message = text("Reading files…", 15, false);
+        message.setPadding(dp(24), dp(16), dp(24), dp(8));
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle("Installing")
+                .setView(message).setCancelable(false).show();
+        // Its own thread: an install can take a while and shouldn't hold up the other commands.
+        new Thread(() -> {
+            String result = ApkInstaller.install(this, uris, text -> main.post(() -> message.setText(text)));
+            main.post(() -> {
+                progress.dismiss();
+                new AlertDialog.Builder(this).setTitle("Install").setMessage(result)
+                        .setPositiveButton("OK", null).show();
+            });
+            reloadApps();
+        }, "install").start();
     }
 
     private void openBackup() {
@@ -1204,6 +1367,12 @@ public class MainActivity extends Activity {
                 });
             });
         }
+    }
+
+    /** Reloads the cached app list, e.g. after installing an app. Call off the main thread. */
+    private synchronized void reloadApps() {
+        apps = null;
+        installedApps();
     }
 
     private synchronized boolean appsLoaded() {
