@@ -1,0 +1,1 @@
+- Speed up phone now does everything on every press: deletes every app's cache, closes cached apps, frees and compacts memory and trims storage.
