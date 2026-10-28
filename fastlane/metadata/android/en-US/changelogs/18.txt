@@ -1,0 +1,7 @@
+- New Speed up phone: trims and compacts app memory, closes apps only when memory is low, clears caches only when storage is nearly full.
+- Notification channels: block one kind of notification from an app.
+- Trackers in apps: find ad and analytics libraries and cut an app off the internet.
+- Install options: allow downgrade, grant all permissions, test-only apps.
+- Asks once on first start whether to check for updates.
+- Removed Notification history and the app icon switch (icons always show).
+- Debloater needs Android 8+; fixes for Android 7.
