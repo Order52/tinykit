@@ -151,7 +151,8 @@ fi
 
 # Notification channels (Android 8+): list, block one, put it back
 if [ "$sdk" -ge 26 ]; then
-  chan=$(helper Channels list android 1000 2>&1 | head -1)
+  # A channel whose id is plain text, so it passes through the shell unquoted.
+  chan=$(helper Channels list android 1000 2>&1 | grep -E '^[A-Za-z0-9_.-]+	' | head -1)
   id=$(echo "$chan" | cut -f1); imp=$(echo "$chan" | cut -f3)
   if [ -n "$id" ]; then
     out=$(helper Channels set android 1000 "$id" 0 2>&1 | tail -1); [ "$out" = OK ] && pass "block a notification channel" || bad "block a notification channel: $out"
