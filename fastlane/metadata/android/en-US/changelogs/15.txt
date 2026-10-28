@@ -1,0 +1,4 @@
+- Block internet per app (Android 14+): cut chosen apps off Wi-Fi and mobile data with Android's own firewall. Nothing runs in the background.
+- Install APK files: .apk, .apks, .xapk and .apkm, including apps split into parts and game data.
+- Clipboard guard: stop chosen apps from reading what you copy.
+- Stop background activity now also puts apps in Android's Restricted battery mode.
