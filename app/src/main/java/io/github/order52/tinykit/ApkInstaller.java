@@ -87,7 +87,7 @@ final class ApkInstaller {
 
             long total = 0;
             for (Part p : parts) total += p.size;
-            Shell.Result create = Shell.run("pm install-create -r"
+            Shell.Result create = Shell.run("pm install-create -r -i io.github.order52.tinykit"
                     + (Build.VERSION.SDK_INT >= 34 ? " --bypass-low-target-sdk-block" : "") + " -S " + total);
             Matcher session = SESSION.matcher(create.out);
             if (!create.ok() || !session.find()) return explain(create.out);

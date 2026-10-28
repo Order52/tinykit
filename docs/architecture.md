@@ -10,6 +10,7 @@ changing the code.
 - [How a command runs](#how-a-command-runs)
 - [Privilege model](#privilege-model)
 - [app_process helpers](#app_process-helpers)
+- [Restore after a restart](#restore-after-a-restart)
 - [UI](#ui)
 - [Threading](#threading)
 - [Memory](#memory)
@@ -24,7 +25,9 @@ These are the rules the code follows. Changes should keep them.
 
 1. **Nothing in the background.** No services that keep running, no alarms, no jobs, no
    receivers waiting for system events. TinyKit runs only while it's on screen or while a tile
-   or the widget is being tapped.
+   or the widget is being tapped. The one exception is when Shizuku starts: it starts TinyKit's
+   process, which spends a second or two putting back what a restart wiped (see
+   [Restore](#restore-after-a-restart)) and then idles.
 2. **Only Android's own mechanisms.** Every change is a `settings` key, an app-op, a package
    manager call or a system service call that `adb shell` could make. No patching, no root, no
    Xposed.
@@ -54,6 +57,10 @@ tinykit/
 │       │   ├── BoostWidget.java    Home screen widget: one tap frees RAM and clears caches
 │       │   ├── Sensors.java        app_process helper: all-sensors privacy
 │       │   ├── Firewall.java       app_process helper: block an app's internet (Android 14+)
+│       │   ├── FirewallPolicy.java The saved block/allow lists and how they are applied
+│       │   ├── Restore.java        Puts back the firewall and Force dark after a restart
+│       │   ├── TinyKitApp.java     Application: starts Restore when Shizuku's binder arrives
+│       │   ├── Bloat.java          Safety ratings for the Debloater
 │       │   ├── ApkInstaller.java   Installs .apk, .apks, .xapk and .apkm through pm, streaming
 │       │   ├── WifiDump.java       app_process helper: saved Wi-Fi credentials
 │       │   └── Qr.java             Small QR encoder for Wi-Fi codes
@@ -138,11 +145,27 @@ CLASSPATH=/data/app/…/base.apk app_process /system/bin io.github.order52.tinyk
 | --- | --- | --- |
 | `WifiDump` | `IWifiManager.getPrivilegedConfiguredNetworks("com.android.shell", …)`, adding an `AttributionSource` on Android 12+ | One `SSID⇥type⇥password` line per network |
 | `Sensors` | `ISensorPrivacyManager.setSensorPrivacy(…)` and `isSensorPrivacyEnabled()` | `OK`, or `true`/`false` |
-| `Firewall` | `IConnectivityManager.setUidFirewallRule(…)` and `getUidFirewallRule(…)` on `FIREWALL_CHAIN_OEM_DENY_3` | `OK`, or the blocked user IDs. It exits at once; the kernel keeps the rule. |
+| `Firewall` | `IConnectivityManager.setUidFirewallRule(…)` and `getUidFirewallRule(…)` on `FIREWALL_CHAIN_OEM_DENY_3`; `sync` blocks and clears in one run | `OK`, or the blocked user IDs. It exits at once; the kernel keeps the rule. |
 
 All three look up their service through `ServiceManager.getService` and pick the matching method by
 reflection, so they keep working across Android versions with different signatures. Their
 `main` methods are kept by `proguard-rules.pro`.
+
+## Restore after a restart
+
+Android wipes two things TinyKit sets: the firewall rules and `debug.hwui.force_dark`. When
+Shizuku starts it starts the processes of apps that use it, and `TinyKitApp` (the `Application`)
+listens for Shizuku's binder arriving. `Restore` then runs once per boot, tracked by
+`Settings.Global.BOOT_COUNT`:
+
+- `FirewallPolicy.apply` pushes the saved choice in one `Firewall sync` run (nothing to do if no
+  app is blocked), and
+- Force dark is switched back on if it was on.
+
+The process then idles like any cached app. TinyKit keeps no service and no receiver. The
+firewall choice lives in `SharedPreferences` (`fw_blocked`, `fw_allowed`, `fw_allow_mode`).
+`FirewallPolicy` reads user IDs from `PackageManager` instead of `pm list packages -U`, which
+saves a shell call each time.
 
 ## UI
 

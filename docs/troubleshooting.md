@@ -67,8 +67,30 @@ can parse.
 Captive portals at hotels and airports often need normal DNS. Turn Ad-blocking DNS off, sign
 in, then turn it back on.
 
-**Force dark or All sensors off turned itself off.**
-Both reset when the phone reboots. That's how Android implements them. Turn them on again.
+**Force dark turned itself off after a restart.**
+Android forgets it, and TinyKit puts it back once Shizuku is running again, without opening
+TinyKit. If it doesn't come back, Shizuku isn't running or hasn't allowed TinyKit yet.
+
+**Blocked apps are online again after a restart.**
+Android clears the block at every restart. TinyKit re-applies it as soon as Shizuku is running,
+so start Shizuku and give it a few seconds. Without Shizuku nothing can set the block.
+
+**An app I installed later has internet in allow list mode.**
+TinyKit blocks it the next time it runs. Open TinyKit once after installing apps.
+
+**All sensors off turned itself off.**
+It resets when the phone reboots. That's how Android implements it. Turn it on again.
+
+**The Debloater won't let me select an app.**
+Apps marked **Unsafe**, and the ones in use right now (home screen, keyboard, phone, messages,
+web view, TinyKit, Shizuku), are locked so the phone can't be broken by accident.
+
+**A removed app doesn't appear under Removed.**
+Only apps that came with the phone can be restored. An app you installed yourself and removed
+has no files left to bring back.
+
+**The language I picked for an app has no effect.**
+Android only applies it if the app has that language. Pick another, or choose *System default*.
 
 **Unused apps or Storage by app is empty.**
 TinyKit needs the usage access app-op, which it grants itself through Shizuku. Start Shizuku

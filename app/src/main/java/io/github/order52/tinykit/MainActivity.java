@@ -89,6 +89,7 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -127,7 +128,6 @@ public class MainActivity extends Activity {
     private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
     private static final int REQUEST_RUN_COMMAND = 2;
     private static final int REQUEST_PICK_APK = 4;
-    private static final String PREF_BLOCKED = "fw_blocked";
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
     private static final String BACKUP_DIR = "/sdcard/Download/TinyKit";
@@ -249,7 +249,6 @@ public class MainActivity extends Activity {
     private Button startButton;
     private Button stopButton;
     private boolean starting;
-    private boolean firewallRestored;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
@@ -342,7 +341,10 @@ public class MainActivity extends Activity {
 
     private void show() {
         frame.removeAllViews();
-        frame.addView(pages.get(pages.size() - 1));
+        View page = pages.get(pages.size() - 1);
+        frame.addView(page);
+        // A page that shows live numbers refreshes itself when it comes back into view.
+        if (page.getTag() instanceof Runnable) ((Runnable) page.getTag()).run();
         if (getActionBar() != null) {
             getActionBar().setTitle(titles.get(titles.size() - 1));
             getActionBar().setDisplayHomeAsUpEnabled(pages.size() > 1);
@@ -437,7 +439,8 @@ public class MainActivity extends Activity {
             // Grant TinyKit the permissions its toggles and tiles need, so they keep working
             // when Shizuku is later turned off. Done once, off the main thread.
             worker.execute(() -> Tweak.grantSelf(this));
-            restoreFirewall();
+            // Puts back what a restart wiped (firewall rules, Force dark); once per boot.
+            Restore.start(this);
         }
     }
 
@@ -766,6 +769,13 @@ public class MainActivity extends Activity {
         f.add(new Feature("Keep apps alive", "Exempt apps from battery limits", this::openKeepAlive));
         f.add(new Feature("Back up app as APK", "Save any app's APK", this::openBackup));
         f.add(new Feature("Install APK files", "Install .apk, .apks, .xapk and split apps", this::pickApks));
+        f.add(new Feature("Debloater", "Remove apps your phone came with, and bring them back", this::openDebloat));
+        f.add(new Feature("Special access", "Install unknown apps, draw over apps, all files and more",
+                this::openSpecialAccess));
+        f.add(new Feature("App language", "Give an app its own language", this::openAppLanguage));
+        f.add(new Feature("Installed with TinyKit", "Apps the installer put on, with a remove button",
+                this::openInstallHistory));
+        f.add(new Feature("Screen time", "How long each app was on screen", this::openScreenTime));
         f.add(new Feature("Clipboard guard", "Stop apps from reading your clipboard", this::openClipboardGuard));
         f.add(new Feature("Block internet per app", "Cut an app off Wi-Fi and mobile data", this::openFirewall));
         f.add(new Feature("Force dark on all apps", "Dark-theme apps that have no dark mode", () -> selectTab(3)));
@@ -908,6 +918,15 @@ public class MainActivity extends Activity {
         link(list, "Install APK files",
                 "Install .apk, .apks, .xapk and .apkm files, including apps split into several parts.",
                 this::pickApks);
+        row(list, "Installed with TinyKit", "Apps the installer put on, newest first, with a remove button.",
+                arrow(), this::openInstallHistory, false);
+
+        section(list, "Remove & control");
+        link(list, "Debloater", "Remove apps your phone came with, with a safety rating for each. "
+                + "Bring any of them back later.", this::openDebloat);
+        link(list, "Special access", "Install unknown apps, draw over apps, all files access and more, "
+                + "per app.", this::openSpecialAccess);
+        link(list, "App language", "Give any app its own language (Android 13+).", this::openAppLanguage);
 
         return scroll(list);
     }
@@ -917,9 +936,9 @@ public class MainActivity extends Activity {
         section(list, "Display");
         privacySwitch(list, "Force dark on all apps",
                 "Dark-themes apps that have no dark mode (Android's force-dark). Takes effect as each "
-                        + "app is re-opened. Resets on reboot; just turn it on again.",
+                        + "app is re-opened. Android forgets it at a restart; TinyKit puts it back once Shizuku is running.",
                 () -> "true".equals(Shell.run("getprop debug.hwui.force_dark").out.trim()),
-                block -> error(Shell.run("setprop debug.hwui.force_dark " + (block ? "true" : "false")
+                block -> forceDark(block, Shell.run("setprop debug.hwui.force_dark " + (block ? "true" : "false")
                         + " && (settings put secure op_force_dark_entire_world " + (block ? 1 : 0)
                         + " 2>/dev/null; settings put secure aosp_force_dark_mode " + (block ? 1 : 0)
                         + " 2>/dev/null; true)")));
@@ -999,6 +1018,8 @@ public class MainActivity extends Activity {
 
         section(list, "Battery & logs");
         link(list, "Battery usage", "Which apps have drained the most since the last charge.", this::openBatteryUsage);
+        row(list, "Screen time", "How long each app was on screen today, yesterday or in the last 7 days.", arrow(),
+                this::openScreenTime, false);
         link(list, "Wake-ups", "What has kept the phone awake.", this::openWakeups);
         link(list, "Vibration log", "Recent vibrations and what asked for them.", this::openVibration);
         link(list, "App log", "See an app's log output (Huawei hides most of it).", this::openAppLog);
@@ -1064,6 +1085,12 @@ public class MainActivity extends Activity {
                 });
     }
 
+    /** Remembers Force dark so {@link Restore} can switch it back on after a restart. */
+    private String forceDark(boolean on, Shell.Result r) {
+        if (r.ok()) prefs.edit().putBoolean(Restore.PREF_FORCE_DARK, on).apply();
+        return error(r);
+    }
+
     private void openKeepAlive() {
         openPicker("Keep apps alive",
                 "Checked apps are exempt from battery optimization and background limits, so "
@@ -1100,85 +1127,686 @@ public class MainActivity extends Activity {
 
     // ---- Block internet per app ---------------------------------------------------------------
 
-    private static String firewallCmd(Context c, String args) {
-        return "CLASSPATH=" + c.getPackageCodePath()
-                + " app_process /system/bin io.github.order52.tinykit.Firewall " + args;
-    }
-
-    /** Package name to user id for every app, from one pm call. */
-    private static Map<String, String> userIds() {
-        Map<String, String> ids = new HashMap<>();
-        for (String line : Shell.run("pm list packages -U").out.split("\n")) {
-            int at = line.indexOf(" uid:");
-            if (line.startsWith("package:") && at > 0) ids.put(line.substring(8, at), line.substring(at + 5).trim());
-        }
-        return ids;
-    }
-
     private void openFirewall() {
-        if (Build.VERSION.SDK_INT < 34) {
+        if (!FirewallPolicy.supported()) {
             toast("Blocking an app's internet needs Android 14 or newer.");
             return;
         }
-        openPicker("Block internet per app",
-                "Checked apps can't use Wi-Fi or mobile data. It takes effect at once, is enforced by "
-                        + "Android itself so TinyKit doesn't need to keep running, and lasts until you "
-                        + "uncheck the app or restart the phone (TinyKit puts it back the next time you "
-                        + "open it).", true,
-                () -> {
-                    Map<String, String> ids = userIds();
-                    Set<String> saved = prefs.getStringSet(PREF_BLOCKED, Collections.emptySet());
-                    String all = TextUtils.join(" ", ids.values());
-                    Set<String> blocked = new HashSet<>(Arrays.asList(
-                            Shell.run(firewallCmd(this, "query " + all)).out.split("\\s+")));
-                    Set<String> checked = new HashSet<>();
-                    List<String> lost = new ArrayList<>();
-                    for (Map.Entry<String, String> e : ids.entrySet()) {
-                        boolean now = blocked.contains(e.getValue());
-                        if (now || saved.contains(e.getKey())) checked.add(e.getKey());
-                        if (!now && saved.contains(e.getKey())) lost.add(e.getValue());
+        LinearLayout list = vertical();
+        TextView status = text("", 14, true);
+        status.setPadding(dp(16), dp(12), dp(16), dp(4));
+        list.addView(status);
+        list.addView(note("Blocked apps can't use Wi-Fi or mobile data. Android itself enforces it, so "
+                + "TinyKit runs nothing in the background, and it comes back by itself after a restart "
+                + "as soon as Shizuku is running again."));
+        Switch modeSwitch = new Switch(this);
+        modeSwitch.setClickable(false);
+        modeSwitch.setFocusable(false);
+        View[] choose = new View[1];
+        Runnable refresh = () -> {
+            boolean allow = FirewallPolicy.allowMode(prefs);
+            modeSwitch.setChecked(allow);
+            ((TextView) choose[0].getTag()).setText(allow
+                    ? "Pick the apps that may use the internet. Everything else is blocked."
+                    : "Pick the apps to cut off.");
+            status.setText("…");
+            worker.execute(() -> {
+                int n = FirewallPolicy.blockedCount(this, prefs);
+                main.post(() -> status.setText(n == 0 ? "No app is blocked."
+                        : n + (n == 1 ? " app is" : " apps are") + " blocked."));
+            });
+        };
+        choose[0] = row(list, "Choose apps", "", arrow(), this::openFirewallApps, true);
+        row(list, "Allow list mode", "Block every app except the ones you allow. Apps you install later are "
+                + "blocked the next time TinyKit runs, so open it after installing. Allow Google Play "
+                + "services if you want push notifications.", modeSwitch, () -> {
+                    boolean on = !FirewallPolicy.allowMode(prefs);
+                    if (!on) {
+                        setFirewallMode(false, refresh);
+                        return;
                     }
-                    // The phone was restarted since: the rules are gone but the choice is kept.
-                    if (!lost.isEmpty()) Shell.run(firewallCmd(this, "block " + TextUtils.join(" ", lost)));
+                    new AlertDialog.Builder(this)
+                            .setTitle("Block everything except allowed apps?")
+                            .setMessage("Every app that isn't on your allow list loses Wi-Fi and mobile data "
+                                    + "right away, including system apps like Google Play services. "
+                                    + "Pick the apps to allow next.")
+                            .setPositiveButton("Turn on", (d, w) -> setFirewallMode(true, refresh))
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                }, true);
+        action(list, "Unblock all apps", "Let every app use the internet again and turn allow list mode off.", () -> {
+            prefs.edit().putStringSet(FirewallPolicy.BLOCKED, new HashSet<>())
+                    .putBoolean(FirewallPolicy.MODE, false).apply();
+            String error = FirewallPolicy.apply(this, prefs, true);
+            main.post(refresh);
+            return error == null ? "Every app can use the internet." : error;
+        });
+        View page = scroll(list);
+        page.setTag(refresh);
+        push("Block internet per app", page);
+        refresh.run();
+    }
+
+    private void setFirewallMode(boolean allow, Runnable refresh) {
+        prefs.edit().putBoolean(FirewallPolicy.MODE, allow).apply();
+        worker.execute(() -> {
+            String error = FirewallPolicy.apply(this, prefs, true);
+            main.post(() -> {
+                refresh.run();
+                if (error != null) toast(error);
+            });
+        });
+    }
+
+    private void openFirewallApps() {
+        boolean allow = FirewallPolicy.allowMode(prefs);
+        openPicker(allow ? "Allowed apps" : "Blocked apps",
+                allow ? "Checked apps may use Wi-Fi and mobile data. Every other app is blocked."
+                        : "Checked apps can't use Wi-Fi or mobile data. It takes effect at once.",
+                true,
+                () -> {
+                    Set<String> installed = FirewallPolicy.uids(this).keySet();
+                    Set<String> checked = FirewallPolicy.saved(prefs, allow ? FirewallPolicy.ALLOWED
+                            : FirewallPolicy.BLOCKED);
+                    checked.retainAll(installed);
                     return checked;
                 },
                 (pkg, on) -> {
-                    Map<String, String> ids = userIds();
-                    String uid = ids.get(pkg);
-                    if (uid == null) return "Couldn't find " + pkg + ".";
-                    if (Integer.parseInt(uid) < 10000) {
-                        return "This is part of Android itself, so it can't be blocked on its own.";
-                    }
-                    String error = error(Shell.run(firewallCmd(this, (on ? "block " : "allow ") + uid)));
+                    String error = FirewallPolicy.choose(this, prefs, pkg, on);
                     if (error != null) return error;
-                    Set<String> saved = new HashSet<>(prefs.getStringSet(PREF_BLOCKED, Collections.emptySet()));
-                    if (on) saved.add(pkg); else saved.remove(pkg);
-                    prefs.edit().putStringSet(PREF_BLOCKED, saved).apply();
                     // Apps from one developer can share an id, and the rule covers all of them.
                     List<String> same = new ArrayList<>();
-                    for (Map.Entry<String, String> e : ids.entrySet()) {
-                        if (e.getValue().equals(uid) && !e.getKey().equals(pkg)) same.add(label(e.getKey()));
-                    }
+                    for (String other : FirewallPolicy.sharing(this, pkg)) same.add(label(other));
                     if (!same.isEmpty()) {
-                        main.post(() -> toast((on ? "Also blocked: " : "Also allowed: ")
+                        main.post(() -> toast("Also " + (on != allow ? "blocked: " : "allowed: ")
                                 + TextUtils.join(", ", same)));
                     }
                     return null;
                 });
     }
 
-    /** Puts back the rules chosen earlier after a restart. Once per launch, and only if any were chosen. */
-    private void restoreFirewall() {
-        if (firewallRestored || Build.VERSION.SDK_INT < 34) return;
-        firewallRestored = true;
-        Set<String> saved = prefs.getStringSet(PREF_BLOCKED, Collections.emptySet());
-        if (saved.isEmpty()) return;
-        worker.execute(() -> {
-            Map<String, String> ids = userIds();
-            List<String> uids = new ArrayList<>();
-            for (String pkg : saved) if (ids.containsKey(pkg)) uids.add(ids.get(pkg));
-            if (!uids.isEmpty()) Shell.run(firewallCmd(this, "block " + TextUtils.join(" ", uids)));
+    // ---- Debloater --------------------------------------------------------------------------------
+
+    private static final class Pkg {
+        String pkg;
+        String label;
+        String note;
+        boolean system;
+        boolean checked;
+        boolean locked;
+        int level;
+    }
+
+    private static final int[] LEVEL_COLORS = {0xFF66BB6A, 0xFFFFCA28, 0xFFFF8A65, 0xFFEF5350};
+
+    /** Apps in use right now, with why: removing one would break the phone. Call off the main thread. */
+    private Map<String, String> inUse() {
+        Map<String, String> m = new HashMap<>();
+        PackageManager pm = getPackageManager();
+        m.put(getPackageName(), "TinyKit, the app you are using");
+        m.put(SHIZUKU_PKG, "Shizuku, which TinyKit needs");
+        ResolveInfo home = pm.resolveActivity(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY);
+        if (home != null && home.activityInfo != null) m.put(home.activityInfo.packageName, "Your home screen");
+        String ime = Settings.Secure.getString(getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
+        if (ime != null && ime.contains("/")) m.put(ime.substring(0, ime.indexOf('/')), "Your keyboard");
+        if (Build.VERSION.SDK_INT >= 26) {
+            android.content.pm.PackageInfo web = android.webkit.WebView.getCurrentWebViewPackage();
+            if (web != null) m.put(web.packageName, "Shows web pages inside apps");
+        }
+        if (Build.VERSION.SDK_INT >= 29 && Shell.ready()) {
+            // Whoever holds these roles is in use even if it isn't the default for something else.
+            String[][] wanted = {{"HOME", "Your home screen"}, {"DIALER", "Your phone app"}, {"SMS", "Your messages app"}};
+            for (String[] role : wanted) {
+                for (String holder : packages(Shell.run("cmd role get-role-holders --user 0 android.app.role."
+                        + role[0]).out)) {
+                    m.put(holder, role[1]);
+                }
+            }
+        }
+        return m;
+    }
+
+    private static Pkg describe(String pkg, String label, boolean system, Map<String, String> inUse) {
+        Pkg p = new Pkg();
+        p.pkg = pkg;
+        p.label = label == null ? pkg : label;
+        p.system = system;
+        Bloat.Info info = Bloat.info(pkg, system);
+        String why = inUse.get(pkg);
+        p.level = why != null ? Bloat.UNSAFE : info.level;
+        p.note = why != null ? why + ". In use right now" : info.note;
+        p.locked = p.level == Bloat.UNSAFE;
+        return p;
+    }
+
+    /** Installed apps, or (removed) the system apps taken off this phone and still restorable. */
+    private List<Pkg> debloatList(boolean removed) {
+        PackageManager pm = getPackageManager();
+        Map<String, String> inUse = inUse();
+        Map<String, String> names = new HashMap<>();
+        for (App a : installedApps()) names.put(a.pkg, a.label);
+        List<Pkg> out = new ArrayList<>();
+        Set<String> installed = new HashSet<>();
+        for (ApplicationInfo i : pm.getInstalledApplications(0)) {
+            installed.add(i.packageName);
+            if (!removed) {
+                out.add(describe(i.packageName, names.get(i.packageName),
+                        (i.flags & ApplicationInfo.FLAG_SYSTEM) != 0, inUse));
+            }
+        }
+        if (removed) {
+            // "-u" also lists apps that are gone for this user but still on the system partition.
+            for (String line : Shell.run("pm list packages -u").out.split("\n")) {
+                String pkg = line.trim().replaceFirst("^package:", "");
+                if (pkg.isEmpty() || installed.contains(pkg)) continue;
+                try {
+                    ApplicationInfo i = pm.getApplicationInfo(pkg, PackageManager.MATCH_UNINSTALLED_PACKAGES);
+                    // An app the user installed and removed has no files left to bring back.
+                    if ((i.flags & ApplicationInfo.FLAG_SYSTEM) == 0) continue;
+                    Pkg p = describe(pkg, String.valueOf(i.loadLabel(pm)), true, Collections.emptyMap());
+                    p.locked = false;
+                    out.add(p);
+                } catch (PackageManager.NameNotFoundException ignored) {
+                }
+            }
+        }
+        return out;
+    }
+
+    private void openDebloat() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Remove apps your phone came with, for you only. Nothing is deleted from the "
+                + "system: bring any app back from Removed, and a factory reset restores all of them. "
+                + "Hold an app to read about it.", 13, false);
+        help.setAlpha(0.8f);
+        page.addView(help);
+        EditText search = new EditText(this);
+        search.setHint("Search apps");
+        search.setSingleLine(true);
+        page.addView(search);
+        CheckBox mine = new CheckBox(this);
+        mine.setText("Also show apps I installed");
+        page.addView(mine);
+        TextView loading = text("Reading apps…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        Button go = button("", null);
+        go.setVisibility(View.GONE);
+        page.addView(go);
+        push("Debloater", page);
+
+        final boolean[] removedView = {false};
+        final int[] levelFilter = {-1};
+        List<Pkg> all = new ArrayList<>();
+        Adapter<Pkg> adapter = new Adapter<>(true, (p, row) -> {
+            row.first.setText(p.label);
+            row.second.setText(p.pkg);
+            row.third.setText(Bloat.LEVELS[p.level] + " · " + p.note);
+            row.third.setTextColor(LEVEL_COLORS[p.level]);
+            row.check.setChecked(p.checked);
+            row.check.setVisibility(p.locked ? View.INVISIBLE : View.VISIBLE);
+            showIcon(row, p.pkg);
         });
+        listView.setAdapter(adapter);
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            List<Pkg> shown = new ArrayList<>();
+            int picked = 0;
+            for (Pkg p : all) {
+                if (p.checked) picked++;
+                if (!removedView[0] && !p.system && !mine.isChecked() && !p.checked) continue;
+                if (levelFilter[0] >= 0 && p.level != levelFilter[0]) continue;
+                if (p.label.toLowerCase(Locale.ROOT).contains(q) || p.pkg.contains(q)) shown.add(p);
+            }
+            Collections.sort(shown, (x, y) -> x.checked != y.checked ? (x.checked ? -1 : 1)
+                    : x.label.compareToIgnoreCase(y.label));
+            adapter.set(shown);
+            go.setVisibility(picked > 0 ? View.VISIBLE : View.GONE);
+            go.setText((removedView[0] ? "Restore " : "Remove ") + picked + (picked == 1 ? " app" : " apps"));
+        };
+        Runnable load = () -> {
+            boolean wanted = removedView[0];
+            all.clear();
+            filter.run();
+            loading.setText("Reading apps…");
+            loading.setVisibility(View.VISIBLE);
+            worker.execute(() -> {
+                List<Pkg> list = debloatList(wanted);
+                main.post(() -> {
+                    if (wanted != removedView[0]) return;
+                    all.clear();
+                    all.addAll(list);
+                    loading.setText("No apps here.");
+                    loading.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+                    filter.run();
+                });
+            });
+        };
+        LinearLayout chips = new LinearLayout(this);
+        chips.setPadding(dp(0), dp(8), dp(0), dp(4));
+        chips.addView(chip("", "View", new String[]{"Installed apps", "Removed apps"}, i -> {
+            removedView[0] = i == 1;
+            mine.setVisibility(i == 1 ? View.GONE : View.VISIBLE);
+            load.run();
+        }));
+        chips.addView(chip("", "Safety", new String[]{"All", "Recommended", "Advanced", "Expert", "Unsafe"}, i -> {
+            levelFilter[0] = i - 1;
+            filter.run();
+        }));
+        page.addView(chips, 3);
+        search.addTextChangedListener(watcher(filter));
+        mine.setOnCheckedChangeListener((v, checked) -> filter.run());
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            Pkg p = adapter.getItem(position);
+            if (p.locked) {
+                toast(p.label + ": " + p.note + ". It can't be removed.");
+                return;
+            }
+            p.checked = !p.checked;
+            filter.run();
+        });
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            Pkg p = adapter.getItem(position);
+            new AlertDialog.Builder(this)
+                    .setTitle(p.label)
+                    .setMessage(Bloat.LEVELS[p.level] + ": " + Bloat.MEANING[p.level] + "\n\n" + p.note
+                            + "\n\n" + p.pkg + (versionName(p.pkg).isEmpty() ? "" : "\nVersion " + versionName(p.pkg)))
+                    .setPositiveButton("OK", null)
+                    .show();
+            return true;
+        });
+        go.setOnClickListener(v -> {
+            List<Pkg> picked = new ArrayList<>();
+            int worst = 0;
+            for (Pkg p : all) {
+                if (!p.checked) continue;
+                picked.add(p);
+                worst = Math.max(worst, p.level);
+            }
+            boolean restore = removedView[0];
+            StringBuilder names = new StringBuilder();
+            for (int i = 0; i < picked.size() && i < 12; i++) names.append("• ").append(picked.get(i).label).append('\n');
+            if (picked.size() > 12) names.append("and ").append(picked.size() - 12).append(" more\n");
+            new AlertDialog.Builder(this)
+                    .setTitle((restore ? "Restore " : "Remove ") + picked.size() + (picked.size() == 1 ? " app?" : " apps?"))
+                    .setMessage(names + (restore
+                            ? "\nThey come back as they were."
+                            : (picked.size() == 1 ? "\nIt disappears" : "\nThey disappear")
+                                    + " for you only and can be restored from Removed."
+                                    + (worst >= Bloat.EXPERT ? "\n\nSome of these are marked Expert: other "
+                                    + "apps or features may depend on them." : "")))
+                    .setPositiveButton(restore ? "Restore" : "Remove", (d, w) -> runDebloat(picked, restore, load))
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+        load.run();
+    }
+
+    private void runDebloat(List<Pkg> picked, boolean restore, Runnable done) {
+        TextView message = text((restore ? "Restoring " : "Removing ") + picked.size() + "…", 15, false);
+        message.setPadding(dp(24), dp(16), dp(24), dp(8));
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle("Working")
+                .setView(message).setCancelable(false).show();
+        worker.execute(() -> {
+            StringBuilder script = new StringBuilder();
+            for (Pkg p : picked) {
+                String q = Shell.quote(p.pkg);
+                if (restore) {
+                    script.append("echo ").append(q).append("\"|$(pm install-existing --user 0 ").append(q)
+                            .append(" 2>&1)\"; ");
+                } else {
+                    // -k keeps the app's data so a restore brings it back as it was. An updated system
+                    // app first loses its update, so a second pass removes the app itself.
+                    String k = p.system ? "-k " : "";
+                    script.append("r=$(pm uninstall ").append(k).append("--user 0 ").append(q).append(" 2>&1); ")
+                            .append("[ -n \"$(pm path ").append(q).append(" 2>/dev/null)\" ] && r=$(pm uninstall ")
+                            .append(k).append("--user 0 ").append(q).append(" 2>&1); echo ").append(q)
+                            .append("\"|$r\"; ");
+                }
+            }
+            Shell.Result r = Shell.run(script.toString());
+            Map<String, String> labels = new HashMap<>();
+            for (Pkg p : picked) labels.put(p.pkg, p.label);
+            int ok = 0;
+            List<String> failed = new ArrayList<>();
+            for (String line : r.out.split("\n")) {
+                int bar = line.indexOf('|');
+                if (bar < 0) continue;
+                String pkg = line.substring(0, bar);
+                String result = line.substring(bar + 1);
+                if (result.contains("Success") || result.contains("installed for user")) {
+                    ok++;
+                } else if (labels.containsKey(pkg)) {
+                    failed.add(labels.get(pkg) + ": " + debloatReason(result));
+                }
+            }
+            reloadApps();
+            int count = ok;
+            main.post(() -> {
+                progress.dismiss();
+                done.run();
+                String summary = (restore ? "Restored " : "Removed ") + count + (count == 1 ? " app." : " apps.");
+                if (failed.isEmpty() && count > 0) {
+                    toast(summary);
+                } else {
+                    new AlertDialog.Builder(this).setTitle(summary)
+                            .setMessage(failed.isEmpty() ? "Nothing changed." : TextUtils.join("\n", failed))
+                            .setPositiveButton("OK", null).show();
+                }
+            });
+        });
+    }
+
+    private static String debloatReason(String result) {
+        if (result.contains("DEVICE_POLICY")) return "your device policy blocks this";
+        if (result.contains("USER_RESTRICTED")) return "this phone doesn't allow it";
+        if (result.contains("NOT_INSTALLED") || result.contains("Unknown package")) return "not installed";
+        return result.isEmpty() ? "Android refused" : result.replaceAll("\\s+", " ");
+    }
+
+    // ---- Special access ---------------------------------------------------------------------------
+
+    /** Access Android keeps on screens of its own, as {app-op, name, what it allows, permission}. */
+    private static final String[][] SPECIAL = {
+            {"REQUEST_INSTALL_PACKAGES", "Install unknown apps",
+                    "Apps that can install other apps. Allow only your browser, file manager or app store.",
+                    "android.permission.REQUEST_INSTALL_PACKAGES"},
+            {"SYSTEM_ALERT_WINDOW", "Draw over other apps",
+                    "Apps that can show things on top of other apps. Scammers abuse this, so keep it short.",
+                    "android.permission.SYSTEM_ALERT_WINDOW"},
+            {"WRITE_SETTINGS", "Modify system settings",
+                    "Apps that can change brightness, ringtones and other settings.",
+                    "android.permission.WRITE_SETTINGS"},
+            {"MANAGE_EXTERNAL_STORAGE", "All files access",
+                    "Apps that can read and change every file on your phone.",
+                    "android.permission.MANAGE_EXTERNAL_STORAGE"},
+            {"GET_USAGE_STATS", "Usage access",
+                    "Apps that can see which apps you use and for how long.",
+                    "android.permission.PACKAGE_USAGE_STATS"}};
+
+    private void openSpecialAccess() {
+        LinearLayout list = vertical();
+        list.addView(note("These are the permissions Android hides on separate screens. Pick one to see "
+                + "only the apps that ask for it, and allow or take it away."));
+        for (String[] s : SPECIAL) {
+            row(list, s[1], s[2], arrow(), () -> openPicker(s[1], s[2] + " Checked apps have it.", true,
+                    () -> packages(Shell.run("appops query-op " + s[0] + " allow").out),
+                    (pkg, on) -> error(Shell.run("appops set " + Shell.quote(pkg) + " " + s[0]
+                            + (on ? " allow" : " default"))),
+                    () -> requesting(s[3])), true);
+        }
+        push("Special access", scroll(list));
+    }
+
+    /** Apps that list {@code permission} in their manifest. Call off the main thread. */
+    private Set<String> requesting(String permission) {
+        Set<String> set = new HashSet<>();
+        for (PackageInfo info : getPackageManager().getInstalledPackages(PackageManager.GET_PERMISSIONS)) {
+            if (info.requestedPermissions == null) continue;
+            for (String p : info.requestedPermissions) {
+                if (p.equals(permission)) {
+                    set.add(info.packageName);
+                    break;
+                }
+            }
+        }
+        return set;
+    }
+
+    // ---- App language ---------------------------------------------------------------------------
+
+    private void openAppLanguage() {
+        if (Build.VERSION.SDK_INT < 33) {
+            toast("A language for each app needs Android 13 or newer.");
+            return;
+        }
+        openAppList("App language", "Pick an app to give it its own language. It only takes effect for "
+                + "languages the app has.", this::chooseAppLanguage);
+    }
+
+    private void chooseAppLanguage(String pkg) {
+        worker.execute(() -> {
+            String out = Shell.run("cmd locale get-app-locales " + Shell.quote(pkg) + " --user 0").out;
+            Matcher m = Pattern.compile("\\[(.*?)\\]").matcher(out);
+            String current = m.find() ? m.group(1).split(",")[0].trim() : "";
+            // The languages Android itself ships translations for.
+            Set<String> tags = new HashSet<>();
+            for (String tag : getResources().getAssets().getLocales()) {
+                // The pseudo-locales (en-XA, ar-XB) are only for testing layouts.
+                if (!tag.isEmpty() && !tag.matches(".*-X[A-C]")) tags.add(tag);
+            }
+            List<String[]> options = new ArrayList<>();
+            for (String tag : tags) {
+                Locale l = Locale.forLanguageTag(tag);
+                options.add(new String[]{tag, l.getDisplayName() + "  (" + tag + ")"});
+            }
+            Collections.sort(options, (x, y) -> x[1].compareToIgnoreCase(y[1]));
+            options.add(0, new String[]{"", "System default"});
+            String[] names = new String[options.size()];
+            for (int i = 0; i < names.length; i++) {
+                names[i] = (options.get(i)[0].equals(current) ? "●  " : "") + options.get(i)[1];
+            }
+            main.post(() -> new AlertDialog.Builder(this)
+                    .setTitle(label(pkg))
+                    .setItems(names, (d, which) -> worker.execute(() -> {
+                        String tag = options.get(which)[0];
+                        String error = error(Shell.run("cmd locale set-app-locales " + Shell.quote(pkg)
+                                + " --user 0" + (tag.isEmpty() ? "" : " --locales " + Shell.quote(tag))));
+                        main.post(() -> toast(error != null ? error : label(pkg) + ": " + options.get(which)[1]));
+                    }))
+                    .setNegativeButton("Cancel", null)
+                    .show());
+        });
+    }
+
+    // ---- Installed with TinyKit ---------------------------------------------------------------
+
+    /**
+     * Apps installed through TinyKit's installer, which marks itself as their installer (see
+     * {@link ApkInstaller}). The list is read from Android's own records, so TinyKit stores nothing.
+     */
+    private List<String[]> installedByTinyKit() {
+        PackageManager pm = getPackageManager();
+        List<long[]> order = new ArrayList<>();
+        List<String[]> rows = new ArrayList<>();
+        for (ApplicationInfo i : pm.getInstalledApplications(0)) {
+            String installer;
+            try {
+                installer = Build.VERSION.SDK_INT >= 30
+                        ? pm.getInstallSourceInfo(i.packageName).getInstallingPackageName()
+                        : pm.getInstallerPackageName(i.packageName);
+            } catch (PackageManager.NameNotFoundException | RuntimeException e) {
+                continue;
+            }
+            if (!getPackageName().equals(installer) || i.packageName.equals(getPackageName())) continue;
+            try {
+                PackageInfo info = pm.getPackageInfo(i.packageName, 0);
+                long size = new java.io.File(i.sourceDir).length();
+                long age = System.currentTimeMillis() - info.lastUpdateTime;
+                String when = age < 60_000 ? "just now" : DateUtils.getRelativeTimeSpanString(info.lastUpdateTime,
+                        System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
+                rows.add(new String[]{i.packageName, String.valueOf(i.loadLabel(pm)) + "  " + info.versionName,
+                        (info.firstInstallTime == info.lastUpdateTime ? "Installed " : "Updated ") + when
+                                + " · " + Formatter.formatShortFileSize(this, size)});
+                order.add(new long[]{rows.size() - 1, info.lastUpdateTime});
+            } catch (PackageManager.NameNotFoundException ignored) {
+            }
+        }
+        Collections.sort(order, (x, y) -> Long.compare(y[1], x[1]));
+        List<String[]> sorted = new ArrayList<>();
+        for (long[] o : order) sorted.add(rows.get((int) o[0]));
+        return sorted;
+    }
+
+    private void openInstallHistory() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Apps installed with TinyKit's installer, newest first. Tap one to open or "
+                + "remove it. This list is read from Android's own records, so TinyKit stores nothing.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        TextView loading = text("Reading…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        View view = page;
+        Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(a[1]);
+            row.second.setText(a[0]);
+            row.third.setText(a[2]);
+            showIcon(row, a[0]);
+        });
+        listView.setAdapter(adapter);
+        Runnable load = () -> worker.execute(() -> {
+            reloadApps();
+            List<String[]> rows = installedByTinyKit();
+            main.post(() -> {
+                loading.setText("Nothing yet. Apps you install with TinyKit from now on show up here.");
+                loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
+                adapter.set(rows);
+            });
+        });
+        listView.setOnItemClickListener((parent, v, position, id) -> {
+            String[] a = adapter.getItem(position);
+            new AlertDialog.Builder(this)
+                    .setTitle(a[1])
+                    .setMessage(a[2] + "\n\nRemoving it deletes the app and its data. TinyKit keeps no copy "
+                            + "of the file, so an older version can't be put back.")
+                    .setPositiveButton("Open", (d, w) -> openApp(a[0]))
+                    .setNegativeButton("Remove", (d, w) -> new AlertDialog.Builder(this)
+                            .setTitle("Remove " + a[1] + "?")
+                            .setMessage("The app and its data are deleted.")
+                            .setPositiveButton("Remove", (d2, w2) -> worker.execute(() -> {
+                                String error = error(Shell.run("pm uninstall " + Shell.quote(a[0])));
+                                main.post(() -> {
+                                    toast(error != null ? error : "Removed.");
+                                    load.run();
+                                });
+                            }))
+                            .setNegativeButton("Cancel", null)
+                            .show())
+                    .setNeutralButton("Close", null)
+                    .show();
+        });
+        push("Installed with TinyKit", view);
+        load.run();
+    }
+
+    // ---- Screen time ------------------------------------------------------------------------------
+
+    private void openScreenTime() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView total = text("", 16, true);
+        page.addView(total);
+        TextView help = text("How long each app was on your screen, and how often you opened it. Read from "
+                + "Android's usage history, so TinyKit measures nothing itself.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        TextView loading = text("Reading usage…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(a[1]);
+            row.second.setText(a[2]);
+            showIcon(row, a[0]);
+        });
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, v, position, id) -> openAppInfo(adapter.getItem(position)[0]));
+        final int[] range = {0};
+        Runnable load = () -> {
+            loading.setText("Reading usage…");
+            loading.setVisibility(View.VISIBLE);
+            worker.execute(() -> {
+                if (!Tweak.usageAllowed(this)) Tweak.grantSelf(this);
+                if (!Tweak.usageAllowed(this)) {
+                    main.post(() -> loading.setText("TinyKit needs usage access. Start Shizuku once and "
+                            + "reopen this page, or allow it in Settings > Apps > Special access."));
+                    return;
+                }
+                Calendar midnight = Calendar.getInstance();
+                midnight.set(Calendar.HOUR_OF_DAY, 0);
+                midnight.set(Calendar.MINUTE, 0);
+                midnight.set(Calendar.SECOND, 0);
+                midnight.set(Calendar.MILLISECOND, 0);
+                long now = System.currentTimeMillis();
+                long today = midnight.getTimeInMillis();
+                // Whole days, because Android keeps its usage totals per day.
+                long from = range[0] == 2 ? today - 6 * DAY : range[0] == 1 ? today - DAY : today;
+                long to = range[0] == 1 ? today - 1 : now;
+                long[] sum = {0};
+                List<String[]> rows = screenTime(from, to, sum);
+                main.post(() -> {
+                    total.setText(sum[0] == 0 ? "" : "Total on screen: " + duration(sum[0]));
+                    loading.setText("No app use recorded in this time.");
+                    loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
+                    adapter.set(rows);
+                });
+            });
+        };
+        page.addView(sortBarLike(chip("", "Show", new String[]{"Today", "Yesterday", "Last 7 days"}, i -> {
+            range[0] = i;
+            load.run();
+        })), 1);
+        push("Screen time", page);
+        load.run();
+    }
+
+    private static final long DAY = 86_400_000L;
+
+    private static String duration(long ms) {
+        long minutes = Math.round(ms / 60000.0);
+        if (minutes < 1) return ms < 1000 ? "0 min" : "under a minute";
+        return minutes >= 60 ? (minutes / 60) + " h " + (minutes % 60) + " min" : minutes + " min";
+    }
+
+    /** Rows {package, label, "2 h 5 min · 12 opens"}, longest first; sum[0] gets the total. Off the main thread. */
+    private List<String[]> screenTime(long from, long to, long[] sum) {
+        UsageStatsManager usm = (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+        // Android adds up the foreground time itself, which copes with apps that were killed while
+        // open. Only whole-day totals inside the range are used, so a week-long total can't leak in.
+        Map<String, Long> stats = new HashMap<>();
+        List<UsageStats> days = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, from, to);
+        if (days != null) {
+            for (UsageStats d : days) {
+                if (d.getFirstTimeStamp() < from - 3_600_000L || d.getLastTimeStamp() > to + DAY) continue;
+                Long before = stats.get(d.getPackageName());
+                stats.put(d.getPackageName(), (before == null ? 0 : before) + d.getTotalTimeInForeground());
+            }
+        }
+        // Opens aren't kept as a number, so count how often each app came to the front.
+        Map<String, Integer> opens = new HashMap<>();
+        android.app.usage.UsageEvents events = usm.queryEvents(from, to);
+        android.app.usage.UsageEvents.Event e = new android.app.usage.UsageEvents.Event();
+        String last = "";
+        while (events.hasNextEvent()) {
+            events.getNextEvent(e);
+            // 1 is "activity resumed", the long-standing value of the foreground event.
+            if (e.getEventType() != 1 || e.getPackageName().equals(last)) continue;
+            last = e.getPackageName();
+            opens.put(last, (opens.containsKey(last) ? opens.get(last) : 0) + 1);
+        }
+        List<String[]> rows = new ArrayList<>();
+        List<long[]> order = new ArrayList<>();
+        for (Map.Entry<String, Long> s : stats.entrySet()) {
+            long spent = s.getValue();
+            if (spent < 1000) continue;
+            int n = opens.containsKey(s.getKey()) ? opens.get(s.getKey()) : 0;
+            rows.add(new String[]{s.getKey(), label(s.getKey()),
+                    duration(spent) + (n == 0 ? "" : " · " + n + (n == 1 ? " open" : " opens"))});
+            order.add(new long[]{rows.size() - 1, spent});
+            sum[0] += spent;
+        }
+        Collections.sort(order, (x, y) -> Long.compare(y[1], x[1]));
+        List<String[]> sorted = new ArrayList<>();
+        for (long[] o : order) sorted.add(rows.get((int) o[0]));
+        return sorted;
     }
 
     // ---- Install APK files ----------------------------------------------------------------
@@ -1246,6 +1874,12 @@ public class MainActivity extends Activity {
     }
 
     private void openPicker(String title, String help, boolean checkable, Loader loader, AppChange change) {
+        openPicker(title, help, checkable, loader, change, null);
+    }
+
+    /** As above; {@code eligible}, when given, limits the list to the apps it returns. */
+    private void openPicker(String title, String help, boolean checkable, Loader loader, AppChange change,
+                            Loader eligible) {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView helpView = text(help, 14, false);
@@ -1267,6 +1901,8 @@ public class MainActivity extends Activity {
         push(title, page);
 
         List<App> all = new ArrayList<>();
+        final Set<String> only = Collections.synchronizedSet(new HashSet<>());
+        final boolean[] limited = {eligible != null};
         Adapter<App> adapter = new Adapter<>(checkable, (app, row) -> {
             row.first.setText(app.label);
             row.second.setText(app.pkg);
@@ -1278,6 +1914,7 @@ public class MainActivity extends Activity {
             String q = search.getText().toString().toLowerCase(Locale.ROOT);
             List<App> shown = new ArrayList<>();
             for (App a : all) {
+                if (limited[0] && !only.contains(a.pkg)) continue;
                 if ((system.isChecked() || !a.system || a.checked)
                         && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) {
                     shown.add(a);
@@ -1331,6 +1968,16 @@ public class MainActivity extends Activity {
             worker.execute(() -> {
                 installedApps();
                 main.post(show);
+            });
+        }
+        if (eligible != null) {
+            worker.execute(() -> {
+                Set<String> ok = eligible.load();
+                main.post(() -> {
+                    only.addAll(ok);
+                    limited[0] = true;
+                    filter.run();
+                });
             });
         }
         if (loader != null) {
@@ -2697,7 +3344,112 @@ public class MainActivity extends Activity {
             return "Saved " + r.out.trim() + " settings to Download/TinyKit.";
         });
         link(list, "Restore settings", "Pick a backup file and apply it.", this::openRestore);
+        section(list, "TinyKit setup");
+        list.addView(note("Saves your choices in TinyKit: blocked and allowed apps, the clipboard guard, "
+                + "stopped background apps, kept-alive and hidden apps, special access, removed system "
+                + "apps. Restoring puts all of it back, for example after a factory reset."));
+        action(list, "Back up TinyKit setup", "Save these choices to Download/TinyKit.", this::backupSetup);
+        link(list, "Restore TinyKit setup", "Pick a setup file and apply it.", this::openRestoreSetup);
         push("Settings backup & restore", scroll(list));
+    }
+
+    /** App-ops TinyKit's pickers set, as {op, mode}: the ones whose apps a setup backup lists. */
+    private static final String[][] SETUP_OPS = {
+            {"READ_CLIPBOARD", "ignore"}, {"RUN_ANY_IN_BACKGROUND", "ignore"}, {"WAKE_LOCK", "ignore"},
+            {"REQUEST_INSTALL_PACKAGES", "allow"}, {"SYSTEM_ALERT_WINDOW", "allow"},
+            {"WRITE_SETTINGS", "allow"}, {"MANAGE_EXTERNAL_STORAGE", "allow"}, {"GET_USAGE_STATS", "allow"}};
+
+    private String backupSetup() {
+        StringBuilder out = new StringBuilder("# TinyKit setup\n");
+        out.append("mode\t").append(FirewallPolicy.allowMode(prefs) ? "allow" : "block").append('\n');
+        for (String pkg : FirewallPolicy.saved(prefs, FirewallPolicy.BLOCKED)) out.append("blocked\t").append(pkg).append('\n');
+        for (String pkg : FirewallPolicy.saved(prefs, FirewallPolicy.ALLOWED)) out.append("allowed\t").append(pkg).append('\n');
+        if (prefs.getBoolean(Restore.PREF_FORCE_DARK, false)) out.append("dark\t1\n");
+        for (String[] op : SETUP_OPS) {
+            for (String pkg : packages(Shell.run("appops query-op " + op[0] + " " + op[1]).out)) {
+                out.append("op\t").append(op[0]).append('\t').append(op[1]).append('\t').append(pkg).append('\n');
+            }
+        }
+        for (String line : Shell.run("dumpsys deviceidle whitelist").out.split("\n")) {
+            String[] parts = line.trim().split(",");
+            if (parts.length >= 2 && parts[0].equals("user")) out.append("alive\t").append(parts[1]).append('\n');
+        }
+        for (String pkg : disabledPackages()) out.append("hidden\t").append(pkg).append('\n');
+        for (Pkg p : debloatList(true)) out.append("removed\t").append(p.pkg).append('\n');
+        String file = BACKUP_DIR + "/setup-" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT)
+                .format(new java.util.Date()) + ".txt";
+        Shell.Result r = Shell.run("mkdir -p " + BACKUP_DIR + "; cat > " + Shell.quote(file),
+                new java.io.ByteArrayInputStream(out.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        if (!r.ok()) return "Failed: " + (r.out.isEmpty() ? "couldn't write the file." : r.out);
+        return "Saved " + (out.toString().split("\n").length - 1) + " choices to Download/TinyKit.";
+    }
+
+    private void openRestoreSetup() {
+        worker.execute(() -> {
+            List<String> files = new ArrayList<>();
+            for (String line : Shell.run("ls -1t " + BACKUP_DIR + "/setup-*.txt 2>/dev/null").out.split("\n")) {
+                if (!line.trim().isEmpty()) files.add(line.trim());
+            }
+            main.post(() -> {
+                if (files.isEmpty()) {
+                    toast("No setup backups yet. Back up first.");
+                    return;
+                }
+                String[] names = new String[files.size()];
+                for (int i = 0; i < names.length; i++) names[i] = files.get(i).substring(files.get(i).lastIndexOf('/') + 1);
+                new AlertDialog.Builder(this)
+                        .setTitle("Restore which setup?")
+                        .setItems(names, (d, which) -> worker.execute(() -> {
+                            String result = restoreSetup(files.get(which));
+                            main.post(() -> new AlertDialog.Builder(this).setTitle("Restore")
+                                    .setMessage(result).setPositiveButton("OK", null).show());
+                        }))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        });
+    }
+
+    /** Applies a setup file. Apps that aren't installed any more are skipped. */
+    private String restoreSetup(String file) {
+        Set<String> blocked = new HashSet<>(), allowed = new HashSet<>();
+        boolean allowMode = false, dark = false;
+        StringBuilder script = new StringBuilder();
+        int count = 0;
+        for (String line : Shell.run("cat " + Shell.quote(file)).out.split("\n")) {
+            String[] f = line.split("\t");
+            if (f.length < 2) continue;
+            // Package names are checked before they reach the shell.
+            if (f.length > 1 && !f[0].equals("mode") && !f[0].equals("dark") && !PACKAGE.matcher(f[f.length - 1]).matches()) continue;
+            String q = Shell.quote(f[f.length - 1]);
+            switch (f[0]) {
+                case "mode": allowMode = f[1].equals("allow"); break;
+                case "dark": dark = true; break;
+                case "blocked": blocked.add(f[1]); break;
+                case "allowed": allowed.add(f[1]); break;
+                case "op":
+                    if (f.length == 4 && f[1].matches("[A-Z_]+") && f[2].matches("[a-z]+")) {
+                        script.append("appops set ").append(q).append(' ').append(f[1]).append(' ').append(f[2]).append("; ");
+                        if (f[1].equals("RUN_ANY_IN_BACKGROUND")) {
+                            script.append("am set-standby-bucket ").append(q).append(" restricted >/dev/null 2>&1; ");
+                        }
+                    }
+                    break;
+                case "alive": script.append("dumpsys deviceidle whitelist +").append(q).append(" >/dev/null; "); break;
+                case "hidden": script.append("pm disable-user --user 0 ").append(q).append(" >/dev/null 2>&1; "); break;
+                case "removed": script.append("pm uninstall -k --user 0 ").append(q).append(" >/dev/null 2>&1; "); break;
+                default: continue;
+            }
+            count++;
+        }
+        if (count == 0) return "That file has nothing TinyKit can restore.";
+        prefs.edit().putStringSet(FirewallPolicy.BLOCKED, blocked).putStringSet(FirewallPolicy.ALLOWED, allowed)
+                .putBoolean(FirewallPolicy.MODE, allowMode).putBoolean(Restore.PREF_FORCE_DARK, dark).apply();
+        if (script.length() > 0) Shell.run(script.toString());
+        if (dark) Shell.run("setprop debug.hwui.force_dark true");
+        String firewall = FirewallPolicy.supported() ? FirewallPolicy.apply(this, prefs, true) : null;
+        reloadApps();
+        return "Restored " + count + " choices." + (firewall != null ? "\nThe internet block wasn't applied: " + firewall : "");
     }
 
     private void openRestore() {
@@ -4853,10 +5605,23 @@ public class MainActivity extends Activity {
      * options when tapped, calling onSelect with the chosen index. Reused by every sortable list.
      */
     private View sortBar(String[] options, OnPage onSelect) {
-        final int[] sel = {0};
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         bar.setPadding(dp(12), dp(8), dp(12), dp(4));
+        bar.addView(chip("↕  ", "Sort", options, onSelect));
+        return bar;
+    }
+
+    private View sortBarLike(View chip) {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setPadding(0, dp(8), 0, dp(4));
+        bar.addView(chip);
+        return bar;
+    }
+
+    /** A rounded button that shows "Title: choice" and opens a list of {@code options} when tapped. */
+    private TextView chip(String icon, String title, String[] options, OnPage onSelect) {
+        final int[] sel = {0};
         TextView chip = text("", 13, true);
         chip.setGravity(Gravity.CENTER);
         chip.setPadding(dp(16), dp(8), dp(16), dp(8));
@@ -4866,14 +5631,17 @@ public class MainActivity extends Activity {
         shape.setColor(0xFF161616);
         shape.setStroke(dp(1), 0x40FFFFFF);
         chip.setBackground(shape);
-        Runnable render = () -> chip.setText("↕  Sort: " + options[sel[0]]);
+        LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-2, -2);
+        margin.setMargins(0, 0, dp(8), 0);
+        chip.setLayoutParams(margin);
+        Runnable render = () -> chip.setText(icon + title + ": " + options[sel[0]]);
         chip.setOnClickListener(v -> {
             String[] items = new String[options.length];
             for (int i = 0; i < options.length; i++) {
                 items[i] = (i == sel[0] ? "●  " : "○  ") + options[i];
             }
             new AlertDialog.Builder(this)
-                    .setTitle("Sort by")
+                    .setTitle(title)
                     .setItems(items, (d, which) -> {
                         sel[0] = which;
                         render.run();
@@ -4883,8 +5651,7 @@ public class MainActivity extends Activity {
                     .show();
         });
         render.run();
-        bar.addView(chip);
-        return bar;
+        return chip;
     }
 
     // ---- Rows and widgets ---------------------------------------------------------------------------
