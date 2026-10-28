@@ -22,7 +22,6 @@ settings.
 
 Info: battery, network (with public IP and a shortcut to your router's settings), charging,
 temperatures, device IDs, battery usage, wake-ups, vibration and app logs — all as readable
-lists. Notification history saves notifications and their text, grouped per app, with apps
-to include or exclude.
+lists.
 
 Requires Shizuku running. Free and open source (MIT).

@@ -99,11 +99,6 @@ and open the page again.
 **Hide apps: where did the app go?**
 It's disabled, not uninstalled. Uncheck it in **Apps → Hide apps** to bring it back.
 
-**Notification history missed some notifications.**
-TinyKit only saves what's in the notification shade when you open the page, because it never
-runs in the background. Turn on **Android notification history** on the same page to record
-everything for 24 hours.
-
 ## Huawei / EMUI notes
 
 TinyKit is developed and tested on a Huawei phone, and handles EMUI's quirks:

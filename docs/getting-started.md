@@ -138,8 +138,7 @@ These keep working when Shizuku is stopped (the tiles thanks to the one-time sel
   need Shizuku)
 - **Phone info**, **Network info**, **Charging info**, **Temperatures** and **Device IDs**
   (some show fewer details)
-- Reading saved notifications in **Notification history** (saving new ones needs Shizuku)
-- **Free up RAM** and the **Free RAM** tile on Android 13 and older (closing cached apps only)
+- **Speed up phone** and the **Free RAM** tile on Android 13 and older (closing cached apps only)
 
 Everything else needs Shizuku running: per-app tools, logs, file recovery, saved Wi-Fi networks,
 and more. While Shizuku is off, those rows are dimmed and marked **Requires Shizuku**, and rows
@@ -164,7 +163,7 @@ that work without it look normal.
 | **Privacy** | Privacy toggles, all sensors off, analytics and telemetry, saved Wi-Fi networks |
 | **Apps** | Fake permissions, default apps, hide, unused, storage, recent access, mixed audio, running and background apps, APK backup |
 | **System** | Force dark, animation speed, quick panel editor, TinyKit tiles, run a command, file recovery, settings backup, advanced reboot, cleanup, network tweaks |
-| **Info** | Phone, network, charging, temperatures, device IDs, battery usage, wake-ups, vibration, app and crash logs, notification history, updates |
+| **Info** | Phone, network, charging, temperatures, device IDs, battery usage, wake-ups, vibration, app and crash logs, updates |
 
 The **search bar** at the top of the Shizuku tab searches every tool by name and description.
 Every search word has to match, so `wifi qr` finds *Saved Wi-Fi networks*. Tapping a result

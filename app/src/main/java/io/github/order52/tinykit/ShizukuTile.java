@@ -125,6 +125,7 @@ public class ShizukuTile extends TileService {
                 .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", result);
     }
 
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated") // PendingIntent form used on 34+
     private void openApp() {
         Intent intent = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (Build.VERSION.SDK_INT >= 34) {

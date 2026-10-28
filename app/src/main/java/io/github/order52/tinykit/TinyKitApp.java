@@ -9,6 +9,8 @@ public final class TinyKitApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // The removed notification history kept its saved notifications here.
+        new java.io.File(getFilesDir(), "notifications.tsv").delete();
         Shizuku.addBinderReceivedListenerSticky(() -> Restore.start(this));
     }
 }

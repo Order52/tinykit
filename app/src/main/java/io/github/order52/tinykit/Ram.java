@@ -10,10 +10,9 @@ import android.os.SystemClock;
 import android.text.format.Formatter;
 
 /**
- * Frees memory the way Android itself does when it runs low, so nothing the user is using breaks:
- * it closes only the apps Android has already set aside as cached (never the app on screen,
- * music, navigation or anything running a service), then asks the apps still running to release
- * their own caches. Also clears app caches for the speed-up widget and the System tab.
+ * Keeps the phone smooth the way Android itself would: asks apps to release memory, compacts what
+ * cached apps hold, and closes cached apps only when memory is really low (never the app on
+ * screen, music, navigation or anything running a service). Also clears app caches.
  *
  * With Shizuku this uses the shell's "kill-all" and "send-trim-memory". Without it, Android 13
  * and older let any app close other apps' background processes, so TinyKit can still do the
@@ -32,10 +31,12 @@ final class Ram {
 
     // "cmd activity" talks to the system directly. Older versions only have "am", which starts a
     // Java VM per call: fine for one kill-all, far too slow for one trim per app, so the trims are
-    // skipped there (kill-all does most of the work anyway).
-    private static final String SCRIPT = APPS
+    // skipped there. KILL is "kill-all" (cached apps only) and runs only when memory is really low:
+    // closing apps Android could have kept makes them cold-start later, which is slower.
+    private static String script(boolean kill) {
+        return APPS
             + "A=; cmd activity help 2>/dev/null | grep -q send-trim-memory && A='cmd activity'; "
-            + "a=$(L | wc -l); ${A:-am} kill-all; sleep 1; "
+            + "a=$(L | wc -l); " + (kill ? "${A:-am} kill-all; sleep 1; " : "")
             + "[ -n \"$A\" ] && L | { while read p n; do "
             // SystemUI is left alone so the status bar and quick panel never redraw. Background
             // apps take MODERATE (release what they can rebuild); apps in use only accept
@@ -43,7 +44,10 @@ final class Ram {
             + "[ \"$n\" = com.android.systemui ] || { $A send-trim-memory \"$p\" MODERATE || "
             + "$A send-trim-memory \"$p\" RUNNING_LOW; } >/dev/null 2>&1 & "
             + "done; wait; }; "
+            // Android 11+: compress what cached apps still hold instead of closing them.
+            + "[ -n \"$A\" ] && $A help 2>/dev/null | grep -q 'compact system' && $A compact system >/dev/null 2>&1; "
             + "echo $((a - $(L | wc -l)))";
+    }
 
     private Ram() {
     }
@@ -58,39 +62,78 @@ final class Ram {
         return mem.availMem;
     }
 
-    /** Frees memory and returns a short result for the user. Runs off the main thread. */
+    /**
+     * One tap to make the phone smoother, using only what helps:
+     * 1. asks apps to release memory they can rebuild and compacts what cached apps still hold;
+     * 2. closes cached apps only when free memory is under a quarter of the total;
+     * 3. clears just enough app caches to bring storage back to 20% free, only if it is under 15%;
+     * 4. starts Android's own idle maintenance (TRIM and compiling), at most once a day.
+     * Returns a short result for the user. Runs off the main thread.
+     */
     static String free(Context c) {
-        long before = available(c);
-        int closed = -1;
+        ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
+        c.getSystemService(ActivityManager.class).getMemoryInfo(mem);
+        boolean tight = mem.availMem < mem.totalMem / 4;
+        long before = mem.availMem;
+        int closed = 0;
+        java.util.List<String> did = new java.util.ArrayList<>();
         if (Shell.ready()) {
-            Shell.Result r = Shell.run(SCRIPT);
+            Shell.Result r = Shell.run(script(tight));
             String[] lines = r.out.split("\n");
             try {
                 closed = Math.max(0, Integer.parseInt(lines[lines.length - 1].trim()));
             } catch (NumberFormatException e) {
                 if (!r.ok()) return "Failed: " + r.out;
             }
+            did.add(closed > 0 ? "closed " + closed + " cached app" + (closed == 1 ? "" : "s")
+                    : "trimmed app memory");
+            String storage = storage(c);
+            if (storage != null) did.add(storage);
+            if (maintenance(c)) did.add("started Android's storage maintenance");
         } else if (!needsShizuku()) {
-            ActivityManager am = c.getSystemService(ActivityManager.class);
-            for (ApplicationInfo app : c.getPackageManager().getInstalledApplications(0)) {
-                // Stopped apps have no processes to close.
-                if ((app.flags & ApplicationInfo.FLAG_STOPPED) != 0
-                        || app.packageName.equals(c.getPackageName())) continue;
-                try {
-                    am.killBackgroundProcesses(app.packageName);
-                } catch (SecurityException ignored) {
+            if (tight) {
+                ActivityManager am = c.getSystemService(ActivityManager.class);
+                for (ApplicationInfo app : c.getPackageManager().getInstalledApplications(0)) {
+                    // Stopped apps have no processes to close.
+                    if ((app.flags & ApplicationInfo.FLAG_STOPPED) != 0
+                            || app.packageName.equals(c.getPackageName())) continue;
+                    try {
+                        am.killBackgroundProcesses(app.packageName);
+                    } catch (SecurityException ignored) {
+                    }
                 }
+                SystemClock.sleep(1000);
+                did.add("closed cached apps");
             }
-            SystemClock.sleep(1000);
         } else {
             return "Start Shizuku first.";
         }
         long freed = Math.max(0, available(c) - before);
-        String free = Formatter.formatShortFileSize(c, available(c)) + " free now.";
-        if (freed < 1024 * 1024 && closed <= 0) return "Memory was already clear. " + free;
-        return "Freed " + Formatter.formatShortFileSize(c, freed)
-                + (closed > 0 ? " and closed " + closed + " cached app" + (closed == 1 ? "" : "s") : "")
-                + ". " + free;
+        String free = Formatter.formatShortFileSize(c, available(c)) + " memory free now.";
+        if (did.isEmpty()) return "Memory is fine, so no apps were closed. " + free;
+        return (freed >= 1024 * 1024 ? "Freed " + Formatter.formatShortFileSize(c, freed) + ": " : "Done: ")
+                + String.join(", ", did) + ". " + free;
+    }
+
+    /** Clears app caches only if storage is nearly full, and only as much as needed. */
+    private static String storage(Context c) {
+        StatFs fs = new StatFs(Environment.getDataDirectory().getPath());
+        long total = fs.getTotalBytes(), free = fs.getAvailableBytes();
+        if (free >= total * 15 / 100) return null;
+        Shell.Result r = Shell.run("pm trim-caches " + (total / 5));
+        long gained = Math.max(0, freeStorage() - free);
+        return r.ok() && gained > 0 ? "cleared " + Formatter.formatShortFileSize(c, gained)
+                + " of caches (storage was nearly full)" : null;
+    }
+
+    /** Starts Android's idle maintenance (TRIM, compiling) in the system, at most once a day. */
+    private static boolean maintenance(Context c) {
+        android.content.SharedPreferences p = c.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
+        long now = System.currentTimeMillis();
+        if (now - p.getLong("maintenance", 0) < 24L * 3600 * 1000) return false;
+        if (!Shell.run("sm idle-maint run").ok()) return false;
+        p.edit().putLong("maintenance", now).apply();
+        return true;
     }
 
     /**

@@ -21,7 +21,7 @@ what it actually does, and what it never does.
 | `INTERNET` | Check for updates, and the public IP on Network info, only when you use them |
 | `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE` | Network info reads the active connection's details |
 | `com.termux.permission.RUN_COMMAND` | Start Shizuku through Termux. Android asks you first. |
-| `KILL_BACKGROUND_PROCESSES` | Free up RAM without Shizuku on Android 13 and older. Closes only cached apps. |
+| `KILL_BACKGROUND_PROCESSES` | Speed up phone without Shizuku on Android 13 and older. Closes only cached apps. |
 | `PACKAGE_USAGE_STATS` | Unused apps and Storage by app. Granted through Shizuku. |
 | `WRITE_SECURE_SETTINGS` | Lets toggles and tiles work with Shizuku stopped. Granted once through Shizuku. |
 
@@ -48,13 +48,12 @@ Some tools display data that other apps can't see. It stays on your device:
 | Tool | Data | Stored? |
 | --- | --- | --- |
 | Saved Wi-Fi networks | Wi-Fi passwords | No. Read each time the page opens. |
-| Notification history | The text of your notifications | Yes, in TinyKit's private storage (`notifications.tsv`). Capped at 3,000 entries, deleted by **Clear saved notifications** or uninstalling. |
 | Device IDs | Android ID, serial, MAC | No |
 | App log and crash log | Other apps' log output | No |
 | Recover deleted files | Files in recycle bins | Only the files you choose to restore, copied to `Download/TinyKit/Recovered` |
 
 TinyKit's manifest sets `allowBackup="false"`, so Android's cloud and device-to-device backups
-never copy its private files, including the auth token and saved notifications.
+never copy its private files, including the auth token.
 
 ## Network
 

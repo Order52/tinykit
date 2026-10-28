@@ -24,7 +24,7 @@ public class BoostWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
-        manager.updateAppWidget(ids, views(context, "Tap to free RAM & cache"));
+        manager.updateAppWidget(ids, views(context, "Tap to speed up"));
     }
 
     @Override
@@ -44,19 +44,8 @@ public class BoostWidget extends AppWidgetProvider {
                     status = "Start Shizuku first";
                     message = "Start Shizuku first.";
                 } else {
-                    // Caches first: "pm" itself takes some memory, which the RAM step then frees.
-                    String caches = shizuku ? Ram.clearCaches(app) : null;
-                    long before = Ram.available(app);
-                    String ram = Ram.free(app);
-                    String freed = Formatter.formatShortFileSize(app, Math.max(0, Ram.available(app) - before));
-                    boolean cleared = caches != null && caches.startsWith("Freed ");
-                    // The widget line carries the result: Android hides toasts from apps in the
-                    // background when their notifications aren't allowed.
-                    status = "Freed " + freed + " RAM" + (cleared ? " + " + caches.substring(6) + " cache" : "")
-                            + " · " + Formatter.formatShortFileSize(app, Ram.available(app)) + " free";
-                    message = ram + (caches == null ? " Clearing app caches needs Shizuku."
-                            : cleared ? " Cleared " + caches.substring(6) + " of app caches."
-                            : " Couldn't clear app caches.");
+                    message = Ram.free(app);
+                    status = Formatter.formatShortFileSize(app, Ram.available(app)) + " free";
                 }
                 show(app, status);
                 new Handler(Looper.getMainLooper()).post(

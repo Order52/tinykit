@@ -48,12 +48,23 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    // Lint runs in CI and fails on errors. These are on purpose: the UI is English only and built
+    // in code, and TinyKit reaches hidden system APIs by reflection and /sdcard paths as the shell.
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        disable += listOf("SetTextI18n", "SdCardPath", "PrivateApi", "DiscouragedApi", "HardwareIds",
+            "DefaultLocale", "ClickableViewAccessibility", "WebViewApiAvailability", "DataExtractionRules",
+            "OldTargetApi", "ObsoleteSdkInt", "UnusedAttribute", "InlinedApi")
+    }
+
     buildFeatures {
         buildConfig = false
     }
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
 }

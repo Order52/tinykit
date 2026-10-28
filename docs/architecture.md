@@ -53,7 +53,7 @@ tinykit/
 │       │   ├── Tiles.java          14 Quick Settings tiles on one base class
 │       │   ├── ShizukuTile.java    Shizuku on/off tile (token, Termux or kill)
 │       │   ├── ScreenshotTile.java Screenshot tile
-│       │   ├── Ram.java            Free up RAM, shared by the app, the Free RAM tile and the widget
+│       │   ├── Ram.java            Speed up phone, shared by the app, the Free RAM tile and the widget
 │       │   ├── BoostWidget.java    Home screen widget: one tap frees RAM and clears caches
 │       │   ├── Sensors.java        app_process helper: all-sensors privacy
 │       │   ├── Firewall.java       app_process helper: block an app's internet (Android 14+)
@@ -76,7 +76,7 @@ tinykit/
 ```
 
 `MainActivity` is organised into sections marked with `// ---- Name ----` comments: *Pages*,
-*Shizuku*, *Home*, *Per-app tools*, *Running apps*, *Phone info*, *Notification history*,
+*Shizuku*, *Home*, *Per-app tools*, *Running apps*, *Phone info*,
 *Recover deleted files*, *Apps: permissions & app-ops*, *Quick panel editor*, *Rows and
 widgets*, *Helpers* and so on. Search for the marker to jump to a feature.
 
@@ -198,7 +198,6 @@ can't overlap. Tiles have their own single-thread executor.
 - The installed-app list is loaded once (labels are the slow part) and shared by every picker.
 - App icons (up to 128) and thumbnails (up to 96) are kept in small LRU bitmap caches.
 - `onTrimMemory(TRIM_MEMORY_UI_HIDDEN)` clears both caches as soon as TinyKit leaves the screen.
-- **Show app icons** (System tab) turns icons off entirely for the lowest memory use.
 
 ## Quick Settings tiles
 
@@ -222,7 +221,6 @@ re-reads it.
 | Store | Contents |
 | --- | --- |
 | `SharedPreferences("tinykit")` | Last tab, apps blocked from the internet (re-applied after a restart), Shizuku auth token, previous Private DNS (to restore it), Caffeine's previous timeout, notification filter, known quick panel tiles, original panel layout, icon setting |
-| `files/notifications.tsv` | Saved notifications as `time⇥package⇥title⇥text`, escaped, capped at 3,000 |
 | Android | Everything else: settings, app-ops, permissions, disabled packages, roles |
 
 ## Network access

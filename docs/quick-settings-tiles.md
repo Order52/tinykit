@@ -29,7 +29,7 @@ of them keeps a service running.
 | <img src="images/tiles/miccam.svg" width="40" alt=""> | **Mic & camera off** | Blocks the microphone and camera for every app | On / off | Yes |
 | <img src="images/tiles/timeout.svg" width="40" alt=""> | **Screen timeout** | Cycles 30 s → 1 min → 5 min → 30 min → never | The current timeout | No |
 | <img src="images/tiles/cache.svg" width="40" alt=""> | **Clear caches** | Clears every app's cache | MB freed | Yes |
-| <img src="images/tiles/ram.svg" width="40" alt=""> | **Free RAM** | Frees memory safely, like **Free up RAM** | Free memory | Android 14+² |
+| <img src="images/tiles/ram.svg" width="40" alt=""> | **Free RAM** | Speeds up the phone, like **Speed up phone** | Free memory | Android 14+² |
 | <img src="images/tiles/kill.svg" width="40" alt=""> | **Close app** | Force-stops the app on screen | — | Yes |
 
 ¹ The Shizuku tile needs either the auth token or Termux with shizuku-termux. See
@@ -72,6 +72,6 @@ including the accelerometer and gyroscope, and resets on reboot.
 **Close app** finds the app in front (`dumpsys activity activities`) and force-stops it. It never
 stops SystemUI, the launcher or TinyKit itself.
 
-**Free RAM** runs the same routine as **System → Free up RAM**: it closes only the apps Android
-has already cached and asks running apps to release memory, then shows how much came back. See
-[Free up RAM](features.md#clean--speed).
+**Free RAM** runs the same routine as **System → Speed up phone**: it trims app memory, closes
+cached apps only if memory is low, and shows how much is free. See
+[Speed up phone](features.md#clean--speed).
