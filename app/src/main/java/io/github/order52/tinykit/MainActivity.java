@@ -466,6 +466,11 @@ public class MainActivity extends Activity {
             worker.execute(() -> Tweak.grantSelf(this));
             // Puts back what a restart wiped (firewall rules, Force dark); once per boot.
             Restore.start(this);
+            // Fake permissions Android reset to Real in the meantime go back to Fake.
+            worker.execute(() -> {
+                String fixed = FakePolicy.enforce(this, prefs);
+                if (fixed != null && !fixed.isEmpty()) main.post(() -> toast(fixed));
+            });
         }
     }
 
@@ -3171,6 +3176,11 @@ public class MainActivity extends Activity {
             if (parts.length >= 2 && parts[0].equals("user")) out.append("alive\t").append(parts[1]).append('\n');
         }
         for (String pkg : disabledPackages()) out.append("hidden\t").append(pkg).append('\n');
+        for (String entry : FakePolicy.all(prefs)) {
+            String[] f = entry.split("\\|", -1);
+            if (f.length == 3) out.append("fake\t").append(f[1]).append('\t').append(f[2].isEmpty() ? "-" : f[2])
+                    .append('\t').append(f[0]).append('\n');
+        }
         for (Pkg p : debloatList(true)) out.append("removed\t").append(p.pkg).append('\n');
         String file = BACKUP_DIR + "/setup-" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT)
                 .format(new java.util.Date()) + ".txt";
@@ -3208,7 +3218,7 @@ public class MainActivity extends Activity {
 
     /** Applies a setup file. Apps that aren't installed any more are skipped. */
     private String restoreSetup(String file) {
-        Set<String> blocked = new HashSet<>(), allowed = new HashSet<>();
+        Set<String> blocked = new HashSet<>(), allowed = new HashSet<>(), fakes = new HashSet<>();
         boolean allowMode = false, dark = false;
         StringBuilder script = new StringBuilder();
         int count = 0;
@@ -3231,6 +3241,11 @@ public class MainActivity extends Activity {
                         }
                     }
                     break;
+                case "fake":
+                    if (f.length == 4 && f[1].matches("[A-Z_]+") && f[2].matches("-|[A-Za-z0-9_.]+")) {
+                        fakes.add(FakePolicy.key(f[3], f[1], f[2].equals("-") ? "" : f[2]));
+                    }
+                    break;
                 case "alive": script.append("dumpsys deviceidle whitelist +").append(q).append(" >/dev/null; "); break;
                 case "hidden": script.append("pm disable-user --user 0 ").append(q).append(" >/dev/null 2>&1; "); break;
                 case "removed": script.append("pm uninstall -k --user 0 ").append(q).append(" >/dev/null 2>&1; "); break;
@@ -3242,6 +3257,12 @@ public class MainActivity extends Activity {
         prefs.edit().putStringSet(FirewallPolicy.BLOCKED, blocked).putStringSet(FirewallPolicy.ALLOWED, allowed)
                 .putBoolean(FirewallPolicy.MODE, allowMode).putBoolean(Restore.PREF_FORCE_DARK, dark).apply();
         if (script.length() > 0) Shell.run(script.toString());
+        if (!fakes.isEmpty()) {
+            Set<String> merged = FakePolicy.all(prefs);
+            merged.addAll(fakes);
+            prefs.edit().putStringSet(FakePolicy.KEY, merged).apply();
+            FakePolicy.enforce(this, prefs);
+        }
         if (dark) Shell.run("setprop debug.hwui.force_dark true");
         String firewall = FirewallPolicy.supported() ? FirewallPolicy.apply(this, prefs, true) : null;
         reloadApps();
@@ -3866,6 +3887,8 @@ public class MainActivity extends Activity {
                 render.run();
                 worker.execute(() -> {
                     String err = setOp(pkg, op, permission, target);
+                    // Remembered so Android can't quietly turn it back into Real.
+                    if (err == null) FakePolicy.set(prefs, pkg, op[0], permission ? op[2] : "", target.equals("Fake"));
                     String now = readState(pkg, op, permission);
                     main.post(() -> {
                         state[0] = now;

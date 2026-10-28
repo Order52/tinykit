@@ -27,6 +27,7 @@ returns nothing behind it.
 - [Supported permissions](#supported-permissions)
 - [Hidden app-ops](#hidden-app-ops)
 - [Verifying it yourself](#verifying-it-yourself)
+- [Staying Fake](#staying-fake)
 - [Undoing changes](#undoing-changes)
 - [Caveats](#caveats)
 - [FAQ](#faq)
@@ -192,15 +193,39 @@ Both permissions are `granted=true`, so the app sees them as granted, while the 
 `ignore`. Android also marks them `REVOKED_COMPAT`, its own name for "granted, but blocked by
 app-ops".
 
+## Staying Fake
+
+Fake is "permission granted, app-op ignore", and **Android doesn't keep that on its own**. It
+re-syncs permissions with app-ops when the phone restarts, when an app is updated, and when the
+app or Android's Settings changes the permission. We checked on Android 14: after a restart the
+camera, microphone, location and contacts app-ops of a Fake app were back to normal (Real). Off
+(permission revoked) and the hidden app-ops survive a restart; only Fake permissions don't.
+
+So TinyKit remembers every Fake you set (in its private preferences) and checks them:
+
+- every time Shizuku starts, which also starts TinyKit's process, **without you opening TinyKit**
+  (at most every ten minutes after that, because tiles start the process too);
+- every time you open TinyKit with Shizuku running;
+- when you restore a **TinyKit setup** backup, which includes your Fake permissions.
+
+Anything Android reset is put back, and TinyKit says so (*"Android had reset 3 Fake permissions.
+TinyKit put them back."*). If one can't be put back, it's switched **Off**, never left Real. An
+uninstalled app is forgotten.
+
+> [!IMPORTANT]
+> Between a restart and Shizuku starting, Android's reset is in effect and a Fake app sees Real.
+> Nothing on the phone can change another app's permissions without Shizuku, so that gap is
+> real. Start Shizuku soon after boot (or use a start-on-boot setup) to keep it short.
+
 ## Undoing changes
 
-Every state is reversible from the same screen: tap **Real** to restore normal access. Nothing
-is patched or replaced, and TinyKit keeps no state of its own for this. Everything lives in
-Android's own permission and app-op databases, which means:
+Every state is reversible from the same screen: tap **Real** to restore normal access (TinyKit
+then forgets the Fake). Nothing is patched or replaced.
 
-- Changes **survive reboots** and keep working with Shizuku stopped and TinyKit closed.
+- Real, Off and the hidden app-ops live in Android's own databases and **survive reboots**,
+  even with Shizuku stopped and TinyKit closed. Fake needs TinyKit's check described above.
 - Changes are **lost if the app is uninstalled** (its permissions go with it) and on a factory
-  reset.
+  reset. A **TinyKit setup** backup brings the Fake list back.
 - To reset everything for an app by hand, run `appops reset <pkg>`, then grant or revoke
   permissions in Android's Settings app.
 
@@ -210,9 +235,9 @@ Android's own permission and app-op databases, which means:
   microphone, Android's own default is often `foreground`, which means *only while the app is in
   use*. If you want while-in-use behaviour back, set it in Android's Settings app instead of
   tapping Real.
-- **Android Settings can overwrite Fake.** Changing a permission in the system Settings app
-  re-syncs the app-op, so a Fake permission can turn back into Real or Off. Re-apply it in
-  TinyKit afterwards.
+- **Android can overwrite Fake.** A restart, an app update or a change in the system Settings
+  app re-syncs the app-op, so a Fake permission turns back into Real. TinyKit puts it back the
+  next time Shizuku starts or TinyKit opens (see [Staying Fake](#staying-fake)).
 - **One app-op per UID.** Apps that share a user ID (rare, mostly system apps) share their
   permission app-ops, so changing one changes them all.
 - **Some permissions can't be granted.** If an app targets an old Android version, or the
@@ -230,7 +255,8 @@ permission. XPrivacyLua-style tools hook into the app itself to return fake data
 made-up location. TinyKit doesn't invent data; it returns none.
 
 **Does Fake use battery or run in the background?**
-No. Android enforces app-ops itself. TinyKit isn't involved after you tap.
+No. Android enforces app-ops itself. TinyKit only runs a short check when Shizuku starts or
+when you open it, then ends.
 
 **Why does the camera show as unavailable instead of a black image?**
 This is how Android's camera service handles an ignored camera op. TinyKit can't change it

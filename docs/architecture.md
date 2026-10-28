@@ -60,7 +60,8 @@ tinykit/
 │       │   ├── Trackers.java       Names of known ad and analytics libraries
 │       │   ├── Firewall.java       app_process helper: block an app's internet (Android 14+)
 │       │   ├── FirewallPolicy.java The saved block/allow lists and how they are applied
-│       │   ├── Restore.java        Puts back the firewall and Force dark after a restart
+│       │   ├── Restore.java        Puts back the firewall, Force dark and Fake permissions after a restart
+│       │   ├── FakePolicy.java     Remembers Fake permissions and puts back any Android reset to Real
 │       │   ├── TinyKitApp.java     Application: starts Restore when Shizuku's binder arrives
 │       │   ├── Bloat.java          Safety ratings for the Debloater
 │       │   ├── ApkInstaller.java   Installs .apk, .apks, .xapk and .apkm through pm, streaming
@@ -156,14 +157,18 @@ reflection, so they keep working across Android versions with different signatur
 
 ## Restore after a restart
 
-Android wipes two things TinyKit sets: the firewall rules and `debug.hwui.force_dark`. When
+Android wipes two things TinyKit sets, the firewall rules and `debug.hwui.force_dark`, and resets
+Fake permissions to Real (see [Fake permissions](fake-permissions.md#staying-fake)). When
 Shizuku starts it starts the processes of apps that use it, and `TinyKitApp` (the `Application`)
 listens for Shizuku's binder arriving. `Restore` then runs once per boot, tracked by
 `Settings.Global.BOOT_COUNT`:
 
 - `FirewallPolicy.apply` pushes the saved choice in one `Firewall sync` run (nothing to do if no
   app is blocked), and
-- Force dark is switched back on if it was on.
+- Force dark is switched back on if it was on, and
+- `FakePolicy.enforce` re-checks every saved Fake permission (`fake_ops`), puts back any Android
+  reset to Real and switches any it can't fix Off. This one also runs when TinyKit opens, and at
+  most every ten minutes when tiles start the process.
 
 The process then idles like any cached app. TinyKit keeps no service and no receiver. The
 firewall choice lives in `SharedPreferences` (`fw_blocked`, `fw_allowed`, `fw_allow_mode`).
