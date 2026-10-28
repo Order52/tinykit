@@ -1,0 +1,2 @@
+- Fake permissions now stay Fake: Android resets them to Real at a restart, so TinyKit puts them back when Shizuku starts and when it opens. One it can't fix is switched Off, never left Real.
+- The TinyKit setup backup includes your Fake permissions.
