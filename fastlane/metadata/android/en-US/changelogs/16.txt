@@ -1,0 +1,1 @@
+- Update on start now shows a popup instead of a notification, so no notification permission is needed.
