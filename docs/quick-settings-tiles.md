@@ -72,6 +72,6 @@ including the accelerometer and gyroscope, and resets on reboot.
 **Close app** finds the app in front (`dumpsys activity activities`) and force-stops it. It never
 stops SystemUI, the launcher or TinyKit itself.
 
-**Free RAM** runs the same routine as **System → Speed up phone**: it trims app memory, closes
-cached apps only if memory is low, and shows how much is free. See
+**Free RAM** runs the same routine as **System → Speed up phone**: it deletes caches, closes
+cached apps, frees memory, and shows how much is free. See
 [Speed up phone](features.md#clean--speed).

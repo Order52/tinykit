@@ -31,12 +31,11 @@ final class Ram {
 
     // "cmd activity" talks to the system directly. Older versions only have "am", which starts a
     // Java VM per call: fine for one kill-all, far too slow for one trim per app, so the trims are
-    // skipped there. KILL is "kill-all" (cached apps only) and runs only when memory is really low:
-    // closing apps Android could have kept makes them cold-start later, which is slower.
-    private static String script(boolean kill) {
+    // skipped there. "kill-all" closes only the apps Android has set aside as cached.
+    private static String script() {
         return APPS
             + "A=; cmd activity help 2>/dev/null | grep -q send-trim-memory && A='cmd activity'; "
-            + "a=$(L | wc -l); " + (kill ? "${A:-am} kill-all; sleep 1; " : "")
+            + "a=$(L | wc -l); " + "${A:-am} kill-all; sleep 1; "
             + "[ -n \"$A\" ] && L | { while read p n; do "
             // SystemUI is left alone so the status bar and quick panel never redraw. Background
             // apps take MODERATE (release what they can rebuild); apps in use only accept
@@ -63,67 +62,53 @@ final class Ram {
     }
 
     /**
-     * One tap to make the phone smoother, using only what helps:
-     * 1. asks apps to release memory they can rebuild and compacts what cached apps still hold;
-     * 2. closes cached apps only when free memory is under a quarter of the total;
-     * 3. clears just enough app caches to bring storage back to 20% free, only if it is under 15%;
-     * 4. starts Android's own idle maintenance (TRIM and compiling), at most once a day.
+     * One tap that cleans the phone:
+     * 1. deletes every app's cache (first, because the commands themselves use a little memory);
+     * 2. closes every cached app, asks the ones still running to release memory, and compacts RAM;
+     * 3. trims storage (TRIM) and, once a day, starts Android's idle maintenance.
      * Returns a short result for the user. Runs off the main thread.
      */
     static String free(Context c) {
-        ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
-        c.getSystemService(ActivityManager.class).getMemoryInfo(mem);
-        boolean tight = mem.availMem < mem.totalMem / 4;
-        long before = mem.availMem;
+        long beforeRam = available(c);
+        long beforeStorage = freeStorage();
         int closed = 0;
         java.util.List<String> did = new java.util.ArrayList<>();
         if (Shell.ready()) {
-            Shell.Result r = Shell.run(script(tight));
+            Shell.Result caches = Shell.run("pm trim-caches 999G");
+            long cleared = Math.max(0, freeStorage() - beforeStorage);
+            if (caches.ok() && cleared > 0) did.add("deleted " + Formatter.formatShortFileSize(c, cleared) + " of cache");
+            Shell.Result r = Shell.run(script());
             String[] lines = r.out.split("\n");
             try {
                 closed = Math.max(0, Integer.parseInt(lines[lines.length - 1].trim()));
             } catch (NumberFormatException e) {
                 if (!r.ok()) return "Failed: " + r.out;
             }
-            did.add(closed > 0 ? "closed " + closed + " cached app" + (closed == 1 ? "" : "s")
-                    : "trimmed app memory");
-            String storage = storage(c);
-            if (storage != null) did.add(storage);
-            if (maintenance(c)) did.add("started Android's storage maintenance");
+            if (closed > 0) did.add("closed " + closed + " cached app" + (closed == 1 ? "" : "s"));
+            Shell.run("sm fstrim");
+            if (maintenance(c)) did.add("started storage maintenance");
         } else if (!needsShizuku()) {
-            if (tight) {
-                ActivityManager am = c.getSystemService(ActivityManager.class);
-                for (ApplicationInfo app : c.getPackageManager().getInstalledApplications(0)) {
-                    // Stopped apps have no processes to close.
-                    if ((app.flags & ApplicationInfo.FLAG_STOPPED) != 0
-                            || app.packageName.equals(c.getPackageName())) continue;
-                    try {
-                        am.killBackgroundProcesses(app.packageName);
-                    } catch (SecurityException ignored) {
-                    }
+            ActivityManager am = c.getSystemService(ActivityManager.class);
+            for (ApplicationInfo app : c.getPackageManager().getInstalledApplications(0)) {
+                // Stopped apps have no processes to close.
+                if ((app.flags & ApplicationInfo.FLAG_STOPPED) != 0
+                        || app.packageName.equals(c.getPackageName())) continue;
+                try {
+                    am.killBackgroundProcesses(app.packageName);
+                } catch (SecurityException ignored) {
                 }
-                SystemClock.sleep(1000);
-                did.add("closed cached apps");
             }
+            SystemClock.sleep(1000);
+            did.add("closed cached apps");
         } else {
             return "Start Shizuku first.";
         }
-        long freed = Math.max(0, available(c) - before);
-        String free = Formatter.formatShortFileSize(c, available(c)) + " memory free now.";
-        if (did.isEmpty()) return "Memory is fine, so no apps were closed. " + free;
-        return (freed >= 1024 * 1024 ? "Freed " + Formatter.formatShortFileSize(c, freed) + ": " : "Done: ")
-                + String.join(", ", did) + ". " + free;
-    }
-
-    /** Clears app caches only if storage is nearly full, and only as much as needed. */
-    private static String storage(Context c) {
-        StatFs fs = new StatFs(Environment.getDataDirectory().getPath());
-        long total = fs.getTotalBytes(), free = fs.getAvailableBytes();
-        if (free >= total * 15 / 100) return null;
-        Shell.Result r = Shell.run("pm trim-caches " + (total / 5));
-        long gained = Math.max(0, freeStorage() - free);
-        return r.ok() && gained > 0 ? "cleared " + Formatter.formatShortFileSize(c, gained)
-                + " of caches (storage was nearly full)" : null;
+        long freed = Math.max(0, available(c) - beforeRam);
+        String memory = Formatter.formatShortFileSize(c, available(c)) + " memory free now"
+                + (freed >= 1024 * 1024 ? " (+" + Formatter.formatShortFileSize(c, freed) + ")" : "") + ".";
+        if (!Shell.ready()) return (did.isEmpty() ? "Done." : "Done: " + String.join(", ", did) + ".") + " " + memory;
+        did.add(0, "trimmed and compacted memory");
+        return "Done: " + String.join(", ", did) + ". " + memory;
     }
 
     /** Starts Android's idle maintenance (TRIM, compiling) in the system, at most once a day. */

@@ -815,7 +815,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
         f.add(new Feature("Settings backup & restore", "Save and restore all settings", this::openBackupRestore));
         f.add(new Feature("Advanced reboot", "Reboot, recovery, bootloader, soft reboot", this::openReboot));
-        f.add(new Feature("Speed up phone", "Trim memory, free space, one tap", () -> selectTab(3)));
+        f.add(new Feature("Speed up phone", "Delete caches and free memory, one tap", () -> selectTab(3)));
         f.add(new Feature("Speed-up widget", "One-tap RAM and cache cleaner", this::addBoostWidget));
         f.add(new Feature("Clear all app caches", "Free cached space", () -> selectTab(3)));
         f.add(new Feature("Optimize apps", "Recompile apps so they open faster", () -> selectTab(3)));
@@ -998,9 +998,8 @@ public class MainActivity extends Activity {
                 this::openReboot);
 
         section(list, "Clean & speed");
-        action(list, "Speed up phone", "Trims and compacts app memory, closes cached apps only if memory is low, "
-                + "clears caches only if storage is nearly full, and runs Android's storage maintenance "
-                + "once a day. Nothing you're using is closed.", Ram.needsShizuku(),
+        action(list, "Speed up phone", "Deletes every app's cache, closes cached apps, frees and compacts memory "
+                + "and trims storage. Apps you're using stay open.", Ram.needsShizuku(),
                 () -> Ram.free(this));
         row(list, "Speed-up widget", "Add a home screen widget that does the same speed-up in one tap, "
                 + "without opening TinyKit.", arrow(), this::addBoostWidget, false);

@@ -487,37 +487,34 @@ nothing without Shizuku can set it.
 
 | Action | Command | Notes |
 | --- | --- | --- |
-| **Speed up phone** | `cmd activity send-trim-memory`, `cmd activity compact system`, `am kill-all` only when memory is low, `pm trim-caches` only when storage is nearly full, `sm idle-maint run` at most daily | See below. Works without Shizuku on Android 13 and older (closes cached apps only when memory is low). |
+| **Speed up phone** | `pm trim-caches 999G`, `am kill-all`, `cmd activity send-trim-memory`, `cmd activity compact system`, `sm fstrim`, and `sm idle-maint run` once a day | Deletes every app's cache, closes cached apps, frees and compacts memory, trims storage. Works without Shizuku on Android 13 and older (closes cached apps only). |
 | **Clear all app caches** | `pm trim-caches 999G` | Reports how much space came back |
 | **Optimize apps** | `cmd package bg-dexopt-job` | Compiles apps ahead of time so they open faster. Runs for about 10 minutes and keeps going if you close TinyKit. |
 | **Trim storage** | `sm fstrim; sm idle-maint run` | Storage maintenance and TRIM |
 
-**Speed up phone** is one tap and does only what helps. Closing apps Android could have kept
-makes them cold-start later, which is slower, so it is not the default:
+**Speed up phone** is one tap. Every press does all of this:
 
-1. It asks every running app to release memory it can rebuild (`TRIM_MEMORY_MODERATE` to
-   background apps, `TRIM_MEMORY_RUNNING_LOW` to apps in use), then has Android **compact** what
-   cached apps still hold (Android 11+). Nothing is closed. SystemUI is left alone.
-2. Only if free memory is under a quarter of the total does it also close the apps Android has
-   already marked as **cached**. The app on screen, music, navigation, anything showing a
-   notification and anything running a service are never touched.
-3. Only if storage is under 15% free does it clear app caches, and only enough to reach 20%
-   free. A nearly full phone is slow; a half-empty one gains nothing from this.
-4. It starts Android's own idle maintenance (TRIM and compiling), at most once a day.
+1. **Deletes every app's cache** (`pm trim-caches`). The commands themselves use a little memory,
+   so this runs first.
+2. **Closes every cached app**: apps you left a while ago that Android keeps around. The app on
+   screen, music, navigation, anything showing a notification and anything running a service are
+   never touched.
+3. **Frees memory**: asks every running app to release what it can rebuild
+   (`TRIM_MEMORY_MODERATE` to background apps, `TRIM_MEMORY_RUNNING_LOW` to apps in use), then has
+   Android compact RAM (Android 11+). SystemUI is left alone.
+4. **Trims storage** (`sm fstrim`) and, once a day, starts Android's idle maintenance.
 
-The result says what was done, for example *"Freed 33 MB: trimmed app memory, started Android's
-storage maintenance. 1.9 GB memory free now."* If memory is fine it says so and closes nothing.
+The result says what was done, for example *"Done: trimmed and compacted memory, deleted 412 MB
+of cache, closed 9 cached apps, started storage maintenance. 2.3 GB memory free now (+640 MB)."*
+Closed apps open normally next time, just without their last screen, and they rebuild their
+caches as you use them.
 
 Without Shizuku, on **Android 13 and older**, TinyKit can close cached apps with the regular
-`killBackgroundProcesses` API, but only when memory is low. Android 14 limited that API to an
-app's own processes, so on Android 14 and newer the row shows **Requires Shizuku**.
+`killBackgroundProcesses` API. Android 14 limited that API to an app's own processes, so on
+Android 14 and newer the row shows **Requires Shizuku**.
 
-> [!NOTE]
-> Android is designed to keep memory full, so memory fills up again over time. The biggest
-> real gains come from free storage and from restarting the phone now and then.
-
-**Speed-up widget** puts **Speed up phone** on your home screen. One tap runs it without opening
-TinyKit, and the widget then shows how much memory is free. Tap **Speed-up widget** in this
+**Speed-up widget** puts **Speed up phone** on your home screen. One tap runs all of it without
+opening TinyKit, and the widget then shows how much memory is free. Tap **Speed-up widget** in this
 section to place it (Android 8+), or add it from your launcher's widget list. The widget never
 updates on its own and runs nothing until you tap it.
 

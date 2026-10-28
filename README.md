@@ -174,7 +174,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Animation speed** | Turns system animations off, or makes them faster or slower. |
 | **Advanced reboot** | Reboots normally, or into recovery or the bootloader, or does a soft (userspace) reboot. |
 | **Speed-up widget** | A home screen widget: one tap frees RAM and clears app caches without opening TinyKit, and shows how much it freed. |
-| **Speed up phone** | One tap: trims and compacts app memory, closes cached apps only when memory is low, clears caches only when storage is nearly full, and starts Android's storage maintenance once a day. Nothing you're using is closed. Works without Shizuku on Android 13 and older. |
+| **Speed up phone** | One tap deletes every app's cache, closes cached apps, frees and compacts memory and trims storage. Apps you're using stay open. Works without Shizuku on Android 13 and older. |
 | **Clean & speed** | Clear all app caches · Optimize apps · Trim storage |
 | **Network & battery** | Free hotspot · Turn off mobile data while on Wi-Fi |
 
