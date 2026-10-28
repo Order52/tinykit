@@ -17,6 +17,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.ComponentInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -99,6 +100,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -940,6 +942,9 @@ public class MainActivity extends Activity {
         link(list, "Install APK files",
                 "Install .apk, .apks, .xapk and .apkm files, including apps split into several parts.",
                 this::pickApks);
+        View[] installOptions = new View[1];
+        installOptions[0] = row(list, "Install options", installOptionsSummary(), arrow(),
+                () -> chooseInstallOptions((TextView) installOptions[0].getTag()), false);
         row(list, "Installed with TinyKit", "Apps the installer put on, newest first, with a remove button.",
                 arrow(), this::openInstallHistory, false);
 
@@ -949,6 +954,10 @@ public class MainActivity extends Activity {
         link(list, "Special access", "Install unknown apps, draw over apps, all files access and more, "
                 + "per app.", this::openSpecialAccess);
         link(list, "App language", "Give any app its own language (Android 13+).", this::openAppLanguage);
+        link(list, "Trackers in apps", "See which ad and analytics libraries each app carries.",
+                this::openTrackers);
+        link(list, "Notification channels", "Silence one kind of notification from an app, not all of them "
+                + "(Android 8+).", this::openChannelsApp);
 
         return scroll(list);
     }
@@ -1705,6 +1714,219 @@ public class MainActivity extends Activity {
                     .show();
         });
         push("Installed with TinyKit", view);
+        load.run();
+    }
+
+    // ---- Install options ------------------------------------------------------------------------
+
+    private static final String[] INSTALL_OPTION_NAMES = {
+            "Allow downgrade (install an older version over a newer one)",
+            "Grant all permissions the app asks for",
+            "Allow test-only apps"};
+    private static final int[] INSTALL_OPTION_BITS = {ApkInstaller.DOWNGRADE, ApkInstaller.GRANT_ALL, ApkInstaller.TEST_ONLY};
+
+    private String installOptionsSummary() {
+        int options = prefs.getInt(ApkInstaller.PREF, 0);
+        StringBuilder on = new StringBuilder();
+        String[] short_ = {"Allow downgrade", "Grant all permissions", "Test-only apps"};
+        for (int i = 0; i < INSTALL_OPTION_BITS.length; i++) {
+            if ((options & INSTALL_OPTION_BITS[i]) != 0) on.append(on.length() > 0 ? ", " : "").append(short_[i]);
+        }
+        return on.length() == 0 ? "Normal install. Tap to allow downgrades or grant permissions."
+                : "On: " + on + ".";
+    }
+
+    private void chooseInstallOptions(TextView summary) {
+        boolean[] checked = new boolean[INSTALL_OPTION_BITS.length];
+        int options = prefs.getInt(ApkInstaller.PREF, 0);
+        for (int i = 0; i < checked.length; i++) checked[i] = (options & INSTALL_OPTION_BITS[i]) != 0;
+        new AlertDialog.Builder(this)
+                .setTitle("Install options")
+                .setMultiChoiceItems(INSTALL_OPTION_NAMES, checked, (d, which, on) -> checked[which] = on)
+                .setPositiveButton("Save", (d, w) -> {
+                    int bits = 0;
+                    for (int i = 0; i < checked.length; i++) if (checked[i]) bits |= INSTALL_OPTION_BITS[i];
+                    prefs.edit().putInt(ApkInstaller.PREF, bits).apply();
+                    if (summary != null) summary.setText(installOptionsSummary());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    // ---- Trackers in apps -----------------------------------------------------------------------
+
+    /**
+     * Which ad and analytics libraries each app carries, read from the parts it declares. Android
+     * doesn't let the shell turn individual parts off ("Shell cannot change component state"), so
+     * this finds them and offers what does work: cutting the app off the internet.
+     */
+    private void openTrackers() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Ad and analytics libraries found inside your apps, most first. This is what each "
+                + "app declares, not proof it uses them. Tap an app to see them" + (FirewallPolicy.supported()
+                ? " or cut it off the internet." : "."), 13, false);
+        help.setAlpha(0.8f);
+        page.addView(help);
+        CheckBox system = new CheckBox(this);
+        system.setText("Show system apps");
+        page.addView(system);
+        TextView loading = text("Scanning apps…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Trackers in apps", page);
+
+        // {package, label, "A, B, C", count, system}
+        List<String[]> all = new ArrayList<>();
+        Adapter<String[]> adapter = new Adapter<>(false, (t, row) -> {
+            row.first.setText(t[1]);
+            row.second.setText(t[3] + (t[3].equals("1") ? " tracker" : " trackers"));
+            row.third.setText(t[2]);
+            showIcon(row, t[0]);
+        });
+        listView.setAdapter(adapter);
+        Runnable filter = () -> {
+            List<String[]> shown = new ArrayList<>();
+            for (String[] t : all) if (system.isChecked() || t[4].equals("0")) shown.add(t);
+            adapter.set(shown);
+            loading.setText("No trackers found.");
+            loading.setVisibility(shown.isEmpty() ? View.VISIBLE : View.GONE);
+        };
+        system.setOnCheckedChangeListener((v, on) -> filter.run());
+        worker.execute(() -> {
+            PackageManager pm = getPackageManager();
+            List<String[]> found = new ArrayList<>();
+            for (App a : installedApps()) {
+                Set<String> libs = new TreeSet<>();
+                try {
+                    PackageInfo info = pm.getPackageInfo(a.pkg, PackageManager.GET_ACTIVITIES
+                            | PackageManager.GET_SERVICES | PackageManager.GET_RECEIVERS | PackageManager.GET_PROVIDERS);
+                    for (ComponentInfo[] group : new ComponentInfo[][]{info.activities, info.services,
+                            info.receivers, info.providers}) {
+                        if (group == null) continue;
+                        for (ComponentInfo ci : group) {
+                            String lib = Trackers.find(ci.name);
+                            if (lib != null) libs.add(lib);
+                        }
+                    }
+                } catch (PackageManager.NameNotFoundException | RuntimeException e) {
+                    continue;
+                }
+                if (libs.isEmpty()) continue;
+                found.add(new String[]{a.pkg, a.label, TextUtils.join(", ", libs), String.valueOf(libs.size()),
+                        a.system ? "1" : "0"});
+            }
+            Collections.sort(found, (x, y) -> Integer.parseInt(y[3]) - Integer.parseInt(x[3]));
+            main.post(() -> {
+                all.clear();
+                all.addAll(found);
+                filter.run();
+            });
+        });
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String[] t = adapter.getItem(position);
+            AlertDialog.Builder d = new AlertDialog.Builder(this)
+                    .setTitle(t[1])
+                    .setMessage(t[2] + "\n\nThese are declared inside " + t[0] + ". TinyKit can't switch them off "
+                            + "one by one (Android doesn't allow it from the shell).")
+                    .setNegativeButton("Close", null);
+            if (FirewallPolicy.supported() && Shell.ready()) {
+                d.setPositiveButton("Block internet", (x, w) -> worker.execute(() -> {
+                    String error = FirewallPolicy.choose(this, prefs, t[0], true);
+                    main.post(() -> toast(error != null ? error : t[1] + " is blocked from the internet."));
+                }));
+            }
+            d.show();
+        });
+    }
+
+    // ---- Notification channels ------------------------------------------------------------------
+
+    private void openChannelsApp() {
+        if (Build.VERSION.SDK_INT < 26) {
+            toast("Notification channels need Android 8 or newer.");
+            return;
+        }
+        openAppList("Notification channels", "Pick an app to choose which kinds of notification it may show.",
+                this::openChannels);
+    }
+
+    private static String channelsCmd(Context c, String args) {
+        return "CLASSPATH=" + c.getPackageCodePath()
+                + " app_process /system/bin io.github.order52.tinykit.Channels " + args;
+    }
+
+    private static String importanceName(int importance) {
+        switch (importance) {
+            case 0: return "Blocked";
+            case 1: return "Silent, hidden";
+            case 2: return "Silent";
+            case 3: return "Sound";
+            default: return "Sound and pop-up";
+        }
+    }
+
+    private void openChannels(String pkg) {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Tick = the app may show this kind of notification. Untick to block just that kind. "
+                + "Some system channels can't be blocked.", 13, false);
+        help.setAlpha(0.8f);
+        page.addView(help);
+        TextView loading = text("Reading…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push(label(pkg), page);
+
+        // {id, name, importance}
+        Adapter<String[]> adapter = new Adapter<>(true, (ch, row) -> {
+            row.first.setText(ch[1]);
+            row.second.setText(importanceName(Integer.parseInt(ch[2])));
+            row.check.setChecked(!ch[2].equals("0"));
+        });
+        listView.setAdapter(adapter);
+        int uid;
+        try {
+            uid = getPackageManager().getApplicationInfo(pkg, 0).uid;
+        } catch (PackageManager.NameNotFoundException e) {
+            return;
+        }
+        Runnable load = () -> worker.execute(() -> {
+            Shell.Result r = Shell.run(channelsCmd(this, "list " + Shell.quote(pkg) + " " + uid));
+            List<String[]> rows = new ArrayList<>();
+            if (r.ok()) {
+                for (String line : r.out.split("\n")) {
+                    String[] f = line.split("\t");
+                    if (f.length == 3) rows.add(f);
+                }
+            }
+            Collections.sort(rows, (x, y) -> x[1].compareToIgnoreCase(y[1]));
+            main.post(() -> {
+                loading.setText(r.ok() ? "This app hasn't created any notification channels yet."
+                        : "Couldn't read them: " + r.out);
+                loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
+                adapter.set(rows);
+            });
+        });
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String[] ch = adapter.getItem(position);
+            boolean blocked = ch[2].equals("0");
+            String key = "chan_" + pkg + "|" + ch[0];
+            worker.execute(() -> {
+                // Remember how loud it was so turning it back on restores exactly that.
+                int target = blocked ? prefs.getInt(key, 3) : 0;
+                if (!blocked) prefs.edit().putInt(key, Integer.parseInt(ch[2])).apply();
+                Shell.Result r = Shell.run(channelsCmd(this, "set " + Shell.quote(pkg) + " " + uid + " "
+                        + Shell.quote(ch[0]) + " " + target));
+                main.post(() -> {
+                    if (!r.ok()) toast(r.out);
+                    load.run();
+                });
+            });
+        });
         load.run();
     }
 

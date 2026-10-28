@@ -149,6 +149,22 @@ if [ "$sdk" -ge 34 ]; then
   helper Firewall query "$uid" 2>&1 | grep -q "$uid" && bad "firewall still blocks after allow" || pass "firewall cleared"
 fi
 
+# Notification channels (Android 8+): list, block one, put it back
+if [ "$sdk" -ge 26 ]; then
+  chan=$(helper Channels list android 1000 2>&1 | head -1)
+  id=$(echo "$chan" | cut -f1); imp=$(echo "$chan" | cut -f3)
+  if [ -n "$id" ]; then
+    out=$(helper Channels set android 1000 "$id" 0 2>&1 | tail -1); [ "$out" = OK ] && pass "block a notification channel" || bad "block a notification channel: $out"
+    helper Channels set android 1000 "$id" "$imp" >/dev/null 2>&1
+    [ "$(helper Channels list android 1000 2>&1 | head -1 | cut -f3)" = "$imp" ] && pass "notification channel restored" || bad "notification channel not restored"
+  else
+    echo "skip notification channels (none to test with: $chan)"
+  fi
+fi
+
+# Install options flags are accepted by pm
+check "install flags -d -g -t" sh_ "pm install-create -r -d -g -t -i $PKG | grep -q Success"
+
 # ---- Final crash check ----------------------------------------------------------------------
 crashed && bad "TinyKit crashed during the run" || pass "no TinyKit crash in the whole run"
 echo

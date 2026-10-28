@@ -56,6 +56,8 @@ tinykit/
 │       │   ├── Ram.java            Speed up phone, shared by the app, the Free RAM tile and the widget
 │       │   ├── BoostWidget.java    Home screen widget: one tap frees RAM and clears caches
 │       │   ├── Sensors.java        app_process helper: all-sensors privacy
+│       │   ├── Channels.java       app_process helper: list and change an app's notification channels
+│       │   ├── Trackers.java       Names of known ad and analytics libraries
 │       │   ├── Firewall.java       app_process helper: block an app's internet (Android 14+)
 │       │   ├── FirewallPolicy.java The saved block/allow lists and how they are applied
 │       │   ├── Restore.java        Puts back the firewall and Force dark after a restart
@@ -134,7 +136,7 @@ tiles work with Shizuku stopped.
 
 ## app_process helpers
 
-Three features need hidden system APIs that only privileged callers may use. Rather than adding a
+Four features need hidden system APIs that only privileged callers may use. Rather than adding a
 Shizuku `UserService`, TinyKit runs a class **from its own APK** as the `shell` user:
 
 ```sh
@@ -146,8 +148,9 @@ CLASSPATH=/data/app/…/base.apk app_process /system/bin io.github.order52.tinyk
 | `WifiDump` | `IWifiManager.getPrivilegedConfiguredNetworks("com.android.shell", …)`, adding an `AttributionSource` on Android 12+ | One `SSID⇥type⇥password` line per network |
 | `Sensors` | `ISensorPrivacyManager.setSensorPrivacy(…)` and `isSensorPrivacyEnabled()` | `OK`, or `true`/`false` |
 | `Firewall` | `IConnectivityManager.setUidFirewallRule(…)` and `getUidFirewallRule(…)` on `FIREWALL_CHAIN_OEM_DENY_3`; `sync` blocks and clears in one run | `OK`, or the blocked user IDs. It exits at once; the kernel keeps the rule. |
+| `Channels` | `INotificationManager.getNotificationChannelsForPackage(…)` and `updateNotificationChannelForPackage(…)` | One `id⇥name⇥importance` line per channel, or `OK` |
 
-All three look up their service through `ServiceManager.getService` and pick the matching method by
+All four look up their service through `ServiceManager.getService` and pick the matching method by
 reflection, so they keep working across Android versions with different signatures. Their
 `main` methods are kept by `proguard-rules.pro`.
 

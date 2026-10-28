@@ -155,6 +155,9 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Debloater** | Removes apps your phone came with, for your user only, with a safety rating for each (Recommended, Advanced, Expert, Unsafe). Restore any of them later. |
 | **Special access** | Install unknown apps, draw over apps, modify settings, all files and usage access, per app. |
 | **App language** | Gives any app its own language (Android 13+). |
+| **Trackers in apps** | Finds the ad and analytics libraries inside each app. Tap one to cut that app off the internet (Android 14+). |
+| **Notification channels** | Block one kind of notification from an app (Messages, Promotions…) instead of all of them. Android 8+. |
+| **Install options** | Allow downgrade, grant all permissions or allow test-only apps for the APK installer. |
 | **Installed with TinyKit** | The apps the installer put on, with a remove button. Stores nothing: read from Android's own records. |
 | **Install APK files** | Installs `.apk`, `.apks`, `.xapk` and `.apkm` files, including apps split into parts and game data. Streams the files, installs only the parts your phone needs. |
 | **More** | Running apps (stop any of them) · Stop background activity (full Restricted mode) · Keep apps alive · Back up an app as an APK |

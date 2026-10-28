@@ -309,6 +309,30 @@ cmd locale set-app-locales <pkg> --user 0 --locales fr-FR   # no --locales = sys
 Android has no command for a dark mode per app, so there isn't one. **Force dark on all apps**
 covers every app at once.
 
+### Trackers in apps
+
+Finds the ad and analytics libraries inside your apps (Google Analytics, Google Ads, AppLovin,
+Facebook, AppsFlyer, Adjust and about 50 more), most first. TinyKit reads each app's declared
+parts (activities, services, receivers, providers) and matches their class names against a list
+of known libraries, so it shows what an app *carries*, not proof that it uses it. Tap an app to
+see the libraries, and on Android 14+ to cut it off the internet with **Block internet**.
+
+> [!NOTE]
+> TinyKit can't switch these parts off one by one. Android refuses it from the shell
+> (`Shell cannot change component state`), so blocking the app's internet is what works.
+
+### Notification channels
+
+Many apps split their notifications into channels, such as "Messages", "Promotions" and
+"Reminders". Pick an app, then untick a channel to block just that kind. The row under it says
+how loud it is (Blocked, Silent, Sound, Sound and pop-up). Ticking it again restores the
+loudness it had before. Android 8 and newer. Some system channels can't be blocked and stay as
+they were.
+
+It starts a small program (`Channels`) with `app_process` as the shell user, which asks Android's
+notification service for the app's channels and changes one channel's importance. The change
+lasts until you change it back.
+
 ### Installed with TinyKit
 
 Lists the apps TinyKit's installer put on, newest first, with when and how big. Tap one to open
@@ -340,6 +364,18 @@ pm install-create -r -i io.github.order52.tinykit -S <bytes>   # one session; -i
 pm install-write -S <bytes> <id> pN.apk -    # each part, from stdin
 pm install-commit <id>
 ```
+
+### Install options
+
+Under **Install APK files** in the Apps tab. These apply to every install until you change them:
+
+| Option | pm flag | What it does |
+| --- | --- | --- |
+| Allow downgrade | `-d` | Install an older version over a newer one |
+| Grant all permissions | `-g` | Allow every permission the app asks for as it installs |
+| Allow test-only apps | `-t` | Install apps built as test-only |
+
+All are off by default.
 
 ### Back up app as APK
 

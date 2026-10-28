@@ -69,6 +69,17 @@ final class ApkInstaller {
     private ApkInstaller() {
     }
 
+    // Install options the user can switch on (Apps tab → Install options), as bits in one pref.
+    static final int DOWNGRADE = 1, GRANT_ALL = 2, TEST_ONLY = 4;
+    static final String PREF = "install_options";
+
+    /** The pm flags for the chosen options. */
+    static String flags(int options) {
+        return ((options & DOWNGRADE) != 0 ? " -d" : "")
+                + ((options & GRANT_ALL) != 0 ? " -g" : "")
+                + ((options & TEST_ONLY) != 0 ? " -t" : "");
+    }
+
     /** Installs the picked files as one app and returns the message to show. */
     static String install(Context context, List<Uri> uris, Progress progress) {
         ContentResolver resolver = context.getContentResolver();
@@ -87,7 +98,8 @@ final class ApkInstaller {
 
             long total = 0;
             for (Part p : parts) total += p.size;
-            Shell.Result create = Shell.run("pm install-create -r -i io.github.order52.tinykit"
+            int options = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE).getInt(PREF, 0);
+            Shell.Result create = Shell.run("pm install-create -r -i io.github.order52.tinykit" + flags(options)
                     + (Build.VERSION.SDK_INT >= 34 ? " --bypass-low-target-sdk-block" : "") + " -S " + total);
             Matcher session = SESSION.matcher(create.out);
             if (!create.ok() || !session.find()) return explain(create.out);
@@ -299,7 +311,8 @@ final class ApkInstaller {
         switch (code) {
             case "INSTALL_FAILED_VERSION_DOWNGRADE":
                 return "A newer version is already installed. Android won't install an older one over it. "
-                        + "Uninstall the new one first (this deletes its data).";
+                        + "Turn on \"Allow downgrade\" in Install options, or uninstall the new one first "
+                        + "(this deletes its data).";
             case "INSTALL_FAILED_UPDATE_INCOMPATIBLE":
             case "INSTALL_FAILED_SHARED_USER_INCOMPATIBLE":
                 return "The installed version was signed with a different key, so this can't update it. "

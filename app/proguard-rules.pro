@@ -11,3 +11,4 @@
 # Started by name with app_process (as the shell user) to toggle all-sensors privacy.
 -keep class io.github.order52.tinykit.Sensors { public static void main(java.lang.String[]); }
 -keep class io.github.order52.tinykit.Firewall { public static void main(java.lang.String[]); }
+-keep class io.github.order52.tinykit.Channels { public static void main(java.lang.String[]); }
