@@ -469,10 +469,8 @@ Asks the GitHub API for the latest TinyKit release when you tap it, and offers t
 if there's a newer version.
 
 **Check for updates on start** (off by default) does the same check each time you open TinyKit,
-at most once an hour, and posts a notification when a new version is out. Tapping the
-notification downloads it. You get one notification per version, never repeats. On Android 13
-and newer, turning it on asks for permission to send notifications; without it, the option
-turns itself back off. Nothing checks while TinyKit is closed.
+at most once an hour, and shows an "Update available" popup when a new version is out. You get
+one popup per version, never repeats. No notification permission is needed. Nothing checks while TinyKit is closed.
 
 ### About
 

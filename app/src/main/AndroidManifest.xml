@@ -8,7 +8,6 @@
         tools:ignore="QueryAllPackagesPermission" />
 
     <!-- Update notification, only when "Check for updates on start" is turned on (asked then). -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Only used by "Check for updates" and the public IP on Network info. -->
     <uses-permission android:name="android.permission.INTERNET" />

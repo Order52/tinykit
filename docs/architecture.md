@@ -208,7 +208,7 @@ TinyKit declares `INTERNET` for two features, both of which run only when you us
 
 | Feature | Endpoint | When |
 | --- | --- | --- |
-| Check for updates | `api.github.com/repos/Order52/tinykit/releases/latest` | When you tap it, or when TinyKit opens if *Check for updates on start* is on (at most hourly, one notification per version) |
+| Check for updates | `api.github.com/repos/Order52/tinykit/releases/latest` | When you tap it, or when TinyKit opens if *Check for updates on start* is on (at most hourly, one popup per version) |
 | Network info → Public IP | `api.ipify.org`, falling back to `ifconfig.me/ip` | Each time the page opens |
 
 There are no analytics, crash reporting or ads. See [Privacy & security](privacy-and-security.md).

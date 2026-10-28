@@ -3,9 +3,6 @@ package io.github.order52.tinykit;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.usage.StorageStats;
 import android.appwidget.AppWidgetManager;
@@ -129,10 +126,8 @@ public class MainActivity extends Activity {
     private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
     private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
     private static final int REQUEST_RUN_COMMAND = 2;
-    private static final int REQUEST_NOTIFICATIONS = 3;
     private static final int REQUEST_PICK_APK = 4;
     private static final String PREF_BLOCKED = "fw_blocked";
-    private static final String UPDATE_CHANNEL = "updates";
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
     private static final String BACKUP_DIR = "/sdcard/Download/TinyKit";
@@ -609,16 +604,6 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        if (requestCode == REQUEST_NOTIFICATIONS) {
-            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
-                autoCheckForUpdate();
-            } else {
-                prefs.edit().putBoolean("update_on_start", false).apply();
-                if (updateSwitch != null) updateSwitch.setChecked(false);
-                toast("Allow notifications so TinyKit can tell you about updates.");
-            }
-            return;
-        }
         if (requestCode != REQUEST_RUN_COMMAND) return;
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
             startShizuku();
@@ -1029,18 +1014,11 @@ public class MainActivity extends Activity {
         updateSwitch.setClickable(false);
         updateSwitch.setFocusable(false);
         row(list, "Check for updates on start", "When you open TinyKit, ask GitHub for a new version and "
-                + "send a notification if there is one.", updateSwitch, () -> {
+                + "show a popup if there is one.", updateSwitch, () -> {
                     boolean on = !updateSwitch.isChecked();
                     updateSwitch.setChecked(on);
                     prefs.edit().putBoolean("update_on_start", on).remove("update_checked").apply();
-                    if (!on) return;
-                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")
-                            != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},
-                                REQUEST_NOTIFICATIONS);
-                    } else {
-                        autoCheckForUpdate();
-                    }
+                    if (on) autoCheckForUpdate();
                 }, false);
         row(list, "About", "Made by Ali Alakbar", arrow(), this::showAbout, false);
         return scroll(list);
@@ -1675,7 +1653,7 @@ public class MainActivity extends Activity {
 
     /**
      * With "Check for updates on start" on, checks when TinyKit opens (at most once an hour) and
-     * posts one notification per new version, so it never nags about the same update twice.
+     * shows one popup per new version, so it never nags about the same update twice.
      */
     private void autoCheckForUpdate() {
         long now = System.currentTimeMillis();
@@ -1687,30 +1665,19 @@ public class MainActivity extends Activity {
             if (latest == null || compareVersions(latest[0], versionName(getPackageName())) <= 0
                     || latest[0].equals(prefs.getString("update_notified", ""))) return;
             prefs.edit().putString("update_notified", latest[0]).apply();
-            notifyUpdate(latest[0], latest[1]);
+            main.post(() -> {
+                if (!isFinishing() && !isDestroyed()) showUpdate(latest[0], latest[1]);
+            });
         });
     }
 
-    private void notifyUpdate(String version, String download) {
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        if (nm == null) return;
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(new NotificationChannel(UPDATE_CHANNEL, "App updates",
-                    NotificationManager.IMPORTANCE_DEFAULT));
-            builder = new Notification.Builder(this, UPDATE_CHANNEL);
-        } else {
-            builder = new Notification.Builder(this);
-        }
-        PendingIntent open = PendingIntent.getActivity(this, 0,
-                new Intent(Intent.ACTION_VIEW, Uri.parse(download)), PendingIntent.FLAG_IMMUTABLE);
-        nm.notify(1, builder
-                .setSmallIcon(R.drawable.ic_notify_update)
-                .setContentTitle("TinyKit " + version + " is available")
-                .setContentText("You have " + versionName(getPackageName()) + ". Tap to download it.")
-                .setContentIntent(open)
-                .setAutoCancel(true)
-                .build());
+    private void showUpdate(String version, String download) {
+        new AlertDialog.Builder(this)
+                .setTitle("Update available")
+                .setMessage("TinyKit " + version + " is out (you have " + versionName(getPackageName()) + ").")
+                .setPositiveButton("Download", (d, w) -> openUrl(download))
+                .setNegativeButton("Later", null)
+                .show();
     }
 
     /** Asks the launcher to place the speed-up widget (Android 8+); otherwise explains how to add it. */

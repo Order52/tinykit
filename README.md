@@ -180,7 +180,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Network info** | Shows IP addresses, Wi-Fi details, DNS and your public IP. *Open router settings* opens your default gateway's page. |
 | **Notification history** | Saves notifications and their text, grouped by app, with search, and keeps them after they are dismissed. You can save every app, only the apps you pick, or every app except those. TinyKit has no background service, so it saves what's in the notification shade each time you open this page. It can also turn on Android's own 24-hour notification history. |
 | **Usage logs** | Battery usage · Wake-ups · Vibration log, as plain readable lists |
-| **Diagnostics** | App log · Crash log · Check for updates (by tap, or optionally on start with a notification) · About |
+| **Diagnostics** | App log · Crash log · Check for updates (by tap, or optionally on start with a popup) · About |
 
 The [feature reference](docs/features.md) lists the exact command behind every tool.
 
