@@ -297,7 +297,29 @@ public class MainActivity extends Activity {
             registerReceiver(termuxResult, filter);
         }
         // Not on rotation or other re-creations: only when TinyKit is actually opened.
-        if (savedInstanceState == null) autoCheckForUpdate();
+        if (savedInstanceState == null) {
+            if (prefs.contains("update_on_start")) autoCheckForUpdate();
+            else askUpdateCheck();
+        }
+    }
+
+    /** First run: asks once whether to check for updates whenever TinyKit opens. */
+    private void askUpdateCheck() {
+        new AlertDialog.Builder(this)
+                .setTitle("Check for updates?")
+                .setMessage("Do you want TinyKit to check for a new version each time you open it? It asks "
+                        + "GitHub at most once an hour and shows a popup if there is one. Nothing else is "
+                        + "sent. You can change this later in the Info tab.")
+                .setCancelable(false)
+                .setPositiveButton("Turn on", (d, w) -> setUpdateOnStart(true))
+                .setNegativeButton("No thanks", (d, w) -> setUpdateOnStart(false))
+                .show();
+    }
+
+    private void setUpdateOnStart(boolean on) {
+        prefs.edit().putBoolean("update_on_start", on).remove("update_checked").apply();
+        if (updateSwitch != null) updateSwitch.setChecked(on);
+        if (on) autoCheckForUpdate();
     }
 
     @Override
@@ -1023,10 +1045,7 @@ public class MainActivity extends Activity {
         updateSwitch.setFocusable(false);
         row(list, "Check for updates on start", "When you open TinyKit, ask GitHub for a new version and "
                 + "show a popup if there is one.", updateSwitch, () -> {
-                    boolean on = !updateSwitch.isChecked();
-                    updateSwitch.setChecked(on);
-                    prefs.edit().putBoolean("update_on_start", on).remove("update_checked").apply();
-                    if (on) autoCheckForUpdate();
+                    setUpdateOnStart(!updateSwitch.isChecked());
                 }, false);
         row(list, "About", "Made by Ali Alakbar", arrow(), this::showAbout, false);
         return scroll(list);

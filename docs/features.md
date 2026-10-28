@@ -525,7 +525,7 @@ with `ifconfig.me` as a fallback, and only while you have the page open.
 Asks the GitHub API for the latest TinyKit release when you tap it, and offers the APK download
 if there's a newer version.
 
-**Check for updates on start** (off by default) does the same check each time you open TinyKit,
+**Check for updates on start** (TinyKit asks once, the first time you open it, and you can change it here any time) does the same check each time you open TinyKit,
 at most once an hour, and shows an "Update available" popup when a new version is out. You get
 one popup per version, never repeats. No notification permission is needed. Nothing checks while TinyKit is closed.
 
