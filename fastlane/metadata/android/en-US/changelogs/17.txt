@@ -1,0 +1,5 @@
+- Debloater with safety ratings, multi-select and a Removed tab to restore apps.
+- Internet block: allow list mode and Unblock all apps.
+- Firewall and Force dark are put back automatically after a restart.
+- Special access, app language, Installed with TinyKit and Screen time.
+- Back up and restore your TinyKit setup.
