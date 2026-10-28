@@ -1321,6 +1321,11 @@ public class MainActivity extends Activity {
     }
 
     private void openDebloat() {
+        // Android 7 has no "pm install-existing", so a removed app could not be brought back.
+        if (Build.VERSION.SDK_INT < 26) {
+            toast("The Debloater needs Android 8 or newer, so removed apps can be restored.");
+            return;
+        }
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Remove apps your phone came with, for you only. Nothing is deleted from the "
@@ -1539,6 +1544,7 @@ public class MainActivity extends Activity {
         list.addView(note("These are the permissions Android hides on separate screens. Pick one to see "
                 + "only the apps that ask for it, and allow or take it away."));
         for (String[] s : SPECIAL) {
+            if (s[0].equals("MANAGE_EXTERNAL_STORAGE") && Build.VERSION.SDK_INT < 30) continue;
             row(list, s[1], s[2], arrow(), () -> openPicker(s[1], s[2] + " Checked apps have it.", true,
                     () -> packages(Shell.run("appops query-op " + s[0] + " allow").out),
                     (pkg, on) -> error(Shell.run("appops set " + Shell.quote(pkg) + " " + s[0]

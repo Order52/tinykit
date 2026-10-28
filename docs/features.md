@@ -259,6 +259,10 @@ appops set <pkg> WAKE_LOCK allow
 
 ### Debloater
 
+> [!NOTE]
+> The Debloater needs Android 8 or newer: Android 7 has no `pm install-existing`, so a removed app
+> could not be restored. **Special access** hides *All files access* below Android 11.
+
 Removes apps your phone came with, **for your user only**, and shows a safety rating for each
 one the way Canta does:
 

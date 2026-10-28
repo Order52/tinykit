@@ -68,7 +68,7 @@ open_app; foreground && pass "app opens again after the crawl" || bad "app does 
 sh_ "cmd activity help 2>/dev/null | grep -q send-trim-memory" && pass "trim memory" || echo "skip trim memory (older Android; the app only kills cached apps there)"
 if sh_ "cmd activity help 2>/dev/null | grep -q 'compact system'"; then check "compact system" sh_ "cmd activity compact system"; else echo "skip compact system"; fi
 if sh_ "sm 2>&1 | grep -q idle-maint"; then check "idle maintenance" sh_ "sm idle-maint run"; else echo "skip idle maintenance"; fi
-if sh_ "pm 2>&1 | grep -q trim-caches"; then check "trim caches" sh_ "pm trim-caches 1G"; else echo "skip trim caches"; fi
+if [ "$sdk" -ge 26 ] && sh_ "pm 2>&1 | grep -q trim-caches"; then check "trim caches" sh_ "pm trim-caches 1G"; else echo "skip trim caches"; fi
 check "process list" sh_ "ps -A | grep -q ."
 
 # Settings toggles round-trip (what the tiles and System tab write)
@@ -83,13 +83,15 @@ check "force dark property" sh_ "setprop debug.hwui.force_dark true && [ \"\$(ge
 
 # Permissions and app-ops (Apps tab, Special access, fake permissions)
 check "appops set/get" sh_ "appops set $PKG REQUEST_INSTALL_PACKAGES allow && appops get $PKG REQUEST_INSTALL_PACKAGES | grep -q allow; appops set $PKG REQUEST_INSTALL_PACKAGES default"
-check "special access ops" sh_ "for o in SYSTEM_ALERT_WINDOW WRITE_SETTINGS MANAGE_EXTERNAL_STORAGE GET_USAGE_STATS; do appops get $PKG \$o >/dev/null || exit 1; done"
+ops="SYSTEM_ALERT_WINDOW WRITE_SETTINGS GET_USAGE_STATS"; [ "$sdk" -ge 30 ] && ops="$ops MANAGE_EXTERNAL_STORAGE"
+check "special access ops" sh_ "for o in $ops; do appops get $PKG \$o >/dev/null || exit 1; done"
 check "grant and revoke a permission" sh_ "pm grant $PKG android.permission.WRITE_SECURE_SETTINGS && pm revoke $PKG android.permission.WRITE_SECURE_SETTINGS; pm grant $PKG android.permission.WRITE_SECURE_SETTINGS"
 check "device idle whitelist" sh_ "dumpsys deviceidle whitelist +$PKG >/dev/null && dumpsys deviceidle whitelist -$PKG >/dev/null"
 check "restrict background" sh_ "cmd appops set $PKG RUN_IN_BACKGROUND ignore; cmd appops set $PKG RUN_IN_BACKGROUND default"
 
 # Debloater: remove for the user only, then restore (uses a harmless system app if present)
-victim=$(sh_ pm list packages -s | tr -d '\r' | sed 's/package://' | grep -m1 '^com.android.egg$')
+[ "$sdk" -ge 26 ] || echo "skip debloat (needs Android 8+, the app says so)"
+victim=$([ "$sdk" -ge 26 ] && sh_ pm list packages -s | tr -d '\r' | sed 's/package://' | grep -m1 '^com.android.egg$')
 if [ -n "$victim" ]; then
   check "debloat remove" sh_ "pm uninstall -k --user 0 $victim"
   check "removed app is listed" sh_ "pm list packages -u | grep -q $victim && ! pm path $victim | grep -q ."
@@ -121,7 +123,7 @@ for c in "dumpsys battery" "dumpsys batterystats --charged" "dumpsys thermalserv
   check "info: $c" sh_ "$c"
 done
 # Default apps: "cmd role" where it exists, otherwise the app falls back to dumpsys / pm.
-check "default apps" sh_ "cmd role get-role-holders --user 0 android.app.role.HOME 2>/dev/null || dumpsys role 2>/dev/null | grep -q . || pm resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME | grep -q ."
+check "default apps" sh_ "cmd role get-role-holders --user 0 android.app.role.HOME 2>/dev/null || dumpsys role 2>/dev/null | grep -q . || dumpsys package 2>/dev/null | grep -q ."
 
 # Run a command, backup and restore of settings, recovery paths
 check "run a command" sh_ "echo hello | grep -q hello"
