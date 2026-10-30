@@ -53,7 +53,7 @@ recommended downloads: thedjchi's Shizuku, Termux from F-Droid and the original 
 
 ### Search
 
-The search bar above the tab searches every tool (46 of them) by title and description. Every word you type
+The search bar above the tab searches every tool (47 of them) by title and description. Every word you type
 has to match. Results open the tool directly, or switch to the tab where an inline switch lives.
 
 <br clear="right">
@@ -117,8 +117,9 @@ is closed or Shizuku is stopped, and it costs no memory or CPU. The rule uses on
 
 **Allow list mode** flips it round: every app is blocked except the ones you allow, including
 system apps such as Google Play services (allow it if you want push notifications). TinyKit itself
-always stays online. Apps you install later aren't covered until TinyKit next runs, so open it
-after installing. **Unblock all apps** clears everything and turns the mode off.
+always stays online. Apps you install later are blocked the moment they're installed, without
+opening TinyKit (a reinstalled app that was blocked gets its block back too). If Shizuku is off
+at that moment, TinyKit blocks the app as soon as Shizuku is running again. **Unblock all apps** clears everything and turns the mode off.
 
 The whole choice is applied in one start of the helper, so switching modes with hundreds of
 apps takes a moment, not minutes. The user IDs come from Android's package list directly, with
@@ -394,6 +395,7 @@ or `adb install-multiple`.
 | Setting | What it does | |
 | --- | --- | --- |
 | **Force dark on all apps** | Turns on Android's built-in force-dark for apps that have no dark mode. Each app picks it up when it's next opened. Uses `setprop debug.hwui.force_dark true`, plus the OEM keys `op_force_dark_entire_world` and `aosp_force_dark_mode` where they exist. Android forgets the property at a restart, so TinyKit sets it again once Shizuku is running. | ⟲ |
+| **Disable HW overlays** | Makes the display compose everything with the GPU instead of its hardware overlay layers, the same as the developer option of that name. Some phones need it to fix flicker, tearing or colour problems. Uses `service call SurfaceFlinger 1008 i32 1` (`0` to turn it off). Android forgets it at a restart, so TinyKit sets it again once Shizuku is running. | ⟲ |
 | **Animation speed** | Off, 0.5×, 1×, 1.5× or 2×. Sets `window_animation_scale`, `transition_animation_scale` and `animator_duration_scale` together. | ♻️ |
 
 <br clear="right">
@@ -462,12 +464,12 @@ skipped. The file holds only package names, one per line.
 ### After a restart
 
 Android keeps nearly everything TinyKit changes (app-ops, hidden and removed apps, settings)
-across a restart. Two things it forgets: the **internet block** and **Force dark**. TinyKit puts
-both back by itself the moment Shizuku is running again:
+across a restart. Three things it forgets: the **internet block**, **Force dark** and **Disable HW overlays**.
+TinyKit puts all three back by itself the moment Shizuku is running again:
 
 1. Shizuku starts, and as it comes up it starts the processes of the apps that use it.
 2. TinyKit's process notices Shizuku's connection (`TinyKitApp`), and once per boot
-   re-applies the block in a single call and turns Force dark back on.
+   re-applies the block in a single call and turns Force dark and Disable HW overlays back on.
 3. It then goes idle like any other cached app. Nothing polls, no service stays running, and
    nothing happens until Shizuku starts again.
 
@@ -582,7 +584,7 @@ Version, author, licence and a link to the source code.
 | `Download/TinyKit/Recovered/` | Restored files | Recover deleted files |
 | `Pictures/Screenshots/Screenshot_<date>_TinyKit.png` | Screenshots | Screenshot tile |
 | `Movies/Screen_<date>_TinyKit.mp4` | Recordings | Screen record tile |
-| App-private `shared_prefs/tinykit.xml` | Preferences: last tab, auth token, previous DNS, filters, the internet block lists, Force dark | Everything |
+| App-private `shared_prefs/tinykit.xml` | Preferences: last tab, auth token, previous DNS, filters, the internet block lists, Force dark, Disable HW overlays | Everything |
 
 TinyKit sets `allowBackup="false"`, so its private files are never copied off the device by
 Android's backup.

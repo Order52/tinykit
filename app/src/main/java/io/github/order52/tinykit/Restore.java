@@ -6,7 +6,7 @@ import android.provider.Settings;
 
 /**
  * Puts back the few things Android forgets when the phone restarts, so nothing is lost: the internet
- * firewall rules and Force dark, and puts Fake permissions back (Android resets those to Real at
+ * firewall rules, Force dark and Disable HW overlays, and puts Fake permissions back (Android resets those to Real at
  * a restart). Everything else TinyKit changes (hidden and removed apps, settings) Android keeps.
  *
  * Runs once per boot, the moment Shizuku is running again: Shizuku starts TinyKit's process when
@@ -15,11 +15,19 @@ import android.provider.Settings;
  */
 final class Restore {
     static final String PREF_FORCE_DARK = "force_dark";
+    static final String PREF_NO_OVERLAYS = "no_overlays";
+    // Set when an app was installed while Shizuku was off, so the firewall still has to catch up.
+    static final String PREF_FIREWALL_PENDING = "fw_pending";
     private static final String PREF_BOOT = "restored_boot";
     private static final String PREF_FAKE_CHECKED = "fake_checked";
     private static final String PREF_FAKE_BOOT = "fake_boot";
 
     private Restore() {
+    }
+
+    /** SurfaceFlinger's "disable overlays" call, the one behind the developer option. */
+    static String overlaysCommand(boolean off) {
+        return "service call SurfaceFlinger 1008 i32 " + (off ? 1 : 0);
     }
 
     static void start(Context c) {
@@ -38,12 +46,20 @@ final class Restore {
             FakePolicy.enforce(c, p);
             p.edit().putLong(PREF_FAKE_CHECKED, now).putInt(PREF_FAKE_BOOT, boot).apply();
         }
+        // An app was installed while Shizuku was off: block it now if the firewall is set to.
+        if (p.getBoolean(PREF_FIREWALL_PENDING, false) && FirewallPolicy.supported()
+                && FirewallPolicy.apply(c, p, false) == null) {
+            p.edit().putBoolean(PREF_FIREWALL_PENDING, false).apply();
+        }
         // Already done since the last restart (tiles and the widget start this process often).
         if (boot != -1 && boot == p.getInt(PREF_BOOT, -2)) return;
         boolean ok = true;
         if (FirewallPolicy.supported()) ok = FirewallPolicy.apply(c, p, false) == null;
         if (p.getBoolean(PREF_FORCE_DARK, false)) {
             ok &= Shell.run("setprop debug.hwui.force_dark true").ok();
+        }
+        if (p.getBoolean(PREF_NO_OVERLAYS, false)) {
+            ok &= Shell.run(overlaysCommand(true)).ok();
         }
         if (ok) p.edit().putInt(PREF_BOOT, boot).apply();
     }

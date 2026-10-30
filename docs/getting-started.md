@@ -162,7 +162,7 @@ that work without it look normal.
 | **Shizuku** | Shizuku status, Start and Stop, the auth token, the Shizuku and Screenshot tiles, and the **search bar** |
 | **Privacy** | Privacy toggles, all sensors off, analytics and telemetry, saved Wi-Fi networks |
 | **Apps** | Fake permissions, default apps, hide, unused, storage, recent access, mixed audio, running and background apps, APK backup |
-| **System** | Force dark, animation speed, quick panel editor, TinyKit tiles, run a command, file recovery, settings backup, advanced reboot, cleanup, network tweaks |
+| **System** | Force dark, disable HW overlays, animation speed, quick panel editor, TinyKit tiles, run a command, file recovery, settings backup, advanced reboot, cleanup, network tweaks |
 | **Info** | Phone, network, charging, temperatures, device IDs, battery usage, wake-ups, vibration, app and crash logs, updates |
 
 The **search bar** at the top of the Shizuku tab searches every tool by name and description.

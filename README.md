@@ -171,6 +171,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Recover deleted files** | Searches every recycle bin and trash folder (Gallery's recycle bin, `.File_Recycle`, `.fvTrash`, Android's `.trashed-*` files, `LOST.DIR` and thumbnail caches). It shows thumbnails and copies files to `Download/TinyKit/Recovered`, leaving the originals in place. |
 | **Settings backup & restore** | Saves all system settings to a file and restores them from it. |
 | **Force dark on all apps** | Turns on Android's built-in force-dark for apps that have no dark mode. |
+| **Disable HW overlays** | Composes everything with the GPU, like the developer option, and keeps it on after a restart. |
 | **Animation speed** | Turns system animations off, or makes them faster or slower. |
 | **Advanced reboot** | Reboots normally, or into recovery or the bootloader, or does a soft (userspace) reboot. |
 | **Speed-up widget** | A home screen widget: one tap frees RAM and clears app caches without opening TinyKit, and shows how much it freed. |

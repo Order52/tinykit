@@ -67,6 +67,9 @@ can parse.
 Captive portals at hotels and airports often need normal DNS. Turn Ad-blocking DNS off, sign
 in, then turn it back on.
 
+**Disable HW overlays turned itself off after a restart.**
+Android forgets it, and TinyKit puts it back once Shizuku is running again, like Force dark.
+
 **Force dark turned itself off after a restart.**
 Android forgets it, and TinyKit puts it back once Shizuku is running again, without opening
 TinyKit. If it doesn't come back, Shizuku isn't running or hasn't allowed TinyKit yet.
@@ -76,7 +79,9 @@ Android clears the block at every restart. TinyKit re-applies it as soon as Shiz
 so start Shizuku and give it a few seconds. Without Shizuku nothing can set the block.
 
 **An app I installed later has internet in allow list mode.**
-TinyKit blocks it the next time it runs. Open TinyKit once after installing apps.
+TinyKit blocks new apps the moment they're installed, but it needs Shizuku running to do it. If
+Shizuku was off, the app is blocked as soon as Shizuku starts again. If it still isn't, open
+TinyKit once, and check that Shizuku has allowed it.
 
 **All sensors off turned itself off.**
 It resets when the phone reboots. That's how Android implements it. Turn it on again.

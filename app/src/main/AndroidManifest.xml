@@ -138,6 +138,14 @@
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
 
+        <!-- Blocks a newly installed app when the internet firewall is in allow list mode. -->
+        <receiver android:name=".NewAppReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
         <!-- Termux's reply to a tile tap. -->
         <receiver
             android:name=".ShizukuTile$Result"

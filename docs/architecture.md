@@ -25,9 +25,10 @@ These are the rules the code follows. Changes should keep them.
 
 1. **Nothing in the background.** No services that keep running, no alarms, no jobs, no
    receivers waiting for system events. TinyKit runs only while it's on screen or while a tile
-   or the widget is being tapped. The one exception is when Shizuku starts: it starts TinyKit's
-   process, which spends a second or two putting back what a restart wiped (see
-   [Restore](#restore-after-a-restart)) and then idles.
+   or the widget is being tapped. Two exceptions, both over in a second or two: when Shizuku
+   starts, it starts TinyKit's process, which puts back what a restart wiped (see
+   [Restore](#restore-after-a-restart)) and then idles; and when an app is installed while the
+   internet block is in use, `NewAppReceiver` applies the block to it and ends.
 2. **Only Android's own mechanisms.** Every change is a `settings` key, an app-op, a package
    manager call or a system service call that `adb shell` could make. No patching, no root, no
    Xposed.
@@ -60,7 +61,8 @@ tinykit/
 │       │   ├── Trackers.java       Names of known ad and analytics libraries
 │       │   ├── Firewall.java       app_process helper: block an app's internet (Android 14+)
 │       │   ├── FirewallPolicy.java The saved block/allow lists and how they are applied
-│       │   ├── Restore.java        Puts back the firewall, Force dark and Fake permissions after a restart
+│       │   ├── Restore.java        Puts back the firewall, Force dark, HW overlays and Fake permissions after a restart
+│       │   ├── NewAppReceiver.java Blocks a newly installed app when the internet block is in use
 │       │   ├── FakePolicy.java     Remembers Fake permissions and puts back any Android reset to Real
 │       │   ├── TinyKitApp.java     Application: starts Restore when Shizuku's binder arrives
 │       │   ├── Bloat.java          Safety ratings for the Debloater
@@ -157,7 +159,8 @@ reflection, so they keep working across Android versions with different signatur
 
 ## Restore after a restart
 
-Android wipes two things TinyKit sets, the firewall rules and `debug.hwui.force_dark`, and resets
+Android wipes three things TinyKit sets, the firewall rules, `debug.hwui.force_dark` and
+Disable HW overlays (SurfaceFlinger's state), and resets
 Fake permissions to Real (see [Fake permissions](fake-permissions.md#staying-fake)). When
 Shizuku starts it starts the processes of apps that use it, and `TinyKitApp` (the `Application`)
 listens for Shizuku's binder arriving. `Restore` then runs once per boot, tracked by
@@ -165,12 +168,14 @@ listens for Shizuku's binder arriving. `Restore` then runs once per boot, tracke
 
 - `FirewallPolicy.apply` pushes the saved choice in one `Firewall sync` run (nothing to do if no
   app is blocked), and
-- Force dark is switched back on if it was on, and
+- Force dark and Disable HW overlays are switched back on if they were on, and
 - `FakePolicy.enforce` re-checks every saved Fake permission (`fake_ops`), puts back any Android
   reset to Real and switches any it can't fix Off. This one also runs when TinyKit opens, and at
   most every ten minutes when tiles start the process.
 
-The process then idles like any cached app. TinyKit keeps no service and no receiver. The
+The process then idles like any cached app. TinyKit keeps no service; its only receiver
+(`NewAppReceiver`, for `PACKAGE_ADDED`) wakes for one install, runs `FirewallPolicy.apply` and ends.
+If Shizuku is off then, it sets `fw_pending` and `Restore` catches up when Shizuku is back. The
 firewall choice lives in `SharedPreferences` (`fw_blocked`, `fw_allowed`, `fw_allow_mode`).
 `FirewallPolicy` reads user IDs from `PackageManager` instead of `pm list packages -U`, which
 saves a shell call each time.

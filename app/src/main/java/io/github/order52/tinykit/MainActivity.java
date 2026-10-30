@@ -809,6 +809,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Clipboard guard", "Stop apps from reading your clipboard", this::openClipboardGuard));
         f.add(new Feature("Block internet per app", "Cut an app off Wi-Fi and mobile data", this::openFirewall));
         f.add(new Feature("Force dark on all apps", "Dark-theme apps that have no dark mode", () -> selectTab(3)));
+        f.add(new Feature("Disable HW overlays", "Draw with the GPU only, like the developer option", () -> selectTab(3)));
         f.add(new Feature("Animation speed", "Off, faster or slower system animations", () -> selectTab(3)));
         f.add(new Feature("Edit quick panel", "Reorder, add and remove tiles", this::openQuickPanel));
         f.add(new Feature("Run a command", "Run a shell command via Shizuku", this::openRunCommand));
@@ -978,6 +979,11 @@ public class MainActivity extends Activity {
                         + " && (settings put secure op_force_dark_entire_world " + (block ? 1 : 0)
                         + " 2>/dev/null; settings put secure aosp_force_dark_mode " + (block ? 1 : 0)
                         + " 2>/dev/null; true)")));
+        privacySwitch(list, "Disable HW overlays",
+                "Draws everything with the GPU instead of the display's overlay layers (the same as the "
+                        + "developer option). Android forgets it at a restart; TinyKit puts it back once Shizuku is running.",
+                () -> prefs.getBoolean(Restore.PREF_NO_OVERLAYS, false),
+                block -> noOverlays(block, Shell.run(Restore.overlaysCommand(block))));
         View[] anim = new View[1];
         anim[0] = row(list, "Animation speed", "…", arrow(), () -> chooseAnimationSpeed(anim[0]), true);
         refreshAnimationSpeed(anim[0]);
@@ -1107,6 +1113,12 @@ public class MainActivity extends Activity {
     /** Remembers Force dark so {@link Restore} can switch it back on after a restart. */
     private String forceDark(boolean on, Shell.Result r) {
         if (r.ok()) prefs.edit().putBoolean(Restore.PREF_FORCE_DARK, on).apply();
+        return error(r);
+    }
+
+    /** Remembers Disable HW overlays so {@link Restore} can switch it back on after a restart. */
+    private String noOverlays(boolean on, Shell.Result r) {
+        if (r.ok()) prefs.edit().putBoolean(Restore.PREF_NO_OVERLAYS, on).apply();
         return error(r);
     }
 
@@ -3165,6 +3177,7 @@ public class MainActivity extends Activity {
         for (String pkg : FirewallPolicy.saved(prefs, FirewallPolicy.BLOCKED)) out.append("blocked\t").append(pkg).append('\n');
         for (String pkg : FirewallPolicy.saved(prefs, FirewallPolicy.ALLOWED)) out.append("allowed\t").append(pkg).append('\n');
         if (prefs.getBoolean(Restore.PREF_FORCE_DARK, false)) out.append("dark\t1\n");
+        if (prefs.getBoolean(Restore.PREF_NO_OVERLAYS, false)) out.append("overlays\t1\n");
         for (String[] op : SETUP_OPS) {
             for (String pkg : packages(Shell.run("appops query-op " + op[0] + " " + op[1]).out)) {
                 out.append("op\t").append(op[0]).append('\t').append(op[1]).append('\t').append(pkg).append('\n');
@@ -3218,18 +3231,19 @@ public class MainActivity extends Activity {
     /** Applies a setup file. Apps that aren't installed any more are skipped. */
     private String restoreSetup(String file) {
         Set<String> blocked = new HashSet<>(), allowed = new HashSet<>(), fakes = new HashSet<>();
-        boolean allowMode = false, dark = false;
+        boolean allowMode = false, dark = false, overlays = false;
         StringBuilder script = new StringBuilder();
         int count = 0;
         for (String line : Shell.run("cat " + Shell.quote(file)).out.split("\n")) {
             String[] f = line.split("\t");
             if (f.length < 2) continue;
             // Package names are checked before they reach the shell.
-            if (f.length > 1 && !f[0].equals("mode") && !f[0].equals("dark") && !PACKAGE.matcher(f[f.length - 1]).matches()) continue;
+            if (f.length > 1 && !f[0].equals("mode") && !f[0].equals("dark") && !f[0].equals("overlays") && !PACKAGE.matcher(f[f.length - 1]).matches()) continue;
             String q = Shell.quote(f[f.length - 1]);
             switch (f[0]) {
                 case "mode": allowMode = f[1].equals("allow"); break;
                 case "dark": dark = true; break;
+                case "overlays": overlays = true; break;
                 case "blocked": blocked.add(f[1]); break;
                 case "allowed": allowed.add(f[1]); break;
                 case "op":
@@ -3254,7 +3268,8 @@ public class MainActivity extends Activity {
         }
         if (count == 0) return "That file has nothing TinyKit can restore.";
         prefs.edit().putStringSet(FirewallPolicy.BLOCKED, blocked).putStringSet(FirewallPolicy.ALLOWED, allowed)
-                .putBoolean(FirewallPolicy.MODE, allowMode).putBoolean(Restore.PREF_FORCE_DARK, dark).apply();
+                .putBoolean(FirewallPolicy.MODE, allowMode).putBoolean(Restore.PREF_FORCE_DARK, dark)
+                .putBoolean(Restore.PREF_NO_OVERLAYS, overlays).apply();
         if (script.length() > 0) Shell.run(script.toString());
         if (!fakes.isEmpty()) {
             Set<String> merged = FakePolicy.all(prefs);
@@ -3263,6 +3278,7 @@ public class MainActivity extends Activity {
             FakePolicy.enforce(this, prefs);
         }
         if (dark) Shell.run("setprop debug.hwui.force_dark true");
+        if (overlays) Shell.run(Restore.overlaysCommand(true));
         String firewall = FirewallPolicy.supported() ? FirewallPolicy.apply(this, prefs, true) : null;
         reloadApps();
         return "Restored " + count + " choices." + (firewall != null ? "\nThe internet block wasn't applied: " + firewall : "");
@@ -3571,6 +3587,9 @@ public class MainActivity extends Activity {
         return pkg != null ? label(pkg) : token;
     }
 
+    /** User ids are {@code user * PER_USER_RANGE + app id}. */
+    private static final int PER_USER_RANGE = 100000;
+
     /** First package sharing a batterystats uid token like "u0a162" or "1000", or null. */
     private String uidPackage(String token) {
         int uid = -1;
@@ -3580,9 +3599,14 @@ public class MainActivity extends Activity {
         } else if (token.matches("\\d+")) {
             uid = Integer.parseInt(token);
         }
-        if (uid >= 0) {
-            String[] pkgs = getPackageManager().getPackagesForUid(uid);
-            if (pkgs != null && pkgs.length > 0) return pkgs[0];
+        // batterystats lists every profile (Secure Folder, Dual Apps); Android only answers for our
+        // own, and throws a SecurityException for the others. Those keep showing their raw token.
+        if (uid >= 0 && uid / PER_USER_RANGE == Process.myUid() / PER_USER_RANGE) {
+            try {
+                String[] pkgs = getPackageManager().getPackagesForUid(uid);
+                if (pkgs != null && pkgs.length > 0) return pkgs[0];
+            } catch (SecurityException ignored) {
+            }
         }
         return null;
     }
