@@ -22,7 +22,7 @@
 | | |
 | --- | --- |
 | 🧰 **[Feature reference](features.md)** | Every tool, tab by tab, with the exact command it runs |
-| 🔲 **[Quick Settings tiles](quick-settings-tiles.md)** | All 16 tiles, and which ones work without Shizuku |
+| 🔲 **[Quick Settings tiles](quick-settings-tiles.md)** | All 18 tiles, and which ones work without Shizuku |
 | 🔒 **[Privacy & security](privacy-and-security.md)** | Permissions, network requests, stored data, and what TinyKit never does |
 | 🩺 **[Troubleshooting & FAQ](troubleshooting.md)** | Common problems, and Huawei/EMUI notes |
 
@@ -44,4 +44,4 @@
   <img src="images/screenshots/system.png" width="260" alt="System tab">
 </p>
 
-<p align="center"><sub>TinyKit 1.13.3 · Android 7.0+ · <a href="../LICENSE">MIT</a></sub></p>
+<p align="center"><sub>TinyKit 1.13.4 · Android 7.0+ · <a href="../LICENSE">MIT</a></sub></p>

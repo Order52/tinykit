@@ -300,9 +300,137 @@ public class MainActivity extends Activity {
         }
         // Not on rotation or other re-creations: only when TinyKit is actually opened.
         if (savedInstanceState == null) {
-            if (prefs.contains("update_on_start")) autoCheckForUpdate();
-            else askUpdateCheck();
+            Runnable startup = () -> {
+                if (!showWhatsNew(this::startupUpdateCheck)) startupUpdateCheck();
+            };
+            if (!offerCrashReport(startup)) startup.run();
         }
+    }
+
+    /**
+     * If TinyKit crashed last time, offers to send the details: one tap opens a ready-made GitHub
+     * issue that the user reads and posts themselves. Returns whether the offer is showing; {@code
+     * next} runs when it is closed.
+     */
+    private boolean offerCrashReport(Runnable next) {
+        String report = CrashReport.pending(this);
+        if (report == null) return false;
+        if (!prefs.getBoolean(CrashReport.PREF, true)) {
+            CrashReport.clear(this);
+            return false;
+        }
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this)
+                .setTitle("TinyKit stopped last time")
+                .setMessage("Do you want to send the details so it can be fixed? This opens a ready-made GitHub "
+                        + "issue with TinyKit's version, your phone model, your Android version and the error. "
+                        + "You can read and change it first, and nothing is sent until you post it.")
+                .setPositiveButton("Send", (d, w) -> sendReport(report))
+                .setNegativeButton("Not now", (d, w) -> CrashReport.clear(this))
+                .setOnCancelListener(d -> CrashReport.clear(this))
+                .setOnDismissListener(d -> next.run());
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+            dialog.setNeutralButton("Ask me right away next time", (d, w) -> {
+                CrashReport.clear(this);
+                requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 7);
+            });
+        }
+        dialog.show();
+        return true;
+    }
+
+    /** The first line of a saved report is the issue title; the rest is the details. */
+    private void sendReport(String report) {
+        int nl = report.indexOf('\n');
+        String title = nl > 0 ? report.substring(0, nl) : report;
+        String details = nl > 0 ? report.substring(nl + 1) : "";
+        if (title.length() > 120) title = title.substring(0, 120);
+        try {
+            startActivity(CrashReport.issue(title, details));
+            CrashReport.clear(this);
+        } catch (RuntimeException noBrowser) {
+            toast("No browser found to open GitHub.");
+        }
+    }
+
+    /** "Report a problem": the same one-tap issue, for when TinyKit misbehaves without crashing. */
+    private void reportProblem() {
+        toast("Preparing the report…");
+        worker.execute(() -> {
+            String crash = CrashReport.pending(this);
+            String details = CrashReport.header(this) + "\nRecent log:\n" + CrashReport.recentLog()
+                    + (crash == null ? "" : "\nLast crash:\n" + crash.substring(crash.indexOf('\n') + 1));
+            main.post(() -> {
+                try {
+                    startActivity(CrashReport.issue("Problem: ", details));
+                } catch (RuntimeException noBrowser) {
+                    toast("No browser found to open GitHub.");
+                }
+            });
+        });
+    }
+
+    private void startupUpdateCheck() {
+        if (prefs.contains("update_on_start")) autoCheckForUpdate();
+        else askUpdateCheck();
+    }
+
+    private int versionCode() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            return 0;
+        }
+    }
+
+    /** The release notes for versions after {@code after} up to this one, newest first, or "". */
+    private String releaseNotes(int after) {
+        StringBuilder notes = new StringBuilder();
+        int shown = 0;
+        for (int code = versionCode(); code > after && shown < 5; code--) {
+            try (java.io.InputStream in = getAssets().open(code + ".txt")) {
+                java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+                byte[] chunk = new byte[1024];
+                for (int n; (n = in.read(chunk)) != -1; ) bytes.write(chunk, 0, n);
+                String text = bytes.toString("UTF-8").trim();
+                if (text.isEmpty()) continue;
+                if (notes.length() > 0) notes.append("\n\n");
+                notes.append(text);
+                shown++;
+            } catch (java.io.IOException noNotes) {
+                // No notes for that version.
+            }
+        }
+        return notes.toString();
+    }
+
+    /**
+     * After an update, shows what is new once (the notes of every version since the one last
+     * seen). A first install just records the version. Returns whether a popup is showing; {@code
+     * next} runs when it is closed.
+     */
+    private boolean showWhatsNew(Runnable next) {
+        int code = versionCode();
+        int seen = prefs.getInt("whatsnew_seen", -1);
+        // A first install has nothing new to show; an existing install from before this popup does.
+        boolean fresh = seen == -1 && !prefs.contains("update_on_start");
+        prefs.edit().putInt("whatsnew_seen", code).apply();
+        if (fresh || seen >= code) return false;
+        String notes = releaseNotes(seen);
+        if (notes.isEmpty()) return false;
+        showNotes(notes, next);
+        return true;
+    }
+
+    private void showNotes(String notes, Runnable next) {
+        new AlertDialog.Builder(this)
+                .setTitle("What's new in " + versionName(getPackageName()))
+                .setMessage(notes)
+                .setPositiveButton("OK", null)
+                .setOnDismissListener(d -> {
+                    if (next != null) next.run();
+                })
+                .show();
     }
 
     /** First run: asks once whether to check for updates whenever TinyKit opens. */
@@ -975,10 +1103,7 @@ public class MainActivity extends Activity {
                 "Dark-themes apps that have no dark mode (Android's force-dark). Takes effect as each "
                         + "app is re-opened. Android forgets it at a restart; TinyKit puts it back once Shizuku is running.",
                 () -> "true".equals(Shell.run("getprop debug.hwui.force_dark").out.trim()),
-                block -> forceDark(block, Shell.run("setprop debug.hwui.force_dark " + (block ? "true" : "false")
-                        + " && (settings put secure op_force_dark_entire_world " + (block ? 1 : 0)
-                        + " 2>/dev/null; settings put secure aosp_force_dark_mode " + (block ? 1 : 0)
-                        + " 2>/dev/null; true)")));
+                block -> forceDark(block, Shell.run(Restore.forceDarkCommand(block))));
         privacySwitch(list, "Disable HW overlays",
                 "Draws everything with the GPU instead of the display's overlay layers (the same as the "
                         + "developer option). Android forgets it at a restart; TinyKit puts it back once Shizuku is running.",
@@ -1066,6 +1191,23 @@ public class MainActivity extends Activity {
                 + "show a popup if there is one.", updateSwitch, () -> {
                     setUpdateOnStart(!updateSwitch.isChecked());
                 }, false);
+        row(list, "Report a problem", "Something not working? Opens a ready-made GitHub issue that you read and "
+                + "post yourself.", arrow(), this::reportProblem, false);
+        Switch crashSwitch = new Switch(this);
+        crashSwitch.setChecked(prefs.getBoolean(CrashReport.PREF, true));
+        crashSwitch.setClickable(false);
+        crashSwitch.setFocusable(false);
+        row(list, "Offer to report crashes", "If TinyKit crashes, offer to send the details next time. Nothing is "
+                + "sent unless you tap Send, and you post the issue yourself.", crashSwitch, () -> {
+                    boolean on = !crashSwitch.isChecked();
+                    crashSwitch.setChecked(on);
+                    prefs.edit().putBoolean(CrashReport.PREF, on).apply();
+                    if (!on) CrashReport.clear(this);
+                }, false);
+        row(list, "What's new", "The changes in version " + versionName(getPackageName()) + ".", arrow(), () -> {
+            String notes = releaseNotes(versionCode() - 1);
+            showNotes(notes.isEmpty() ? "No release notes for this version." : notes, null);
+        }, false);
         row(list, "About", "Made by Ali Alakbar", arrow(), this::showAbout, false);
         return scroll(list);
     }
@@ -2705,7 +2847,9 @@ public class MainActivity extends Activity {
                 {Tiles.ClearCaches.class, "Clear caches", "Free every app's cached space.", R.drawable.ic_tile_cache},
                 {Tiles.MicCam.class, "Mic & camera off", "Block the mic and camera for every app.", R.drawable.ic_tile_miccam},
                 {Tiles.Memory.class, "Free RAM", "Stop background apps.", R.drawable.ic_tile_ram},
-                {Tiles.ScreenRecord.class, "Screen record", "Record the screen to Movies.", R.drawable.ic_tile_record}};
+                {Tiles.ScreenRecord.class, "Screen record", "Record the screen to Movies.", R.drawable.ic_tile_record},
+                {Tiles.HwOverlays.class, "HW overlays off", "Turn off hardware overlays (developer option).", R.drawable.ic_tile_overlays},
+                {Tiles.ForceDark.class, "Force dark", "Dark-theme apps that have no dark mode.", R.drawable.ic_tile_forcedark}};
         LinearLayout list = vertical();
         list.addView(note("Tap a tile to add it to your quick panel. On Android 13+ that's one tap; "
                 + "on older phones TinyKit shows where to drag it."));
@@ -3546,6 +3690,7 @@ public class MainActivity extends Activity {
     }
 
     private List<String[]> batteryUsage() {
+        forgetProfiles();
         List<String[]> rows = new ArrayList<>();
         String out = Shell.run("dumpsys batterystats --charged | sed -n '/Estimated power use/,/^$/p'").out;
         Pattern line = Pattern.compile("^(.+?): ([0-9][0-9.]*)");
@@ -3567,8 +3712,8 @@ public class MainActivity extends Activity {
             if (who.regionMatches(true, 0, "uid ", 0, 4)) {
                 String token = who.substring(4).trim();
                 String p = uidPackage(token);
-                pkg = p != null ? p : "";
-                who = p != null ? label(p) : token;
+                pkg = p != null && installedHere(p) ? p : "";
+                who = p != null ? uidTitle(p) : token;
             } else {
                 who = who.replace('_', ' ');
                 who = who.substring(0, 1).toUpperCase(Locale.ROOT) + who.substring(1);
@@ -3599,16 +3744,50 @@ public class MainActivity extends Activity {
         } else if (token.matches("\\d+")) {
             uid = Integer.parseInt(token);
         }
-        // batterystats lists every profile (Secure Folder, Dual Apps); Android only answers for our
-        // own, and throws a SecurityException for the others. Those keep showing their raw token.
-        if (uid >= 0 && uid / PER_USER_RANGE == Process.myUid() / PER_USER_RANGE) {
-            try {
-                String[] pkgs = getPackageManager().getPackagesForUid(uid);
-                if (pkgs != null && pkgs.length > 0) return pkgs[0];
-            } catch (SecurityException ignored) {
-            }
+        if (uid < 0) return null;
+        // batterystats lists every profile (Secure Folder, Dual Apps); Android only answers apps
+        // for our own, and throws a SecurityException for the others, so those are asked of the shell.
+        if (uid / PER_USER_RANGE != Process.myUid() / PER_USER_RANGE) return profilePackage(uid);
+        try {
+            String[] pkgs = getPackageManager().getPackagesForUid(uid);
+            if (pkgs != null && pkgs.length > 0) return pkgs[0];
+        } catch (SecurityException ignored) {
         }
         return null;
+    }
+
+    /** Package lists of the other profiles, as user id to (uid to package), filled on first use. */
+    private final Map<Integer, Map<Integer, String>> profileApps = new HashMap<>();
+
+    private synchronized String profilePackage(int uid) {
+        int user = uid / PER_USER_RANGE;
+        Map<Integer, String> apps = profileApps.get(user);
+        if (apps == null) {
+            apps = new HashMap<>();
+            Matcher m = Pattern.compile("package:(\\S+)\\s+uid:(\\d+)").matcher(
+                    Shell.run("pm list packages -U --user " + user).out);
+            while (m.find()) apps.putIfAbsent(Integer.parseInt(m.group(2)), m.group(1));
+            profileApps.put(user, apps);
+        }
+        return apps.get(uid);
+    }
+
+    /** A row title for a batterystats uid: the app's name, or its package name when it only exists in another profile. */
+    private String uidTitle(String pkg) {
+        return installedHere(pkg) ? label(pkg) : pkg + " (other profile)";
+    }
+
+    private boolean installedHere(String pkg) {
+        try {
+            getPackageManager().getApplicationInfo(pkg, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    private synchronized void forgetProfiles() {
+        profileApps.clear();
     }
 
     private void openWakeups() {
@@ -3617,6 +3796,7 @@ public class MainActivity extends Activity {
     }
 
     private List<String[]> wakeups() {
+        forgetProfiles();
         List<String[]> rows = new ArrayList<>();
         String out = Shell.run("dumpsys batterystats --charged | sed -n '/All partial wake locks/,/^$/p'").out;
         Pattern p = Pattern.compile("Wake lock (\\S+) (.+?): ([0-9hms ]+?) \\((\\d+) times\\)");
@@ -3624,9 +3804,9 @@ public class MainActivity extends Activity {
             Matcher m = p.matcher(line.trim());
             if (!m.find()) continue;
             String pkg = uidPackage(m.group(1));
-            String who = pkg != null ? label(pkg) : m.group(1);
+            String who = pkg != null ? uidTitle(pkg) : m.group(1);
             String detail = "Held " + m.group(3).trim() + "  ·  " + m.group(4) + " times  ·  " + m.group(2);
-            rows.add(new String[]{who, detail, pkg != null ? pkg : ""});
+            rows.add(new String[]{who, detail, pkg != null && installedHere(pkg) ? pkg : ""});
         }
         return rows;
     }

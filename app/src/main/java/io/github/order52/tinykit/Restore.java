@@ -27,6 +27,14 @@ final class Restore {
     private Restore() {
     }
 
+    /** Android's force-dark, plus the OEM keys where they exist. */
+    static String forceDarkCommand(boolean on) {
+        return "setprop debug.hwui.force_dark " + (on ? "true" : "false")
+                + " && (settings put secure op_force_dark_entire_world " + (on ? 1 : 0)
+                + " 2>/dev/null; settings put secure aosp_force_dark_mode " + (on ? 1 : 0)
+                + " 2>/dev/null; true)";
+    }
+
     /** SurfaceFlinger's "disable overlays" call, the one behind the developer option. */
     static String overlaysCommand(boolean off) {
         return "service call SurfaceFlinger 1008 i32 " + (off ? 1 : 0);

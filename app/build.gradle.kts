@@ -19,8 +19,8 @@ android {
         applicationId = "io.github.order52.tinykit"
         minSdk = 24
         targetSdk = 34
-        versionCode = 21
-        versionName = "1.13.3"
+        versionCode = 22
+        versionName = "1.13.4"
     }
 
     signingConfigs {
@@ -42,6 +42,10 @@ android {
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
+
+    // The release notes in fastlane/ (one file per version code) also ship inside the app, for the
+    // "What's new" popup shown after an update.
+    sourceSets["main"].assets.srcDir(rootProject.file("fastlane/metadata/android/en-US/changelogs"))
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

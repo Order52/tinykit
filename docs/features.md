@@ -559,6 +559,23 @@ with `ifconfig.me` as a fallback, and only while you have the page open.
 | **App log** | `logcat --pid` | Up to 500 lines of one app's recent log output. Huawei hides most app logs. |
 | **Crash log** | `logcat -b crash` | Every crash since boot, with stack traces. **Clear** empties the log. |
 
+### Report a problem and crash reports
+
+**Report a problem** opens a new GitHub issue in your browser with TinyKit's version, your phone
+model, your Android version, whether Shizuku was running, and TinyKit's own recent log lines
+filled in. You can read and edit it, and nothing is sent until you press *Submit* on GitHub.
+
+When TinyKit **crashes**, it saves the error privately and (where notifications are allowed)
+shows a notification. The next time you open TinyKit it asks if you want to send it, which opens
+the same pre-filled issue. **Not now** deletes it. **Offer to report crashes** turns all of this
+off. See [Crash reports](privacy-and-security.md#crash-reports).
+
+### What's new
+
+After TinyKit updates, a popup lists what changed (every version since the one you last opened,
+newest first). It shows once per update, never on a fresh install. **What's new** in the Info tab
+shows the current version's notes again. The notes ship inside the app, so nothing is downloaded.
+
 ### Check for updates 📶
 
 Asks the GitHub API for the latest TinyKit release when you tap it, and offers the APK download
@@ -584,6 +601,7 @@ Version, author, licence and a link to the source code.
 | `Download/TinyKit/Recovered/` | Restored files | Recover deleted files |
 | `Pictures/Screenshots/Screenshot_<date>_TinyKit.png` | Screenshots | Screenshot tile |
 | `Movies/Screen_<date>_TinyKit.mp4` | Recordings | Screen record tile |
+| App-private `files/last_crash.txt` | The last crash, kept until you send or dismiss it (never kept if Offer to report crashes is off) | Crash reports |
 | App-private `shared_prefs/tinykit.xml` | Preferences: last tab, auth token, previous DNS, filters, the internet block lists, Force dark, Disable HW overlays | Everything |
 
 TinyKit sets `allowBackup="false"`, so its private files are never copied off the device by

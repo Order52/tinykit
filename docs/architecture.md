@@ -62,6 +62,7 @@ tinykit/
 │       │   ├── Firewall.java       app_process helper: block an app's internet (Android 14+)
 │       │   ├── FirewallPolicy.java The saved block/allow lists and how they are applied
 │       │   ├── Restore.java        Puts back the firewall, Force dark, HW overlays and Fake permissions after a restart
+│       │   ├── CrashReport.java    Keeps a crash and opens a pre-filled GitHub issue if the user agrees
 │       │   ├── NewAppReceiver.java Blocks a newly installed app when the internet block is in use
 │       │   ├── FakePolicy.java     Remembers Fake permissions and puts back any Android reset to Real
 │       │   ├── TinyKitApp.java     Application: starts Restore when Shizuku's binder arrives

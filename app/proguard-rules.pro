@@ -1,3 +1,8 @@
+# TinyKit is open source, so there is nothing to hide, and readable names mean a crash report
+# from the "Send crash details" button can be read as it is.
+-dontobfuscate
+-keepattributes SourceFile,LineNumberTable
+
 # Shell runs commands through Shizuku.newProcess, which is private and called by reflection.
 -keepclassmembers class rikka.shizuku.Shizuku {
     private static rikka.shizuku.ShizukuRemoteProcess newProcess(java.lang.String[], java.lang.String[], java.lang.String);

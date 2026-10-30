@@ -5,7 +5,9 @@ what it actually does, and what it never does.
 
 ## In short
 
-- **No analytics, no ads, no crash reporting, no accounts.**
+- **No analytics, no ads, no automatic crash reporting, no accounts.** If TinyKit crashes it
+  *offers* to open a pre-filled GitHub issue, and only sends anything if you post it
+  (see [Crash reports](#crash-reports)).
 - **Nothing leaves your phone** except two requests you trigger yourself (see
   [Network](#network)).
 - **Nothing runs in the background.** The one exception is when an app is installed while the
@@ -25,6 +27,7 @@ what it actually does, and what it never does.
 | `com.termux.permission.RUN_COMMAND` | Start Shizuku through Termux. Android asks you first. |
 | `KILL_BACKGROUND_PROCESSES` | Speed up phone without Shizuku on Android 13 and older. Closes only cached apps. |
 | `PACKAGE_USAGE_STATS` | Unused apps and Storage by app. Granted through Shizuku. |
+| `POST_NOTIFICATIONS` | A "TinyKit stopped, send the details?" notification when it crashes. Android 13+ asks you first, and only if you tap the option in the crash popup. |
 | `WRITE_SECURE_SETTINGS` | Lets toggles and tiles work with Shizuku stopped. Granted once through Shizuku. |
 
 There are **no** location, contacts, camera, microphone, storage or phone permissions. When
@@ -42,6 +45,22 @@ TinyKit uses that access only for the tool you're using at that moment. To take 
 
 - Revoke TinyKit in **Shizuku → Authorized applications**, or
 - Stop Shizuku. It also stops by itself when the phone reboots.
+
+## Crash reports
+
+TinyKit never sends a crash report by itself. When it crashes, it keeps the error (the stack
+trace, TinyKit's version, your phone model, your Android version and whether Shizuku was running)
+in a private file on the phone and, where notifications are allowed, shows a notification. The
+next time you open TinyKit it asks whether to send it:
+
+- **Send** opens a new issue on GitHub in your browser with those details filled in. You can
+  read and edit everything, and nothing is sent until you press *Submit* on GitHub (which needs a
+  GitHub account).
+- **Not now** deletes the saved crash.
+
+**Info → Report a problem** does the same for a problem that isn't a crash, and adds TinyKit's
+own recent log lines (Android only lets an app read its own). Turn **Offer to report crashes**
+off to stop TinyKit from keeping crashes at all.
 
 ## Sensitive data TinyKit can show you
 

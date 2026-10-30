@@ -1,6 +1,6 @@
 # Quick Settings tiles
 
-TinyKit adds 16 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
+TinyKit adds 18 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
 nothing when you aren't using them: Android only binds a tile while the panel is open, and none
 of them keeps a service running.
 
@@ -30,6 +30,8 @@ of them keeps a service running.
 | <img src="images/tiles/timeout.svg" width="40" alt=""> | **Screen timeout** | Cycles 30 s → 1 min → 5 min → 30 min → never | The current timeout | No |
 | <img src="images/tiles/cache.svg" width="40" alt=""> | **Clear caches** | Clears every app's cache | MB freed | Yes |
 | <img src="images/tiles/ram.svg" width="40" alt=""> | **Free RAM** | Speeds up the phone, like **Speed up phone** | Free memory | Android 14+² |
+| <img src="images/tiles/overlays.svg" width="40" alt=""> | **HW overlays off** | Turns the "Disable HW overlays" developer option on or off | On / off | Yes |
+| <img src="images/tiles/forcedark.svg" width="40" alt=""> | **Force dark** | Dark-themes apps that have no dark mode | On / off | Yes |
 | <img src="images/tiles/kill.svg" width="40" alt=""> | **Close app** | Force-stops the app on screen | — | Yes |
 
 ¹ The Shizuku tile needs either the auth token or Termux with shizuku-termux. See
@@ -68,6 +70,12 @@ restores the timeout you had before.
 **Sensors off** and **Mic & camera off** differ. *Mic & camera off* uses Android 12+'s
 per-sensor privacy toggles (`cmd sensor_privacy`). *Sensors off* blocks **all** sensors,
 including the accelerometer and gyroscope, and resets on reboot.
+
+**HW overlays off** and **Force dark** are settings Android forgets at a restart. The tile
+remembers the choice, and TinyKit puts it back as soon as Shizuku is running again, the same as
+the switches in **System → Display** (they share one setting, so the tile and the switch always
+agree). **HW overlays off** runs `service call SurfaceFlinger 1008 i32 1`; **Force dark** is
+described under [System → Display](features.md#display).
 
 **Close app** finds the app in front (`dumpsys activity activities`) and force-stops it. It never
 stops SystemUI, the launcher or TinyKit itself.

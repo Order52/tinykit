@@ -186,7 +186,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Device info** | Phone info · Charging info · Temperatures (every thermal sensor) · Device IDs |
 | **Network info** | Shows IP addresses, Wi-Fi details, DNS and your public IP. *Open router settings* opens your default gateway's page. |
 | **Usage logs** | Screen time · Battery usage · Wake-ups · Vibration log, as plain readable lists |
-| **Diagnostics** | App log · Crash log · Check for updates (by tap, or optionally on start with a popup) · About |
+| **Diagnostics** | App log · Crash log · Report a problem · What's new · Check for updates (by tap, or optionally on start with a popup) · About |
 
 The [feature reference](docs/features.md) lists the exact command behind every tool.
 
@@ -229,7 +229,7 @@ TinyKit or Android's own settings. The first time Shizuku is available, TinyKit 
 | [Getting started](docs/getting-started.md) | Setting up Shizuku and TinyKit |
 | [Fake permissions](docs/fake-permissions.md) | The full guide, with commands and how to verify them |
 | [Feature reference](docs/features.md) | Every tool and the command it runs |
-| [Quick Settings tiles](docs/quick-settings-tiles.md) | All 16 tiles |
+| [Quick Settings tiles](docs/quick-settings-tiles.md) | All 18 tiles |
 | [Privacy & security](docs/privacy-and-security.md) | What TinyKit can access, stores and sends |
 | [Troubleshooting & FAQ](docs/troubleshooting.md) | Common problems and Huawei notes |
 | [Architecture](docs/architecture.md) · [Building](docs/building.md) · [Contributing](docs/contributing.md) | For developers |

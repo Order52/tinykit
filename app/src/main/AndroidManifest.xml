@@ -27,6 +27,9 @@
     <!-- Free up RAM without Shizuku on Android 13 and older (closes only cached apps). -->
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
 
+    <!-- Offer to send the details of a crash, right when it happens (asked once, only if you agree). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Toggles and tiles keep working with Shizuku off: granted once through Shizuku. -->
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
@@ -122,6 +125,14 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
         <service android:name=".Tiles$MicCam" android:exported="true" android:icon="@drawable/ic_tile_miccam" android:label="Mic &amp; camera off" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$HwOverlays" android:exported="true" android:icon="@drawable/ic_tile_overlays" android:label="HW overlays off" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service android:name=".Tiles$ForceDark" android:exported="true" android:icon="@drawable/ic_tile_forcedark" android:label="Force dark" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>

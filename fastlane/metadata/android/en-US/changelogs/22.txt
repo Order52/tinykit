@@ -1,0 +1,5 @@
+- Fake permissions now stay Fake after an app update: TinyKit puts them back right away.
+- New quick panel tiles: HW overlays off and Force dark.
+- New "What's new" popup after an update (and in the Info tab).
+- If TinyKit crashes, it can offer to send the details: one tap opens a ready-made GitHub issue that you read and post yourself. Also available as Report a problem in the Info tab, and you can turn it off.
+- Battery usage and Wake-ups now show app names from Secure Folder and Dual Apps.

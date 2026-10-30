@@ -152,6 +152,57 @@ public abstract class Tiles extends TileService {
         }
     }
 
+    /**
+     * A tile for a setting Android forgets at a restart. It remembers the choice in TinyKit's
+     * preferences, which is also what {@link Restore} puts back once Shizuku is running.
+     */
+    abstract static class Remembered extends Tiles {
+        abstract String pref();
+
+        abstract String command(boolean on);
+
+        @Override
+        Object[] state() {
+            return state(prefs().getBoolean(pref(), false), null);
+        }
+
+        @Override
+        void tap(boolean active) {
+            if (!shizuku()) return;
+            Shell.Result r = Shell.run(command(!active));
+            if (r.ok()) {
+                prefs().edit().putBoolean(pref(), !active).apply();
+            } else {
+                toast("Couldn't change this. " + r.out);
+            }
+        }
+    }
+
+    /** The "Disable HW overlays" developer option. */
+    public static final class HwOverlays extends Remembered {
+        @Override
+        String pref() {
+            return Restore.PREF_NO_OVERLAYS;
+        }
+
+        @Override
+        String command(boolean on) {
+            return Restore.overlaysCommand(on);
+        }
+    }
+
+    public static final class ForceDark extends Remembered {
+        @Override
+        String pref() {
+            return Restore.PREF_FORCE_DARK;
+        }
+
+        @Override
+        String command(boolean on) {
+            return Restore.forceDarkCommand(on);
+        }
+    }
+
     /** Cycles 30 s, 1 min, 5 min, 30 min and never. Sets the phone's normal screen timeout. */
     public static final class Timeout extends Tiles {
         @Override
