@@ -170,12 +170,14 @@ listens for Shizuku's binder arriving. `Restore` then runs once per boot, tracke
   app is blocked), and
 - Force dark and Disable HW overlays are switched back on if they were on, and
 - `FakePolicy.enforce` re-checks every saved Fake permission (`fake_ops`), puts back any Android
-  reset to Real and switches any it can't fix Off. This one also runs when TinyKit opens, and at
-  most every ten minutes when tiles start the process.
+  reset to Real and switches any it can't fix Off. This one also runs when TinyKit opens, at
+  most once a minute when tiles start the process, and right after an app with Fake
+  permissions is updated (`NewAppReceiver`, twice, four seconds apart).
 
 The process then idles like any cached app. TinyKit keeps no service; its only receiver
-(`NewAppReceiver`, for `PACKAGE_ADDED`) wakes for one install, runs `FirewallPolicy.apply` and ends.
-If Shizuku is off then, it sets `fw_pending` and `Restore` catches up when Shizuku is back. The
+(`NewAppReceiver`, for `PACKAGE_ADDED`) wakes for one install or update, runs `FirewallPolicy.apply`
+(new app) or `FakePolicy.enforce` (updated app with Fake permissions) and ends.
+If Shizuku is off then, it sets `fw_pending` or `fake_pending` and `Restore` catches up when Shizuku is back. The
 firewall choice lives in `SharedPreferences` (`fw_blocked`, `fw_allowed`, `fw_allow_mode`).
 `FirewallPolicy` reads user IDs from `PackageManager` instead of `pm list packages -U`, which
 saves a shell call each time.

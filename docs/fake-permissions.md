@@ -204,7 +204,9 @@ camera, microphone, location and contacts app-ops of a Fake app were back to nor
 So TinyKit remembers every Fake you set (in its private preferences) and checks them:
 
 - every time Shizuku starts, which also starts TinyKit's process, **without you opening TinyKit**
-  (at most every ten minutes after that, because tiles start the process too);
+  (at most once a minute after that, because tiles start the process too);
+- the moment an app with Fake permissions is **updated**, again a few seconds later in case
+  Android syncs twice, also without opening TinyKit (if Shizuku is off then, as soon as it's back);
 - every time you open TinyKit with Shizuku running;
 - when you restore a **TinyKit setup** backup, which includes your Fake permissions.
 
@@ -236,8 +238,11 @@ then forgets the Fake). Nothing is patched or replaced.
   use*. If you want while-in-use behaviour back, set it in Android's Settings app instead of
   tapping Real.
 - **Android can overwrite Fake.** A restart, an app update or a change in the system Settings
-  app re-syncs the app-op, so a Fake permission turns back into Real. TinyKit puts it back the
-  next time Shizuku starts or TinyKit opens (see [Staying Fake](#staying-fake)).
+  app re-syncs the app-op, so a Fake permission turns back into Real. TinyKit puts it back right
+  after an update of that app, the next time Shizuku starts, or when TinyKit opens (see
+  [Staying Fake](#staying-fake)). A change made in Android's Settings app, or by the app through the
+  system permission dialog, has no signal TinyKit can listen for without running all the time, so
+  that one is fixed at the next of those moments.
 - **One app-op per UID.** Apps that share a user ID (rare, mostly system apps) share their
   permission app-ops, so changing one changes them all.
 - **Some permissions can't be granted.** If an app targets an old Android version, or the

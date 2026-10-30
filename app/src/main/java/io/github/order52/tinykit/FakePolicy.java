@@ -40,6 +40,12 @@ final class FakePolicy {
         return new HashSet<>(p.getStringSet(KEY, new HashSet<>()));
     }
 
+    /** Whether any permission of {@code pkg} is saved as Fake. */
+    static boolean has(SharedPreferences p, String pkg) {
+        for (String entry : all(p)) if (entry.startsWith(pkg + "|")) return true;
+        return false;
+    }
+
     /** Remembers (or forgets) that {@code op} is Fake for {@code pkg}. */
     static void set(SharedPreferences p, String pkg, String op, String permission, boolean fake) {
         Set<String> set = all(p);

@@ -9,7 +9,8 @@ what it actually does, and what it never does.
 - **Nothing leaves your phone** except two requests you trigger yourself (see
   [Network](#network)).
 - **Nothing runs in the background.** The one exception is when an app is installed while the
-  internet block is in use: TinyKit wakes for that install, blocks the app and ends.
+  internet block is in use, or updated while it has Fake permissions: TinyKit wakes for that,
+  applies the block or puts Fake back, and ends.
 - **Everything it changes is a standard Android setting**, which you can inspect and undo.
 - **Open source** under the MIT licence: every command is in the code, and this documentation
   lists them.

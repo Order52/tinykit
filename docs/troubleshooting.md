@@ -38,8 +38,13 @@ check the state with `appops get <pkg>`; it should show `ignore` for that op. Se
 [Verifying it yourself](fake-permissions.md#verifying-it-yourself).
 
 **A Fake permission turned back into Real or Off.**
-Changing that permission in Android's Settings app re-syncs the app-op. Set it to Fake in
-TinyKit again.
+Android re-syncs an app's permissions with its app-ops at a restart, after an update and when
+the permission is changed in Android's Settings app or through the app's own permission
+dialog. TinyKit puts Fake back right after an update of that app, when Shizuku starts, and
+when you open TinyKit (at most once a minute otherwise). A change in Settings or the app's
+dialog can't be seen as it happens, so it's fixed at the next of those; open TinyKit to fix
+it straight away. If it keeps turning Real, set it to Fake in TinyKit again and check that
+Shizuku was running.
 
 **The control jumps back after I tap it.**
 The change was refused. For example, an app built for an old Android version may not accept

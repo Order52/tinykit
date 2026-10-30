@@ -19,6 +19,8 @@ final class Restore {
     // Set when an app was installed while Shizuku was off, so the firewall still has to catch up.
     static final String PREF_FIREWALL_PENDING = "fw_pending";
     private static final String PREF_BOOT = "restored_boot";
+    // Set when an app was updated while Shizuku was off: its Fake permissions need another look.
+    static final String PREF_FAKE_PENDING = "fake_pending";
     private static final String PREF_FAKE_CHECKED = "fake_checked";
     private static final String PREF_FAKE_BOOT = "fake_boot";
 
@@ -39,12 +41,14 @@ final class Restore {
         if (!Shell.ready()) return;
         SharedPreferences p = c.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
         // Android turns Fake permissions back into Real at a restart or an app update. Check them
-        // every time Shizuku comes up (not more than every ten minutes: tiles start this process).
+        // every time Shizuku comes up (not more than once a minute: tiles start this process).
         long now = System.currentTimeMillis();
         int boot = Settings.Global.getInt(c.getContentResolver(), Settings.Global.BOOT_COUNT, -1);
-        if (boot != p.getInt(PREF_FAKE_BOOT, -2) || Math.abs(now - p.getLong(PREF_FAKE_CHECKED, 0)) > 10 * 60 * 1000) {
+        if (boot != p.getInt(PREF_FAKE_BOOT, -2) || p.getBoolean(PREF_FAKE_PENDING, false)
+                || Math.abs(now - p.getLong(PREF_FAKE_CHECKED, 0)) > 60 * 1000) {
             FakePolicy.enforce(c, p);
-            p.edit().putLong(PREF_FAKE_CHECKED, now).putInt(PREF_FAKE_BOOT, boot).apply();
+            p.edit().putLong(PREF_FAKE_CHECKED, now).putInt(PREF_FAKE_BOOT, boot)
+                    .putBoolean(PREF_FAKE_PENDING, false).apply();
         }
         // An app was installed while Shizuku was off: block it now if the firewall is set to.
         if (p.getBoolean(PREF_FIREWALL_PENDING, false) && FirewallPolicy.supported()
