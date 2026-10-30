@@ -1,0 +1,3 @@
+- Fixed a crash on Battery usage and Wake-ups on phones with Secure Folder or Dual Apps.
+- New Disable HW overlays switch in System > Display. TinyKit turns it back on after a restart.
+- In allow list mode, apps you install later are now blocked the moment they're installed.
