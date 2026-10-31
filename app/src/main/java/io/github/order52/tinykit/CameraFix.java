@@ -56,26 +56,43 @@ final class CameraFix {
         return appOps(c, false);
     }
 
-    /** Turns sensor privacy off for camera and microphone (and the global "all sensors" switch). */
+    /**
+     * Turns sensor privacy off for camera and microphone and the global "all sensors" switch (the one
+     * in the Privacy tab). It always tries all of them, whatever the phone reports, then checks again.
+     * Returns null when nothing was on, else what happened.
+     */
     static String sensors(Context c) {
-        String before = Shell.run("dumpsys sensor_privacy").out;
-        boolean was = PRIVACY_ON.matcher(before).find();
-        boolean global = "true".equals(Shell.run(MainActivity.sensorsCmd(c, "state")).out.trim());
-        if (!was && !global) return null;
+        boolean was = blocked(c);
         StringBuilder cmd = new StringBuilder("u=$(am get-current-user 2>/dev/null); ");
         for (String sensor : new String[]{"camera", "microphone"}) {
             cmd.append("cmd sensor_privacy disable 0 ").append(sensor).append(" >/dev/null 2>&1; ")
-                    .append("[ -n \"$u\" ] && cmd sensor_privacy disable \"$u\" ").append(sensor).append(" >/dev/null 2>&1; ");
+                    .append("[ -n \"$u\" ] && [ \"$u\" != 0 ] && cmd sensor_privacy disable \"$u\" ")
+                    .append(sensor).append(" >/dev/null 2>&1; ");
         }
         Shell.run(cmd.toString());
-        // "off" means blocking off (the tile sends "off" to unblock).
-        if (global) Shell.run(MainActivity.sensorsCmd(c, "off"));
-        boolean still = PRIVACY_ON.matcher(Shell.run("dumpsys sensor_privacy").out).find()
+        // "off" means blocking off (the Privacy switch and the tile send "off" to unblock).
+        Shell.run(MainActivity.sensorsCmd(c, "off"));
+        boolean still = blocked(c);
+        if (still) {
+            Shell.run(MainActivity.sensorsCmd(c, "off")); // once more: Android can apply it a moment late
+            try {
+                Thread.sleep(700);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            still = blocked(c);
+        }
+        if (still) {
+            return "Couldn't turn off the camera/microphone privacy block. Open Settings > Privacy and turn "
+                    + "Camera access and Microphone access on.";
+        }
+        return was ? "Turned off the sensor block that was cutting the camera and microphone for every app." : null;
+    }
+
+    /** Whether any sensor privacy block (camera, microphone or all sensors) is on right now. */
+    private static boolean blocked(Context c) {
+        return PRIVACY_ON.matcher(Shell.run("dumpsys sensor_privacy").out).find()
                 || "true".equals(Shell.run(MainActivity.sensorsCmd(c, "state")).out.trim());
-        return still
-                ? "Couldn't turn off Android's camera/microphone privacy switch. Open Settings > Privacy and turn "
-                + "Camera access and Microphone access on."
-                : "Turned off the sensor privacy block that was cutting the camera and microphone for every app.";
     }
 
     /** Re-enables or restores camera packages that are switched off or removed (they vanish from app lists). */
