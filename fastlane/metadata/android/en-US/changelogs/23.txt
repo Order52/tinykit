@@ -1,0 +1,1 @@
+- Fixed the Speed up widget going dead after an update (tapping it only opened TinyKit until you removed it and added it again). It now repairs itself when TinyKit updates.

@@ -27,9 +27,27 @@ public class BoostWidget extends AppWidgetProvider {
         manager.updateAppWidget(ids, views(context, "Tap to speed up"));
     }
 
+    /**
+     * Puts the tap handler back on every widget on the home screen. After TinyKit is updated, the
+     * launcher can keep showing the widget's bare starting layout, which has no tap handler, so
+     * tapping it just opens the app until the widget is removed and added again.
+     */
+    static void refresh(Context context) {
+        try {
+            show(context.getApplicationContext(), "Tap to speed up");
+        } catch (RuntimeException ignored) {
+            // The launcher isn't ready; the next start tries again.
+        }
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
+        // Sent to the updated app itself, even when Android holds back other broadcasts for it.
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(intent.getAction())) {
+            refresh(context);
+            return;
+        }
         if (!ACTION_BOOST.equals(intent.getAction())) return;
         Context app = context.getApplicationContext();
         PendingResult pending = goAsync();

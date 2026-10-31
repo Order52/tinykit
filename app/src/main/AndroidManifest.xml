@@ -138,7 +138,10 @@
         </service>
         <!-- Home screen widget: one tap frees RAM and clears app caches. -->
         <receiver android:name=".BoostWidget" android:exported="false" android:label="@string/widget_name">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/boost_widget" />
         </receiver>
         <service android:name=".Tiles$Memory" android:exported="true" android:icon="@drawable/ic_tile_ram" android:label="Free RAM" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">

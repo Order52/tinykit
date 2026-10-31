@@ -129,3 +129,11 @@ TinyKit is developed and tested on a Huawei phone, and handles EMUI's quirks:
 - Your Shizuku version, and how you start it
 - What you tapped, and the exact message you saw
 - If possible, the output of the related command from **System → Run a command**
+
+## Speed up widget
+
+**The widget only opens TinyKit when I tap it.**
+Some launchers keep showing a widget's bare starting layout after the app updates, and that
+layout has no tap handler. From 1.13.5 TinyKit repairs its widget by itself when it updates
+(Android tells TinyKit it was replaced, and TinyKit also checks the first time it starts after
+an update). If it still happens, open TinyKit once, or remove the widget and add it again.
