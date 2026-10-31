@@ -4139,12 +4139,21 @@ public class MainActivity extends Activity {
             apply.run();
         }), 1);
         worker.execute(() -> {
-            List<String[]> rows = job.run();
+            // Whatever goes wrong reading the phone's logs (another profile, an odd dump format), the
+            // page shows its empty message instead of taking the whole app down.
+            List<String[]> rows;
+            try {
+                rows = job.run();
+            } catch (RuntimeException e) {
+                android.util.Log.w("TinyKit", title + ": " + e);
+                rows = new ArrayList<>();
+            }
+            final List<String[]> shownRows = rows;
             main.post(() -> {
-                loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
-                if (rows.isEmpty()) loading.setText(empty);
+                loading.setVisibility(shownRows.isEmpty() ? View.VISIBLE : View.GONE);
+                if (shownRows.isEmpty()) loading.setText(empty);
                 original.clear();
-                original.addAll(rows);
+                original.addAll(shownRows);
                 apply.run();
             });
         });

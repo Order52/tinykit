@@ -151,7 +151,14 @@ Builds:
     gradle:
       - yes
 
+  - versionName: 1.13.11
+    versionCode: 29
+    commit: v1.13.11
+    subdir: app
+    gradle:
+      - yes
+
 AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
-CurrentVersion: 1.13.10
-CurrentVersionCode: 28
+CurrentVersion: 1.13.11
+CurrentVersionCode: 29

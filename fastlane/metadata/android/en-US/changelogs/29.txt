@@ -1,0 +1,1 @@
+Battery usage, Wake-ups and the permission guard can no longer crash on phones with several profiles (Secure Folder, Dual Apps).

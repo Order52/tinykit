@@ -90,7 +90,7 @@ final class PermGuard {
             int uid = c.getPackageManager().getApplicationInfo(pkg, 0).uid;
             String[] all = c.getPackageManager().getPackagesForUid(uid);
             if (all != null) for (String other : all) if (!other.equals(pkg)) same.add(other);
-        } catch (PackageManager.NameNotFoundException ignored) {
+        } catch (PackageManager.NameNotFoundException | SecurityException ignored) {
         }
         return same;
     }
