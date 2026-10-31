@@ -1,0 +1,1 @@
+Block internet list: new "Only apps with internet permission" filter, on by default.
