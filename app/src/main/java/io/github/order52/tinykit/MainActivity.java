@@ -1057,10 +1057,12 @@ public class MainActivity extends Activity {
                 () -> openAppList("App permissions", "Pick an app to change its permissions and app-ops.",
                         this::openAppPage));
         action(list, "Repair permissions",
-                "If an app you never changed (like the camera) stopped working after using Fake, this puts "
-                        + "its camera, microphone and other permissions back to normal.", () -> {
+                "If the camera or microphone stopped working (\"Can't connect to the camera\", mic only works in "
+                        + "calls) or an app you never changed broke, this fixes it.", () -> {
                     if (!Shell.ready()) return "Start Shizuku and allow TinyKit first.";
                     String message = FakePolicy.enforce(this, prefs);
+                    String camera = CameraFix.run(this, prefs);
+                    if (camera != null) message = message == null || message.isEmpty() ? camera : message + " " + camera;
                     return message == null || message.isEmpty()
                             ? "Nothing needed repair. Everything TinyKit checks is normal." : message;
                 });

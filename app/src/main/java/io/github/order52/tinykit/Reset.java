@@ -38,6 +38,8 @@ final class Reset {
         // First fix damage on apps that were never chosen; it needs the saved choices to find them.
         String repaired = PermGuard.repair(c, p);
         if (repaired != null && !repaired.isEmpty()) out.append(repaired).append(' ');
+        String camera = CameraFix.run(c, p);
+        if (camera != null) out.append(camera).append(' ');
 
         // {state, package, op, permission}
         List<String[]> entries = new ArrayList<>();
@@ -190,15 +192,16 @@ final class Reset {
             if (p.getBoolean(Restore.PREF_NO_OVERLAYS, false)) {
                 (Shell.run(Restore.overlaysCommand(false)).ok() ? done : failed).add("HW overlays");
             }
-            if ("true".equals(Shell.run(MainActivity.sensorsCmd(c, "state")).out.trim())) {
-                (Shell.run(MainActivity.sensorsCmd(c, "on")).ok() ? done : failed).add("All sensors off");
-            }
+            // Camera/microphone privacy blocks (the "Sensors off" and "Mic and camera off" switches, or
+            // Android's own). Whatever blocked them is lifted, whether one or both were on.
+            String cam = CameraFix.sensors(c);
+            if (cam != null) (cam.startsWith("Couldn't") ? failed : done).add("camera and microphone block");
         }
         p.edit().putBoolean(Restore.PREF_FORCE_DARK, false).putBoolean(Restore.PREF_NO_OVERLAYS, false).apply();
         // Only the Quick toggles that TinyKit itself offers and that are on right now. The developer
         // options, USB debugging and screen timeout are never touched.
         Tweak[] toggles = {Tweak.AD_DNS, Tweak.NO_SCAN, Tweak.FREE_HOTSPOT, Tweak.NO_MOBILE_ON_WIFI,
-                Tweak.GRAYSCALE, Tweak.EXTRA_DIM, Tweak.MIC_CAM_OFF};
+                Tweak.GRAYSCALE, Tweak.EXTRA_DIM};
         for (Tweak t : toggles) {
             if (!t.usable(c) || !t.isOn(c)) continue;
             (t.set(c, false) == null ? done : failed).add(t.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' '));

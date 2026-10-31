@@ -1,0 +1,1 @@
+New: Fix camera and microphone (Apps > Permissions). Clears the sensor block, switches the camera app back on and repairs its permissions. Reset now really turns the sensor block off.

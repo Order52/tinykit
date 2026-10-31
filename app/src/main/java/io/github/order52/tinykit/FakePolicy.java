@@ -145,6 +145,8 @@ final class FakePolicy {
         // Repair first: it needs the unsafe saved choices (shared user id, camera app) to find the
         // apps they hit, and enforceSaved then drops those choices.
         String repaired = PermGuard.repair(c, p);
+        String cam = FakePolicy.everUsed(p) ? CameraFix.heal(c) : null;
+        if (cam != null && !cam.isEmpty()) repaired = repaired == null ? cam : repaired + " " + cam;
         String fixed = enforceSaved(c, p);
         if (repaired == null) return fixed;
         return fixed == null || fixed.isEmpty() ? repaired : repaired + " " + fixed;
