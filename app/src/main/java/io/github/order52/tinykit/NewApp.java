@@ -33,8 +33,7 @@ final class NewApp {
 
     private static boolean firewall(SharedPreferences p, Intent intent) {
         boolean update = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false);
-        return !update && FirewallPolicy.supported()
-                && (FirewallPolicy.allowMode(p) || !FirewallPolicy.saved(p, FirewallPolicy.BLOCKED).isEmpty());
+        return !update && FirewallPolicy.supported() && !FirewallPolicy.paused(p) && FirewallPolicy.configured(p);
     }
 
     private static boolean fake(SharedPreferences p, Intent intent) {

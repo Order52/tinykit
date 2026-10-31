@@ -1220,6 +1220,38 @@ public class MainActivity extends Activity {
                     prefs.edit().putBoolean(CrashReport.PREF, on).apply();
                     if (!on) CrashReport.clear(this);
                 }, false);
+        // The one switch for everything TinyKit may keep running. Off: it never runs by itself.
+        Switch backgroundSwitch = new Switch(this);
+        backgroundSwitch.setChecked(prefs.getBoolean(NewAppService.PREF, false));
+        backgroundSwitch.setClickable(false);
+        backgroundSwitch.setFocusable(false);
+        TextView backgroundStatus = text("", 13, false);
+        backgroundStatus.setPadding(dp(16), dp(0), dp(16), dp(8));
+        Runnable showBackground = () -> {
+            boolean on = prefs.getBoolean(NewAppService.PREF, false);
+            backgroundSwitch.setChecked(on);
+            backgroundStatus.setText(NewAppService.isRunning() ? "Running in the background now."
+                    : on ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
+                    : "Off. TinyKit never runs by itself.");
+        };
+        showBackground.run();
+        row(list, "Run in the background", "Off: TinyKit never runs by itself, apart from a short check when "
+                + "Shizuku starts. On: a quiet notification and a small service keep TinyKit ready, so a new app "
+                + "is blocked the moment it is installed (Block internet per app). TinyKit is also asked not to "
+                + "be put to sleep. It uses almost no battery or memory.", backgroundSwitch, () -> {
+                    if (!FirewallPolicy.supported()) {
+                        toast("This is only used by Block internet per app, which needs Android 14 or newer.");
+                        return;
+                    }
+                    boolean on = !prefs.getBoolean(NewAppService.PREF, false);
+                    backgroundSwitch.setChecked(on);
+                    worker.execute(() -> {
+                        NewAppService.setEnabled(this, prefs, on);
+                        android.os.SystemClock.sleep(800);
+                        main.post(showBackground);
+                    });
+                }, false);
+        list.addView(backgroundStatus);
         row(list, "What's new", "The changes in version " + versionName(getPackageName()) + ".", arrow(), () -> {
             String notes = releaseNotes(versionCode() - 1);
             showNotes(notes.isEmpty() ? "No release notes for this version." : notes, null);
@@ -1331,6 +1363,9 @@ public class MainActivity extends Activity {
         Switch modeSwitch = new Switch(this);
         modeSwitch.setClickable(false);
         modeSwitch.setFocusable(false);
+        Switch pauseSwitch = new Switch(this);
+        pauseSwitch.setClickable(false);
+        pauseSwitch.setFocusable(false);
         Switch watchSwitch = new Switch(this);
         watchSwitch.setClickable(false);
         watchSwitch.setFocusable(false);
@@ -1342,6 +1377,7 @@ public class MainActivity extends Activity {
             modeSwitch.setChecked(allow);
             boolean watch = prefs.getBoolean(NewAppService.PREF, false);
             watchSwitch.setChecked(watch);
+            pauseSwitch.setChecked(FirewallPolicy.paused(prefs));
             watchStatus.setText(NewAppService.isRunning()
                     ? "Running in the background now. New apps are blocked the moment they are installed."
                     : watch ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
@@ -1352,7 +1388,8 @@ public class MainActivity extends Activity {
             status.setText("…");
             worker.execute(() -> {
                 int n = FirewallPolicy.blockedCount(this, prefs);
-                main.post(() -> status.setText(n == 0 ? "No app is blocked."
+                main.post(() -> status.setText(FirewallPolicy.paused(prefs)
+                        ? "Paused. No app is blocked until you resume." : n == 0 ? "No app is blocked."
                         : n + (n == 1 ? " app is" : " apps are") + " blocked."));
             });
         };
@@ -1373,6 +1410,18 @@ public class MainActivity extends Activity {
                             .setPositiveButton("Turn on", (d, w) -> setFirewallMode(true, refresh))
                             .setNegativeButton("Cancel", null)
                             .show();
+                }, true);
+        row(list, "Pause blocking", "Let every app use the internet for now and keep your lists. Also on the "
+                + "Internet block quick tile.", pauseSwitch, () -> {
+                    boolean on = !FirewallPolicy.paused(prefs);
+                    prefs.edit().putBoolean(FirewallPolicy.PAUSED, on).apply();
+                    worker.execute(() -> {
+                        String error = FirewallPolicy.apply(this, prefs, true);
+                        main.post(() -> {
+                            refresh.run();
+                            if (error != null) toast(error);
+                        });
+                    });
                 }, true);
         row(list, "Block new apps at once", "Keeps TinyKit running in the background, with a small "
                 + "notification, so an app is blocked the moment you install it. Off by default. It uses "
@@ -2889,6 +2938,7 @@ public class MainActivity extends Activity {
                 {Tiles.MicCam.class, "Mic & camera off", "Block the mic and camera for every app.", R.drawable.ic_tile_miccam},
                 {Tiles.Memory.class, "Free RAM", "Stop background apps.", R.drawable.ic_tile_ram},
                 {Tiles.ScreenRecord.class, "Screen record", "Record the screen to Movies.", R.drawable.ic_tile_record},
+                {Tiles.Firewall.class, "Internet block", "Pause and resume blocking apps' internet.", R.drawable.ic_tile_firewall},
                 {Tiles.HwOverlays.class, "HW overlays off", "Turn off hardware overlays (developer option).", R.drawable.ic_tile_overlays},
                 {Tiles.ForceDark.class, "Force dark", "Dark-theme apps that have no dark mode.", R.drawable.ic_tile_forcedark}};
         LinearLayout list = vertical();

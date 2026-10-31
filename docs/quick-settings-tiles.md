@@ -30,6 +30,7 @@ of them keeps a service running.
 | <img src="images/tiles/timeout.svg" width="40" alt=""> | **Screen timeout** | Cycles 30 s → 1 min → 5 min → 30 min → never | The current timeout | No |
 | <img src="images/tiles/cache.svg" width="40" alt=""> | **Clear caches** | Clears every app's cache | MB freed | Yes |
 | <img src="images/tiles/ram.svg" width="40" alt=""> | **Free RAM** | Speeds up the phone, like **Speed up phone** | Free memory | Android 14+² |
+| <img src="images/tiles/firewall.svg" width="40" alt=""> | **Internet block** | Pauses or resumes **Block internet per app** and keeps your lists (Android 14+) | Blocking / Paused | Yes |
 | <img src="images/tiles/overlays.svg" width="40" alt=""> | **HW overlays off** | Turns the "Disable HW overlays" developer option on or off | On / off | Yes |
 | <img src="images/tiles/forcedark.svg" width="40" alt=""> | **Force dark** | Dark-themes apps that have no dark mode | On / off | Yes |
 | <img src="images/tiles/kill.svg" width="40" alt=""> | **Close app** | Force-stops the app on screen | — | Yes |

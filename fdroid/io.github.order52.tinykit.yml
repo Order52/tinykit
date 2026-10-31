@@ -123,7 +123,14 @@ Builds:
     gradle:
       - yes
 
+  - versionName: 1.13.7
+    versionCode: 25
+    commit: v1.13.7
+    subdir: app
+    gradle:
+      - yes
+
 AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
-CurrentVersion: 1.13.6
-CurrentVersionCode: 24
+CurrentVersion: 1.13.7
+CurrentVersionCode: 25

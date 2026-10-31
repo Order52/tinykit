@@ -25,6 +25,8 @@ final class FirewallPolicy {
     static final String BLOCKED = "fw_blocked";
     static final String ALLOWED = "fw_allowed";
     static final String MODE = "fw_allow_mode";
+    /** Blocking is paused: the lists stay, but no app is blocked until it is resumed. */
+    static final String PAUSED = "fw_paused";
     // Lower ids are Android itself, which can't be blocked on its own.
     private static final int FIRST_APP_UID = 10000;
 
@@ -33,6 +35,15 @@ final class FirewallPolicy {
 
     static boolean supported() {
         return Build.VERSION.SDK_INT >= 34;
+    }
+
+    static boolean paused(SharedPreferences p) {
+        return p.getBoolean(PAUSED, false);
+    }
+
+    /** Whether any blocking is set up at all (allow list mode, or at least one blocked app). */
+    static boolean configured(SharedPreferences p) {
+        return allowMode(p) || !saved(p, BLOCKED).isEmpty();
     }
 
     static boolean allowMode(SharedPreferences p) {
@@ -70,6 +81,15 @@ final class FirewallPolicy {
     /** {uids to block, uids to leave open}: the second list is what a full reset sets back to allowed. */
     private static List<Integer>[] desired(Context c, Map<String, Integer> ids, SharedPreferences p) {
         boolean allow = allowMode(p);
+        if (paused(p)) {
+            // Paused: nothing is blocked, and a full reset sets every app back to allowed.
+            List<Integer> none = new ArrayList<>();
+            List<Integer> everyone = new ArrayList<>();
+            for (int uid : new HashSet<>(ids.values())) if (uid >= FIRST_APP_UID) everyone.add(uid);
+            @SuppressWarnings("unchecked")
+            List<Integer>[] paused = new List[]{none, everyone};
+            return paused;
+        }
         Set<String> chosen = saved(p, allow ? ALLOWED : BLOCKED);
         // TinyKit stays reachable in allow mode, so its update check keeps working.
         if (allow) chosen.add(c.getPackageName());

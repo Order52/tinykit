@@ -1,0 +1,2 @@
+- New quick tile "Internet block" and a "Pause blocking" switch: pause and resume blocking without losing your lists.
+- New in Info: "Run in the background". Off by default, TinyKit then never runs by itself. Turn it on so new apps are blocked the moment they are installed.

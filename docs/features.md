@@ -100,8 +100,8 @@ Items that don't apply to your phone are greyed out with *Not on this phone*.
 Pick apps and cut them off **Wi-Fi and mobile data**. Needs **Android 14 or newer**.
 
 TinyKit sets the rule once, through Android's own per-app firewall (the same kernel-level rule
-Data Saver and Battery Saver use), and then does nothing. There's no VPN, no service and no
-background work: Android enforces the block in the network stack, so it holds even when TinyKit
+Data Saver and Battery Saver use), and then does nothing. There's no VPN and no background work by
+default: Android enforces the block in the network stack, so it holds even when TinyKit
 is closed or Shizuku is stopped, and it costs no memory or CPU. The rule uses one of Android's
 `OEM_DENY` firewall chains, which no system feature uses, and leaves Doze and Data Saver alone.
 
@@ -118,8 +118,14 @@ is closed or Shizuku is stopped, and it costs no memory or CPU. The rule uses on
 **Allow list mode** flips it round: every app is blocked except the ones you allow, including
 system apps such as Google Play services (allow it if you want push notifications). TinyKit itself
 always stays online. Apps you install later are blocked the moment they're installed, without
-opening TinyKit (a reinstalled app that was blocked gets its block back too). If Shizuku is off
+opening TinyKit, **if you turn on Run in the background** (Info tab, or *Block new apps at once* on this
+page). Android only tells a running process about an install, so that switch keeps a quiet notification
+and a small service running; it is off by default, and with it off, new apps are blocked the next time you
+open TinyKit. A reinstalled app that was blocked gets its block back too. If Shizuku is off
 at that moment, TinyKit blocks the app as soon as Shizuku is running again. **Unblock all apps** clears everything and turns the mode off.
+
+**Pause blocking** (this page, or the **Internet block** quick tile) lets every app online for now and keeps
+your lists, so you can switch the block off and on without setting it up again.
 
 The whole choice is applied in one start of the helper, so switching modes with hundreds of
 apps takes a moment, not minutes. The user IDs come from Android's package list directly, with

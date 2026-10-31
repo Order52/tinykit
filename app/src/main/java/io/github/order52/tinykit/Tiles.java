@@ -178,6 +178,35 @@ public abstract class Tiles extends TileService {
         }
     }
 
+    /** Pauses and resumes the internet block without losing the lists (Android 14+). */
+    public static final class Firewall extends Tiles {
+        @Override
+        Object[] state() {
+            SharedPreferences p = prefs();
+            if (!FirewallPolicy.supported()) return state(false, "Android 14+");
+            if (!FirewallPolicy.configured(p)) return state(false, "Not set up");
+            boolean paused = FirewallPolicy.paused(p);
+            return state(!paused, paused ? "Paused" : "Blocking");
+        }
+
+        @Override
+        void tap(boolean active) {
+            SharedPreferences p = prefs();
+            if (!FirewallPolicy.supported() || !FirewallPolicy.configured(p)) {
+                toast(FirewallPolicy.supported() ? "Choose apps to block in TinyKit first." : "Needs Android 14 or newer.");
+                return;
+            }
+            if (!shizuku()) return;
+            // Active means blocking now, so a tap pauses; otherwise it resumes.
+            p.edit().putBoolean(FirewallPolicy.PAUSED, active).apply();
+            String error = FirewallPolicy.apply(this, p, true);
+            if (error != null) {
+                p.edit().putBoolean(FirewallPolicy.PAUSED, !active).apply();
+                toast("Couldn't change this. " + error);
+            }
+        }
+    }
+
     /** The "Disable HW overlays" developer option. */
     public static final class HwOverlays extends Remembered {
         @Override
