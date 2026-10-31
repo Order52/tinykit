@@ -23,12 +23,14 @@ changing the code.
 
 These are the rules the code follows. Changes should keep them.
 
-1. **Nothing in the background.** No services that keep running, no alarms, no jobs, no
-   receivers waiting for system events. TinyKit runs only while it's on screen or while a tile
-   or the widget is being tapped. Two exceptions, both over in a second or two: when Shizuku
-   starts, it starts TinyKit's process, which puts back what a restart wiped (see
-   [Restore](#restore-after-a-restart)) and then idles; and when an app is installed while the
-   internet block is in use, `NewAppReceiver` applies the block to it and ends.
+1. **Nothing in the background by default.** No services that keep running, no alarms, no jobs,
+   no receivers waiting for system events. TinyKit runs only while it's on screen or while a tile
+   or the widget is being tapped. Two exceptions: when Shizuku starts, it starts TinyKit's
+   process, which puts back what a restart wiped (see [Restore](#restore-after-a-restart)) and
+   then idles; and, only if the user turns on *Block new apps at once*, `NewAppService` (a quiet
+   foreground service, `watch_new_apps`) listens for installs and blocks the new app. Android
+   delivers `PACKAGE_ADDED` only to a running process, never to a manifest receiver of an app that
+   targets Android 8 or newer, so a running process is the only way to hear about an install.
 2. **Only Android's own mechanisms.** Every change is a `settings` key, an app-op, a package
    manager call or a system service call that `adb shell` could make. No patching, no root, no
    Xposed.
@@ -63,7 +65,7 @@ tinykit/
 │       │   ├── FirewallPolicy.java The saved block/allow lists and how they are applied
 │       │   ├── Restore.java        Puts back the firewall, Force dark, HW overlays and Fake permissions after a restart
 │       │   ├── CrashReport.java    Keeps a crash and opens a pre-filled GitHub issue if the user agrees
-│       │   ├── NewAppReceiver.java Blocks a newly installed app when the internet block is in use
+│       │   ├── NewApp.java         What to do for an install; NewAppService.java listens (optional)
 │       │   ├── FakePolicy.java     Remembers Fake permissions and puts back any Android reset to Real
 │       │   ├── TinyKitApp.java     Application: starts Restore when Shizuku's binder arrives
 │       │   ├── Bloat.java          Safety ratings for the Debloater
@@ -173,11 +175,14 @@ listens for Shizuku's binder arriving. `Restore` then runs once per boot, tracke
 - `FakePolicy.enforce` re-checks every saved Fake permission (`fake_ops`), puts back any Android
   reset to Real and switches any it can't fix Off. This one also runs when TinyKit opens, at
   most once a minute when tiles start the process, and right after an app with Fake
-  permissions is updated (`NewAppReceiver`, twice, four seconds apart).
+  permissions is updated (`NewApp`, twice, four seconds apart; only while the optional watcher
+  runs).
 
-The process then idles like any cached app. TinyKit keeps no service; its only receiver
-(`NewAppReceiver`, for `PACKAGE_ADDED`) wakes for one install or update, runs `FirewallPolicy.apply`
-(new app) or `FakePolicy.enforce` (updated app with Fake permissions) and ends.
+The process then idles like any cached app. TinyKit keeps no service unless the user turns on *Block
+new apps at once*. Then `NewAppService` registers a receiver for `PACKAGE_ADDED`; for one install or update
+`NewApp.handle` runs `FirewallPolicy.apply` (new app) or `FakePolicy.enforce` (updated app with Fake
+permissions). `StartReceiver` starts the service again after a restart or an update. With the switch off,
+`Restore` blocks whatever was installed since the last time TinyKit ran, in allow list mode.
 If Shizuku is off then, it sets `fw_pending` or `fake_pending` and `Restore` catches up when Shizuku is back. The
 firewall choice lives in `SharedPreferences` (`fw_blocked`, `fw_allowed`, `fw_allow_mode`).
 `FirewallPolicy` reads user IDs from `PackageManager` instead of `pm list packages -U`, which

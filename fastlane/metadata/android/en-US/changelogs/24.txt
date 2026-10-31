@@ -1,0 +1,4 @@
+- New apps can now be blocked the moment they are installed: turn on "Block new apps at once" in Block internet per app (off by default, shows a small notification).
+- Fake and Off are now refused on apps that share permissions with others and on the camera app, which could break other apps. Existing damage is repaired automatically or with Apps > Repair permissions.
+- Real, Fake and Off now stay as you set them.
+- New: Reset everything TinyKit changed, and Reset permission changes.

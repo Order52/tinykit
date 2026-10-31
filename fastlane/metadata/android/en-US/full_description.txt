@@ -1,6 +1,7 @@
 TinyKit is a small, fast collection of Android system tweaks and tools powered by
-Shizuku. No root, no ads, no analytics, and nothing ever runs in the background: every
-change is written straight into Android's own settings or app-ops and then it is done.
+Shizuku. No root, no ads, no analytics, and nothing runs in the background unless you turn on the
+one optional switch for it: every change is written straight into Android's own settings or
+app-ops and then it is done.
 
 Pure black UI, organised into a bottom bar (Shizuku, Privacy, Apps, System, Info) with a
 search over every tool.

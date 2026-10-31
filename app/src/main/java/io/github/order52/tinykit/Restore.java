@@ -63,6 +63,9 @@ final class Restore {
                 && FirewallPolicy.apply(c, p, false) == null) {
             p.edit().putBoolean(PREF_FIREWALL_PENDING, false).apply();
         }
+        // Allow list mode: block whatever was installed since TinyKit last ran (this is how new apps
+        // are caught when "Block new apps at once" is off).
+        if (FirewallPolicy.supported() && FirewallPolicy.allowMode(p)) FirewallPolicy.apply(c, p, false);
         // Already done since the last restart (tiles and the widget start this process often).
         if (boot != -1 && boot == p.getInt(PREF_BOOT, -2)) return;
         boolean ok = true;

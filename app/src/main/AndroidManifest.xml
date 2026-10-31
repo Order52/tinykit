@@ -30,6 +30,12 @@
     <!-- Offer to send the details of a crash, right when it happens (asked once, only if you agree). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Block new apps' internet the moment they are installed: a quiet foreground service, only while
+         allow list mode or a block list is in use, started again after a restart. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Toggles and tiles keep working with Shizuku off: granted once through Shizuku. -->
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
@@ -152,11 +158,22 @@
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
 
-        <!-- Blocks a newly installed app when the internet firewall is in allow list mode. -->
-        <receiver android:name=".NewAppReceiver" android:exported="false">
+        <!-- Hears about installs so a new app is blocked at once while the internet block needs it
+             (allow list mode, or a block list). Android only tells a running process about installs. -->
+        <service
+            android:name=".NewAppService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Listens for newly installed apps to block their internet access" />
+        </service>
+
+        <!-- Starts that service again after a restart or an update of TinyKit. -->
+        <receiver android:name=".StartReceiver" android:exported="false">
             <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_ADDED" />
-                <data android:scheme="package" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

@@ -28,6 +28,7 @@ returns nothing behind it.
 - [Hidden app-ops](#hidden-app-ops)
 - [Verifying it yourself](#verifying-it-yourself)
 - [Staying Fake](#staying-fake)
+- [Safety guard](#safety-guard)
 - [Undoing changes](#undoing-changes)
 - [Caveats](#caveats)
 - [FAQ](#faq)
@@ -201,7 +202,8 @@ app or Android's Settings changes the permission. We checked on Android 14: afte
 camera, microphone, location and contacts app-ops of a Fake app were back to normal (Real). Off
 (permission revoked) and the hidden app-ops survive a restart; only Fake permissions don't.
 
-So TinyKit remembers every Fake you set (in its private preferences) and checks them:
+So TinyKit remembers every **Real, Fake and Off** choice you make (in its private preferences) and
+keeps each one exactly as you left it, until you change it yourself:
 
 - every time Shizuku starts, which also starts TinyKit's process, **without you opening TinyKit**
   (at most once a minute after that, because tiles start the process too);
@@ -210,9 +212,28 @@ So TinyKit remembers every Fake you set (in its private preferences) and checks 
 - every time you open TinyKit with Shizuku running;
 - when you restore a **TinyKit setup** backup, which includes your Fake permissions.
 
-Anything Android reset is put back, and TinyKit says so (*"Android had reset 3 Fake permissions.
-TinyKit put them back."*). If one can't be put back, it's switched **Off**, never left Real. An
-uninstalled app is forgotten.
+Anything Android changed is put back, and TinyKit says so (*"Android had reset 3 permission choices.
+TinyKit put them back."*). If a Fake can't be put back, it's switched **Off**, never left Real. An
+uninstalled app is forgotten. Real means granted and allowed, Fake granted and ignored, Off revoked
+(or denied, for the app-ops without a permission). Only one thing changes your choices besides you:
+the safety guard below.
+
+## Safety guard
+
+A permission's app-op is set for a whole **user ID**, so on an app that shares its user ID with
+others the change would land on all of them, and on a system app it can stop the camera from opening
+at all. TinyKit therefore:
+
+- **refuses** Fake and Off on an app that shares its user ID with others, on Android's own core
+  apps, and on your phone's camera app (for the camera and microphone), and says why;
+- **checks after every change** that no app you didn't pick was changed with it, and undoes the change
+  if one was;
+- **repairs damage that is already there.** A permission that is granted but ignored is exactly what
+  Fake looks like and Android never produces it on its own, so on apps you didn't make Fake it is put
+  back to normal. This runs each time TinyKit checks (above) and from **Apps → Repair permissions**.
+  A Fake you chose on a safe app is never touched.
+
+Every write is read back: TinyKit only says something was fixed if Android's state really changed.
 
 > [!IMPORTANT]
 > Between a restart and Shizuku starting, Android's reset is in effect and a Fake app sees Real.
@@ -228,6 +249,15 @@ then forgets the Fake). Nothing is patched or replaced.
   even with Shizuku stopped and TinyKit closed. Fake needs TinyKit's check described above.
 - Changes are **lost if the app is uninstalled** (its permissions go with it) and on a factory
   reset. A **TinyKit setup** backup brings the Fake list back.
+- **Apps → Reset permission changes** undoes every Real, Fake and Off choice TinyKit made: Fake and
+  Off permissions become *not allowed* (the app asks again through Android's own dialog), Real ones
+  stay allowed, and anything Fake damaged is repaired. A backup is saved first.
+- **System → Reset everything TinyKit changed** does that and more (internet block, hidden and
+  removed apps, Force dark, HW overlays, sensors off, the Quick toggles that are on), group by group.
+  It can't know what a setting was before TinyKit changed it, so it goes back to Android's default.
+  Android's own switches that look the same as ones you may have set in Settings (background limits,
+  clipboard guard, kept-alive apps) are off by default in that list; developer options, USB
+  debugging, notification channels and special access are never touched.
 - To reset everything for an app by hand, run `appops reset <pkg>`, then grant or revoke
   permissions in Android's Settings app.
 
@@ -244,7 +274,8 @@ then forgets the Fake). Nothing is patched or replaced.
   system permission dialog, has no signal TinyKit can listen for without running all the time, so
   that one is fixed at the next of those moments.
 - **One app-op per UID.** Apps that share a user ID (rare, mostly system apps) share their
-  permission app-ops, so changing one changes them all.
+  permission app-ops, so changing one would change them all. TinyKit refuses Fake and Off for such
+  apps (see [Safety guard](#safety-guard)).
 - **Some permissions can't be granted.** If an app targets an old Android version, or the
   permission doesn't exist on your phone, `pm grant` can fail. The control then shows the real
   state.

@@ -943,6 +943,8 @@ public class MainActivity extends Activity {
         f.add(new Feature("Run a command", "Run a shell command via Shizuku", this::openRunCommand));
         f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
         f.add(new Feature("Settings backup & restore", "Save and restore all settings", this::openBackupRestore));
+        f.add(new Feature("Reset everything TinyKit changed", "Undo all of TinyKit's changes", this::confirmResetEverything));
+        f.add(new Feature("Reset permission changes", "Undo Real, Fake and Off, repair problems", this::confirmResetPermissions));
         f.add(new Feature("Advanced reboot", "Reboot, recovery, bootloader, soft reboot", this::openReboot));
         f.add(new Feature("Speed up phone", "Delete caches and free memory, one tap", () -> selectTab(3)));
         f.add(new Feature("Speed-up widget", "One-tap RAM and cache cleaner", this::addBoostWidget));
@@ -1035,7 +1037,7 @@ public class MainActivity extends Activity {
         section(list, "Networks");
         link(list, "Block internet per app",
                 Build.VERSION.SDK_INT >= 34
-                        ? "Cut chosen apps off Wi-Fi and mobile data. Nothing runs in the background."
+                        ? "Cut chosen apps off Wi-Fi and mobile data. Nothing runs in the background unless you turn that on."
                         : "Needs Android 14 or newer.", this::openFirewall);
         link(list, "Saved Wi-Fi networks",
                 "See saved passwords and share any network with a QR code.", this::openWifi);
@@ -1054,6 +1056,17 @@ public class MainActivity extends Activity {
                 "Set any app's permissions to Real, Fake (looks granted, gets nothing) or Off.",
                 () -> openAppList("App permissions", "Pick an app to change its permissions and app-ops.",
                         this::openAppPage));
+        action(list, "Repair permissions",
+                "If an app you never changed (like the camera) stopped working after using Fake, this puts "
+                        + "its camera, microphone and other permissions back to normal.", () -> {
+                    if (!Shell.ready()) return "Start Shizuku and allow TinyKit first.";
+                    String message = FakePolicy.enforce(this, prefs);
+                    return message == null || message.isEmpty()
+                            ? "Nothing needed repair. Everything TinyKit checks is normal." : message;
+                });
+        link(list, "Reset permission changes",
+                "Undo every Real, Fake and Off choice TinyKit made and fix any problems it caused.",
+                this::confirmResetPermissions);
         link(list, "Default apps", "Set the default launcher, browser, phone and more.", this::openDefaults);
 
         section(list, "Manage");
@@ -1125,6 +1138,9 @@ public class MainActivity extends Activity {
                 this::openRecover);
         link(list, "Settings backup & restore", "Save all system settings to a file and put them back.",
                 this::openBackupRestore);
+        link(list, "Reset everything TinyKit changed",
+                "Undo TinyKit's changes and go back to Android's defaults. Saves a backup first.",
+                this::confirmResetEverything);
         link(list, "Advanced reboot", "Reboot, recovery, bootloader or a soft (userspace) reboot.",
                 this::openReboot);
 
@@ -1310,15 +1326,26 @@ public class MainActivity extends Activity {
         status.setPadding(dp(16), dp(12), dp(16), dp(4));
         list.addView(status);
         list.addView(note("Blocked apps can't use Wi-Fi or mobile data. Android itself enforces it, so "
-                + "TinyKit runs nothing in the background, and it comes back by itself after a restart "
-                + "as soon as Shizuku is running again."));
+                + "TinyKit runs nothing in the background unless you turn on \"Block new apps at once\" below, "
+                + "and the block comes back by itself after a restart as soon as Shizuku is running again."));
         Switch modeSwitch = new Switch(this);
         modeSwitch.setClickable(false);
         modeSwitch.setFocusable(false);
+        Switch watchSwitch = new Switch(this);
+        watchSwitch.setClickable(false);
+        watchSwitch.setFocusable(false);
+        TextView watchStatus = text("", 13, false);
+        watchStatus.setPadding(dp(16), dp(0), dp(16), dp(8));
         View[] choose = new View[1];
         Runnable refresh = () -> {
             boolean allow = FirewallPolicy.allowMode(prefs);
             modeSwitch.setChecked(allow);
+            boolean watch = prefs.getBoolean(NewAppService.PREF, false);
+            watchSwitch.setChecked(watch);
+            watchStatus.setText(NewAppService.isRunning()
+                    ? "Running in the background now. New apps are blocked the moment they are installed."
+                    : watch ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
+                    : "Not running. Apps you install are blocked the next time you open TinyKit.");
             ((TextView) choose[0].getTag()).setText(allow
                     ? "Pick the apps that may use the internet. Everything else is blocked."
                     : "Pick the apps to cut off.");
@@ -1331,7 +1358,7 @@ public class MainActivity extends Activity {
         };
         choose[0] = row(list, "Choose apps", "", arrow(), this::openFirewallApps, true);
         row(list, "Allow list mode", "Block every app except the ones you allow. Apps you install later are "
-                + "blocked the next time TinyKit runs, so open it after installing. Allow Google Play "
+                + "blocked when you next open TinyKit, or at once with \"Block new apps at once\" below. Allow Google Play "
                 + "services if you want push notifications.", modeSwitch, () -> {
                     boolean on = !FirewallPolicy.allowMode(prefs);
                     if (!on) {
@@ -1347,6 +1374,20 @@ public class MainActivity extends Activity {
                             .setNegativeButton("Cancel", null)
                             .show();
                 }, true);
+        row(list, "Block new apps at once", "Keeps TinyKit running in the background, with a small "
+                + "notification, so an app is blocked the moment you install it. Off by default. It uses "
+                + "almost no battery or memory, and TinyKit is asked not to be put to sleep or closed to "
+                + "save battery.", watchSwitch, () -> {
+                    boolean on = !prefs.getBoolean(NewAppService.PREF, false);
+                    watchSwitch.setChecked(on);
+                    worker.execute(() -> {
+                        NewAppService.setEnabled(this, prefs, on);
+                        // The service starts a moment after the request.
+                        android.os.SystemClock.sleep(800);
+                        main.post(refresh);
+                    });
+                }, true);
+        list.addView(watchStatus);
         action(list, "Unblock all apps", "Let every app use the internet again and turn allow list mode off.", () -> {
             prefs.edit().putStringSet(FirewallPolicy.BLOCKED, new HashSet<>())
                     .putBoolean(FirewallPolicy.MODE, false).apply();
@@ -2413,7 +2454,7 @@ public class MainActivity extends Activity {
         return list;
     }
 
-    private static Set<String> packages(String out) {
+    static Set<String> packages(String out) {
         Set<String> set = new HashSet<>();
         for (String line : out.split("\n")) {
             if (PACKAGE.matcher(line.trim()).matches()) set.add(line.trim());
@@ -3288,6 +3329,96 @@ public class MainActivity extends Activity {
 
     // ---- Settings backup & restore --------------------------------------------------------------
 
+    // ---- Reset ----------------------------------------------------------------------------------
+
+    /** Asks what to reset, saves a backup, resets the chosen groups and shows exactly what happened. */
+    private void confirmResetEverything() {
+        if (!Shell.ready()) {
+            toast("Start Shizuku and allow TinyKit first.");
+            return;
+        }
+        String[] names = {
+                "Internet block (allow list mode, blocked and allowed apps, the new-app watcher)",
+                "Permission choices (Fake, Real, Off) and any damage they caused",
+                "Hidden apps and removed system apps (brought back)",
+                "Force dark, HW overlays, sensors off, and the Quick toggles that are on",
+                "Background limits, clipboard guard and kept-alive apps (these are Android's own settings, "
+                        + "so this also clears limits you set in Settings)"};
+        boolean[] on = {true, true, true, true, false};
+        LinearLayout box = vertical();
+        box.setPadding(dp(20), dp(8), dp(20), dp(0));
+        TextView info = text("Puts what TinyKit changed back to Android's defaults. TinyKit can't know what a "
+                + "setting was before it changed it, so this is Android's default, not a custom value you "
+                + "had earlier. A backup is saved to Download/TinyKit first.\n\nNot touched: developer "
+                + "options, USB debugging, screen timeout, notification channels and special access.", 14, false);
+        info.setPadding(0, dp(8), 0, dp(8));
+        box.addView(info);
+        for (int i = 0; i < names.length; i++) {
+            final int index = i;
+            CheckBox cb = new CheckBox(this);
+            cb.setText(names[i]);
+            cb.setChecked(on[i]);
+            cb.setOnCheckedChangeListener((v, checked) -> on[index] = checked);
+            box.addView(cb);
+        }
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(box);
+        new AlertDialog.Builder(this)
+                .setTitle("Reset everything TinyKit changed?")
+                .setView(scroll)
+                .setPositiveButton("Reset", (d, w) -> runReset(on[0], on[1], on[2], on[3], on[4]))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /** The small version for the permissions: Real, Fake and Off choices, and what they broke. */
+    private void confirmResetPermissions() {
+        if (!Shell.ready()) {
+            toast("Start Shizuku and allow TinyKit first.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Reset permission changes?")
+                .setMessage("Fake and Off permissions become not allowed, so Android asks the app again. Real "
+                        + "ones stay allowed. Anything Fake changed on apps you never picked, like the camera, "
+                        + "is repaired. A backup is saved to Download/TinyKit first.")
+                .setPositiveButton("Reset", (d, w) -> runReset(false, true, false, false, false))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void runReset(boolean internet, boolean permissions, boolean apps, boolean switches, boolean limits) {
+        if (!internet && !permissions && !apps && !switches && !limits) {
+            toast("Nothing was picked.");
+            return;
+        }
+        TextView message = text("Saving a backup, then resetting…", 15, false);
+        message.setPadding(dp(24), dp(16), dp(24), dp(8));
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle("Working").setView(message)
+                .setCancelable(false).show();
+        worker.execute(() -> {
+            // The safety net first: if it can't be saved, nothing is changed.
+            String backup = backupSetup();
+            List<String> lines = new ArrayList<>();
+            if (backup.startsWith("Failed")) {
+                lines.add("Nothing was reset because the backup couldn't be saved. " + backup);
+            } else {
+                lines.add(backup);
+                if (permissions) lines.add(Reset.permissions(this, prefs));
+                if (internet) lines.add(Reset.internet(this, prefs));
+                if (apps) lines.add(Reset.apps(this));
+                if (switches) lines.add(Reset.switches(this, prefs));
+                if (limits) lines.add(Reset.limits(this));
+            }
+            String result = String.join("\n\n", lines);
+            main.post(() -> {
+                progress.dismiss();
+                new AlertDialog.Builder(this).setTitle("Reset").setMessage(result)
+                        .setPositiveButton("OK", null).show();
+            });
+        });
+    }
+
     private void openBackupRestore() {
         LinearLayout list = vertical();
         list.addView(note("Backs up global, secure and system settings to Download/TinyKit. Restoring "
@@ -3337,6 +3468,13 @@ public class MainActivity extends Activity {
             if (f.length == 3) out.append("fake\t").append(f[1]).append('\t').append(f[2].isEmpty() ? "-" : f[2])
                     .append('\t').append(f[0]).append('\n');
         }
+        for (String state : new String[]{"Real", "Off"}) {
+            for (String entry : FakePolicy.entries(prefs, state)) {
+                String[] f = entry.split("\\|", -1);
+                if (f.length == 3) out.append(state.toLowerCase(Locale.ROOT)).append('\t').append(f[1]).append('\t')
+                        .append(f[2].isEmpty() ? "-" : f[2]).append('\t').append(f[0]).append('\n');
+            }
+        }
         for (Pkg p : debloatList(true)) out.append("removed\t").append(p.pkg).append('\n');
         String file = BACKUP_DIR + "/setup-" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT)
                 .format(new java.util.Date()) + ".txt";
@@ -3375,6 +3513,7 @@ public class MainActivity extends Activity {
     /** Applies a setup file. Apps that aren't installed any more are skipped. */
     private String restoreSetup(String file) {
         Set<String> blocked = new HashSet<>(), allowed = new HashSet<>(), fakes = new HashSet<>();
+        List<String[]> choices = new ArrayList<>(); // Real and Off: {package, op, permission, state}
         boolean allowMode = false, dark = false, overlays = false;
         StringBuilder script = new StringBuilder();
         int count = 0;
@@ -3403,6 +3542,12 @@ public class MainActivity extends Activity {
                         fakes.add(FakePolicy.key(f[3], f[1], f[2].equals("-") ? "" : f[2]));
                     }
                     break;
+                case "real":
+                case "off":
+                    if (f.length == 4 && f[1].matches("[A-Z_]+") && f[2].matches("-|[A-Za-z0-9_.]+")) {
+                        choices.add(new String[]{f[3], f[1], f[2].equals("-") ? "" : f[2], f[0].equals("real") ? "Real" : "Off"});
+                    }
+                    break;
                 case "alive": script.append("dumpsys deviceidle whitelist +").append(q).append(" >/dev/null; "); break;
                 case "hidden": script.append("pm disable-user --user 0 ").append(q).append(" >/dev/null 2>&1; "); break;
                 case "removed": script.append("pm uninstall -k --user 0 ").append(q).append(" >/dev/null 2>&1; "); break;
@@ -3415,10 +3560,9 @@ public class MainActivity extends Activity {
                 .putBoolean(FirewallPolicy.MODE, allowMode).putBoolean(Restore.PREF_FORCE_DARK, dark)
                 .putBoolean(Restore.PREF_NO_OVERLAYS, overlays).apply();
         if (script.length() > 0) Shell.run(script.toString());
-        if (!fakes.isEmpty()) {
-            Set<String> merged = FakePolicy.all(prefs);
-            merged.addAll(fakes);
-            prefs.edit().putStringSet(FakePolicy.KEY, merged).apply();
+        for (String[] ch : choices) FakePolicy.choose(prefs, ch[0], ch[1], ch[2], ch[3]);
+        if (!fakes.isEmpty() || !choices.isEmpty()) {
+            FakePolicy.addFakes(prefs, fakes);
             FakePolicy.enforce(this, prefs);
         }
         if (dark) Shell.run("setprop debug.hwui.force_dark true");
@@ -4090,8 +4234,8 @@ public class MainActivity extends Activity {
                 render.run();
                 worker.execute(() -> {
                     String err = setOp(pkg, op, permission, target);
-                    // Remembered so Android can't quietly turn it back into Real.
-                    if (err == null) FakePolicy.set(prefs, pkg, op[0], permission ? op[2] : "", target.equals("Fake"));
+                    // Remembered (Real, Fake or Off) so Android can't quietly change it back.
+                    if (err == null) FakePolicy.choose(prefs, pkg, op[0], permission ? op[2] : "", target);
                     String now = readState(pkg, op, permission);
                     main.post(() -> {
                         state[0] = now;
@@ -4139,18 +4283,9 @@ public class MainActivity extends Activity {
     private String setOp(String pkg, String[] op, boolean permission, String target) {
         String q = Shell.quote(pkg);
         if (permission) {
-            String perm = op[2];
-            switch (target) {
-                case "Real":
-                    return error(Shell.run("pm grant " + q + " " + perm + " 2>/dev/null; "
-                            + "appops set --uid " + q + " " + op[0] + " allow"));
-                case "Fake":
-                    return error(Shell.run("pm grant " + q + " " + perm + " 2>/dev/null; "
-                            + "appops set --uid " + q + " " + op[0] + " ignore"));
-                default:
-                    return error(Shell.run("pm revoke " + q + " " + perm + " 2>/dev/null; "
-                            + "appops set --uid " + q + " " + op[0] + " ignore"));
-            }
+            // Guarded: refuses Fake/Off where other apps or the camera would be hit, and undoes a
+            // change that turns out to have touched an app that wasn't picked.
+            return PermGuard.setPermission(this, pkg, op[0], op[2], target);
         }
         String mode = target.equals("Real") ? "allow" : target.equals("Fake") ? "ignore" : "deny";
         return error(Shell.run("appops set " + q + " " + op[0] + " " + mode));

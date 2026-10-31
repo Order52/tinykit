@@ -34,8 +34,10 @@ and more. It uses [Shizuku](https://shizuku.rikka.app/) to get shell-level acces
 rooting your phone.
 
 - **No root.** Everything runs through Shizuku with ADB-level permissions.
-- **Nothing in the background.** No services, no wake-locks. TinyKit only works while it is
-  open, or when you tap one of its tiles or its widget.
+- **Nothing in the background by default.** No services, no wake-locks. TinyKit only works while
+  it is open, or when you tap one of its tiles or its widget. One optional switch (off unless you
+  turn it on) keeps a small service running so a newly installed app is blocked the moment it
+  appears.
 - **No ads, no analytics, no tracking.** It only goes online when you check for updates
   (GitHub, by tap or optionally when TinyKit opens) or open Network info (public IP lookup).
 - **Small.** About 110 KB, with a single dependency (the Shizuku API).
@@ -136,7 +138,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | --- | --- |
 | **Analytics & telemetry** | Turns off Huawei's User Experience Programme, its background diagnostics apps and HiCloud, and limits Google ad personalisation. Your Huawei ID sign-in is never touched. |
 | **All sensors off** | Blocks every sensor, including motion, microphone and camera, for all apps. It works like the hidden *Sensors off* developer tile. |
-| **Block internet per app** | Cuts chosen apps off Wi-Fi and mobile data (Android 14+) with Android's own per-app firewall, or blocks everything except the apps you allow. Nothing runs in the background: the system enforces it, and TinyKit puts it back after a restart as soon as Shizuku is running. |
+| **Block internet per app** | Cuts chosen apps off Wi-Fi and mobile data (Android 14+) with Android's own per-app firewall, or blocks everything except the apps you allow. Nothing runs in the background unless you turn on *Block new apps at once*: the system enforces it, and TinyKit puts it back after a restart as soon as Shizuku is running. |
 | **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
 | **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code. |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |

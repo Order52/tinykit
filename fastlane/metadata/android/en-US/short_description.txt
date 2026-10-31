@@ -1,1 +1,1 @@
-Small, fast system tweaks and tools powered by Shizuku. No root, no background.
+System tweaks powered by Shizuku. No root, no background unless you turn it on.

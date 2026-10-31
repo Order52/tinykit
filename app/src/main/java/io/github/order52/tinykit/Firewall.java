@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
  * Saver and Battery Saver use. TinyKit starts it with app_process as the shell user via Shizuku,
  * sets the rules and exits. Nothing runs afterwards: the kernel enforces them.
  *
- * Args: block UID... | allow UID... | query UID... | sync BLOCK_UID... -- ALLOW_UID...
+ * Args: block UID... | allow UID... | query UID... | off | sync BLOCK_UID... -- ALLOW_UID...
  * (query prints the blocked UIDs; sync does both changes in this one run, which is what keeps
  * switching modes or restoring after a restart to a single start-up of this program)
  */
@@ -36,6 +36,12 @@ public final class Firewall {
                     }
                 }
                 System.out.println(blocked.toString().trim());
+                return;
+            }
+            if (cmd.equals("off")) {
+                // Switches TinyKit's chain off again; the rules were already cleared.
+                cm.getClass().getMethod("setFirewallChainEnabled", int.class, boolean.class).invoke(cm, CHAIN, false);
+                System.out.println("OK");
                 return;
             }
             if (!cmd.equals("block") && !cmd.equals("allow") && !cmd.equals("sync")) {
