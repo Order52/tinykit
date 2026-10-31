@@ -1487,7 +1487,7 @@ public class MainActivity extends Activity {
                                 + TextUtils.join(", ", same)));
                     }
                     return null;
-                });
+                }, null, true);
     }
 
     // ---- Debloater --------------------------------------------------------------------------------
@@ -2364,6 +2364,12 @@ public class MainActivity extends Activity {
     /** As above; {@code eligible}, when given, limits the list to the apps it returns. */
     private void openPicker(String title, String help, boolean checkable, Loader loader, AppChange change,
                             Loader eligible) {
+        openPicker(title, help, checkable, loader, change, eligible, false);
+    }
+
+    /** As above; {@code internetFilter} adds the "Only apps with internet permission" checkbox. */
+    private void openPicker(String title, String help, boolean checkable, Loader loader, AppChange change,
+                            Loader eligible, boolean internetFilter) {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView helpView = text(help, 14, false);
@@ -2376,6 +2382,16 @@ public class MainActivity extends Activity {
         CheckBox system = new CheckBox(this);
         system.setText("Show system apps");
         page.addView(system);
+        CheckBox net = null;
+        final Set<String> withInternet = Collections.synchronizedSet(new HashSet<>());
+        final boolean[] netReady = {false};
+        if (internetFilter) {
+            net = new CheckBox(this);
+            net.setText("Only apps with internet permission");
+            net.setChecked(prefs.getBoolean(PREF_NET_ONLY, true));
+            page.addView(net);
+        }
+        final CheckBox netBox = net;
         final int[] sort = {0};
         TextView loading = text("Loading apps…", 14, false);
         page.addView(loading);
@@ -2399,6 +2415,9 @@ public class MainActivity extends Activity {
             List<App> shown = new ArrayList<>();
             for (App a : all) {
                 if (limited[0] && !only.contains(a.pkg)) continue;
+                // Apps already in the list stay visible so a saved choice never disappears.
+                if (netBox != null && netBox.isChecked() && netReady[0] && !a.checked
+                        && !withInternet.contains(a.pkg)) continue;
                 if ((system.isChecked() || !a.system || a.checked)
                         && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) {
                     shown.add(a);
@@ -2417,6 +2436,20 @@ public class MainActivity extends Activity {
         }
         search.addTextChangedListener(watcher(filter));
         system.setOnCheckedChangeListener((v, checked) -> filter.run());
+        if (netBox != null) {
+            netBox.setOnCheckedChangeListener((v, checked) -> {
+                prefs.edit().putBoolean(PREF_NET_ONLY, checked).apply();
+                filter.run();
+            });
+            worker.execute(() -> {
+                Set<String> found = internetApps();
+                main.post(() -> {
+                    withInternet.addAll(found);
+                    netReady[0] = true;
+                    filter.run();
+                });
+            });
+        }
         listView.setOnItemClickListener((parent, view, position, id) -> {
             App app = adapter.getItem(position);
             boolean on = !app.checked;
@@ -2476,6 +2509,29 @@ public class MainActivity extends Activity {
                 });
             });
         }
+    }
+
+    private static final String PREF_NET_ONLY = "fw_net_only";
+
+    /**
+     * Apps that can reach the network: those that ask for INTERNET, plus any app sharing a user id
+     * with one (the firewall works per user id). Call off the main thread.
+     */
+    private Set<String> internetApps() {
+        PackageManager pm = getPackageManager();
+        Set<Integer> uids = new HashSet<>();
+        for (android.content.pm.PackageInfo info : pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)) {
+            if (info.requestedPermissions == null || info.applicationInfo == null) continue;
+            for (String r : info.requestedPermissions) {
+                if ("android.permission.INTERNET".equals(r)) {
+                    uids.add(info.applicationInfo.uid);
+                    break;
+                }
+            }
+        }
+        Set<String> out = new HashSet<>();
+        for (ApplicationInfo i : pm.getInstalledApplications(0)) if (uids.contains(i.uid)) out.add(i.packageName);
+        return out;
     }
 
     /** Reloads the cached app list, e.g. after installing an app. Call off the main thread. */
