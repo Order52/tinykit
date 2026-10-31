@@ -1,0 +1,1 @@
+Repair permissions and Reset now always turn off every camera, microphone and "Sensors off" block and check it worked. Adds app icon and screenshots for stores.
