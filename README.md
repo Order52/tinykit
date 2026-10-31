@@ -207,6 +207,13 @@ The [feature reference](docs/features.md) lists the exact command behind every t
 
 The [getting started guide](docs/getting-started.md) covers each way to start Shizuku.
 
+### Install with Obtainium
+
+[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="48">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.order52.tinykit%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FOrder52%2Ftinykit%22%2C%22author%22%3A%22Order52%22%2C%22name%22%3A%22TinyKit%22%7D)
+
+Or in Obtainium choose **Add App** and paste `https://github.com/Order52/tinykit`.
+Releases are signed with the same key as the GitHub APK, so Obtainium updates it in place.
+
 ## How it works
 
 Shizuku runs a small process with ADB (`shell` user) privileges, and TinyKit sends commands to
