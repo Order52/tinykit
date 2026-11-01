@@ -40,6 +40,13 @@ public class TrTest {
     }
 
     @Test
+    public void theRestOfABuiltTextIsTranslatedWhenKnown() {
+        load("The app\tLa app\n. In use right now\t. En uso ahora mismo\n");
+        assertEquals("La app. En uso ahora mismo", Tr.t("The app. In use right now"));
+        assertEquals("Other app. En uso ahora mismo", Tr.t("Other app. In use right now"));
+    }
+
+    @Test
     public void aFragmentNeverMatchesInsideAWord() {
         load("Block\tBloquear\n");
         assertEquals("Blocked apps", Tr.t("Blocked apps"));

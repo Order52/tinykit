@@ -4,4 +4,23 @@
     <string name="widget_name">Speed up</string>
     <string name="widget_hint">Tap to speed up</string>
     <string name="widget_description">One tap frees RAM and clears app caches, without opening TinyKit.</string>
+    <string name="tile_shizuku">Shizuku</string>
+    <string name="tile_screenshot">Screenshot</string>
+    <string name="tile_caffeine">Caffeine</string>
+    <string name="tile_developer_options">Developer options</string>
+    <string name="tile_usb_debugging">USB debugging</string>
+    <string name="tile_close_app">Close app</string>
+    <string name="tile_sensors_off">Sensors off</string>
+    <string name="tile_screen_timeout">Screen timeout</string>
+    <string name="tile_grayscale">Grayscale</string>
+    <string name="tile_ad_block_dns">Ad-block DNS</string>
+    <string name="tile_hide_dev_options">Hide dev options</string>
+    <string name="tile_extra_dim">Extra dim</string>
+    <string name="tile_clear_caches">Clear caches</string>
+    <string name="tile_mic_camera_off">Mic &amp; camera off</string>
+    <string name="tile_internet_block">Internet block</string>
+    <string name="tile_hw_overlays_off">HW overlays off</string>
+    <string name="tile_force_dark">Force dark</string>
+    <string name="tile_free_ram">Free RAM</string>
+    <string name="tile_screen_record">Screen record</string>
 </resources>

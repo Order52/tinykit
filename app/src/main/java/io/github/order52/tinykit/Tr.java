@@ -21,7 +21,8 @@ import java.util.Map;
  * text unchanged and costs nothing.
  *
  * A text built from pieces ("Also blocked: " + names) is translated by its known beginning or end,
- * so the fixed part is translated and the variable part is left as it is.
+ * so the fixed part is translated; what is left over is translated the same way if it is known,
+ * otherwise left as it is.
  */
 final class Tr {
     private static volatile Map<String, String> words = Collections.emptyMap();
@@ -83,11 +84,11 @@ final class Tr {
         String hit = map.get(text);
         if (hit != null) return hit;
         for (String k : starts) {
-            if (text.length() > k.length() && text.startsWith(k)) return map.get(k) + text.substring(k.length());
+            if (text.length() > k.length() && text.startsWith(k)) return map.get(k) + t(text.substring(k.length()));
         }
         for (String k : ends) {
             if (text.length() > k.length() && text.endsWith(k)) {
-                return text.substring(0, text.length() - k.length()) + map.get(k);
+                return t(text.substring(0, text.length() - k.length())) + map.get(k);
             }
         }
         return text;

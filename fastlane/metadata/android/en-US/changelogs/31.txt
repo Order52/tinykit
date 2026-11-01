@@ -1,0 +1,1 @@
+Spanish: Quick Settings tile names, the app remover descriptions and more are now translated. Spanish still needs a native speaker to check it.

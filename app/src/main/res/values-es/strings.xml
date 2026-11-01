@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TinyKit</string>
+    <string name="widget_name">Acelerar</string>
+    <string name="widget_hint">Toca para acelerar</string>
+    <string name="widget_description">Un toque libera RAM y borra las cachés de las apps, sin abrir TinyKit.</string>
+    <string name="tile_shizuku">Shizuku</string>
+    <string name="tile_screenshot">Captura de pantalla</string>
+    <string name="tile_caffeine">Cafeína</string>
+    <string name="tile_developer_options">Opciones de desarrollador</string>
+    <string name="tile_usb_debugging">Depuración USB</string>
+    <string name="tile_close_app">Cerrar app</string>
+    <string name="tile_sensors_off">Sensores apagados</string>
+    <string name="tile_screen_timeout">Tiempo de espera de pantalla</string>
+    <string name="tile_grayscale">Escala de grises</string>
+    <string name="tile_ad_block_dns">DNS bloqueador de anuncios</string>
+    <string name="tile_hide_dev_options">Ocultar opciones de desarrollo</string>
+    <string name="tile_extra_dim">Atenuación extra</string>
+    <string name="tile_clear_caches">Borrar cachés</string>
+    <string name="tile_mic_camera_off">Micrófono y cámara apagados</string>
+    <string name="tile_internet_block">Bloqueo de internet</string>
+    <string name="tile_hw_overlays_off">Superposiciones de HW desactivadas</string>
+    <string name="tile_force_dark">Forzar modo oscuro</string>
+    <string name="tile_free_ram">Liberar RAM</string>
+    <string name="tile_screen_record">Grabar pantalla</string>
+</resources>

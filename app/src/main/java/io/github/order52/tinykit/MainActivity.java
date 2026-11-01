@@ -2867,7 +2867,7 @@ public class MainActivity extends Activity {
     private void showUpdate(String version, String download) {
         new AlertDialog.Builder(this)
                 .setTitle(Tr.t("Update available"))
-                .setMessage(Tr.t("TinyKit " + version + " is out (you have " + versionName(getPackageName()) + ")."))
+                .setMessage("TinyKit " + version + Tr.t(" is out (you have ") + versionName(getPackageName()) + ").")
                 .setPositiveButton(Tr.t("Download"), (d, w) -> openUrl(download))
                 .setNegativeButton(Tr.t("Later"), null)
                 .show();
@@ -2906,7 +2906,7 @@ public class MainActivity extends Activity {
                     status.setText(Tr.t("Version " + found + " is available."));
                     new AlertDialog.Builder(this)
                             .setTitle(Tr.t("Update available"))
-                            .setMessage(Tr.t("TinyKit " + found + " is out (you have " + current + ")."))
+                            .setMessage("TinyKit " + found + Tr.t(" is out (you have ") + current + ").")
                             .setPositiveButton(Tr.t("Download"), (d, w) -> openUrl(download))
                             .setNegativeButton(Tr.t("Later"), null)
                             .show();
