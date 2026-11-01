@@ -41,6 +41,11 @@ Poor fits:
    versions you tested on.
 6. Update the docs in `docs/` and the README if behaviour changes.
 
+## Translations
+
+Translations are welcome. The store listing and the docs can be translated today with no code;
+see [Translating TinyKit](translating.md) for the steps and what comes later.
+
 ## Documentation
 
 Docs live in `docs/` as Markdown, written to render on GitHub. Screenshots are in

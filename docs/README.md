@@ -33,6 +33,7 @@
 | 🏗️ **[Architecture](architecture.md)** | Design principles, project layout, the Shizuku shell, threading and memory |
 | 🔨 **[Building](building.md)** | Build, sign and release |
 | 🤝 **[Contributing](contributing.md)** | Bug reports, feature ideas and pull requests |
+| 🌍 **[Translating](translating.md)** | Store listing and docs in your language |
 
 ---
 
