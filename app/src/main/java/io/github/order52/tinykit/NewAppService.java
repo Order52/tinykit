@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.os.Build;
 import android.os.IBinder;
 
 import java.util.concurrent.ExecutorService;
@@ -107,14 +108,19 @@ public final class NewAppService extends Service {
 
     private Notification notification() {
         NotificationManager nm = getSystemService(NotificationManager.class);
-        NotificationChannel channel = new NotificationChannel(CHANNEL, Tr.t("New app blocking"),
-                NotificationManager.IMPORTANCE_MIN);
-        channel.setShowBadge(false);
-        nm.createNotificationChannel(channel);
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channel = new NotificationChannel(CHANNEL, Tr.t("New app blocking"),
+                    NotificationManager.IMPORTANCE_MIN);
+            channel.setShowBadge(false);
+            nm.createNotificationChannel(channel);
+        }
         Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent tap = PendingIntent.getActivity(this, 0, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        return new Notification.Builder(this, CHANNEL)
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
+        if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_MIN);
+        return b
                 .setSmallIcon(android.R.drawable.ic_lock_lock)
                 .setContentTitle(Tr.t("Blocking the internet of new apps"))
                 .setContentText(Tr.t("You can turn this off in TinyKit: Block internet per app."))
