@@ -41,8 +41,11 @@ jobs:
           echo "APK size: $size bytes"
           [ "$size" -lt 400000 ] || { echo "APK grew past 400 KB"; exit 1; }
           $ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)/aapt dump permissions "$apk" | tee permissions.txt
-          # TinyKit asks for no dangerous permission and has no notification permission.
-          ! grep -q "POST_NOTIFICATIONS" permissions.txt
+          # TinyKit asks for no dangerous permission. POST_NOTIFICATIONS is the one runtime permission,
+          # used only for the opt-in crash notification (docs/privacy-and-security.md).
+          for bad in CAMERA RECORD_AUDIO ACCESS_FINE_LOCATION READ_CONTACTS READ_SMS READ_PHONE_STATE; do
+            ! grep -q "android.permission.$bad" permissions.txt
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: tinykit-apk
