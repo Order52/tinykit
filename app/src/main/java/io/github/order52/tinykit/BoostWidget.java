@@ -67,7 +67,7 @@ public class BoostWidget extends AppWidgetProvider {
                 }
                 show(app, status);
                 new Handler(Looper.getMainLooper()).post(
-                        () -> Toast.makeText(app, message, Toast.LENGTH_LONG).show());
+                        () -> Toast.makeText(app, Tr.t(message), Toast.LENGTH_LONG).show());
             } finally {
                 pending.finish();
             }

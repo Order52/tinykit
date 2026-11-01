@@ -9,6 +9,7 @@ public final class TinyKitApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        Tr.init(this);
         // Keeps a crash for the "send this?" offer on the next start; the default handler still runs.
         Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {

@@ -43,8 +43,8 @@ Poor fits:
 
 ## Translations
 
-Translations are welcome. The store listing and the docs can be translated today with no code;
-see [Translating TinyKit](translating.md) for the steps and what comes later.
+Translations are welcome, and a translation is one plain text file for the app plus the store
+listing. See [Translating TinyKit](translating.md) for the steps.
 
 ## Documentation
 

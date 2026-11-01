@@ -320,17 +320,17 @@ public class MainActivity extends Activity {
             return false;
         }
         AlertDialog.Builder dialog = new AlertDialog.Builder(this)
-                .setTitle("TinyKit stopped last time")
-                .setMessage("Do you want to send the details so it can be fixed? This opens a ready-made GitHub "
+                .setTitle(Tr.t("TinyKit stopped last time"))
+                .setMessage(Tr.t("Do you want to send the details so it can be fixed? This opens a ready-made GitHub "
                         + "issue with TinyKit's version, your phone model, your Android version and the error. "
-                        + "You can read and change it first, and nothing is sent until you post it.")
-                .setPositiveButton("Send", (d, w) -> sendReport(report))
-                .setNegativeButton("Not now", (d, w) -> CrashReport.clear(this))
+                        + "You can read and change it first, and nothing is sent until you post it."))
+                .setPositiveButton(Tr.t("Send"), (d, w) -> sendReport(report))
+                .setNegativeButton(Tr.t("Not now"), (d, w) -> CrashReport.clear(this))
                 .setOnCancelListener(d -> CrashReport.clear(this))
                 .setOnDismissListener(d -> next.run());
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            dialog.setNeutralButton("Ask me right away next time", (d, w) -> {
+            dialog.setNeutralButton(Tr.t("Ask me right away next time"), (d, w) -> {
                 CrashReport.clear(this);
                 requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 7);
             });
@@ -349,13 +349,13 @@ public class MainActivity extends Activity {
             startActivity(CrashReport.issue(title, details));
             CrashReport.clear(this);
         } catch (RuntimeException noBrowser) {
-            toast("No browser found to open GitHub.");
+            toast(Tr.t("No browser found to open GitHub."));
         }
     }
 
     /** "Report a problem": the same one-tap issue, for when TinyKit misbehaves without crashing. */
     private void reportProblem() {
-        toast("Preparing the report…");
+        toast(Tr.t("Preparing the report…"));
         worker.execute(() -> {
             String crash = CrashReport.pending(this);
             String details = CrashReport.header(this) + "\nRecent log:\n" + CrashReport.recentLog()
@@ -364,7 +364,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivity(CrashReport.issue("Problem: ", details));
                 } catch (RuntimeException noBrowser) {
-                    toast("No browser found to open GitHub.");
+                    toast(Tr.t("No browser found to open GitHub."));
                 }
             });
         });
@@ -424,9 +424,9 @@ public class MainActivity extends Activity {
 
     private void showNotes(String notes, Runnable next) {
         new AlertDialog.Builder(this)
-                .setTitle("What's new in " + versionName(getPackageName()))
-                .setMessage(notes)
-                .setPositiveButton("OK", null)
+                .setTitle(Tr.t("What's new in " + versionName(getPackageName())))
+                .setMessage(Tr.t(notes))
+                .setPositiveButton(Tr.t("OK"), null)
                 .setOnDismissListener(d -> {
                     if (next != null) next.run();
                 })
@@ -436,13 +436,13 @@ public class MainActivity extends Activity {
     /** First run: asks once whether to check for updates whenever TinyKit opens. */
     private void askUpdateCheck() {
         new AlertDialog.Builder(this)
-                .setTitle("Check for updates?")
-                .setMessage("Do you want TinyKit to check for a new version each time you open it? It asks "
+                .setTitle(Tr.t("Check for updates?"))
+                .setMessage(Tr.t("Do you want TinyKit to check for a new version each time you open it? It asks "
                         + "GitHub at most once an hour and shows a popup if there is one. Nothing else is "
-                        + "sent. You can change this later in the Info tab.")
+                        + "sent. You can change this later in the Info tab."))
                 .setCancelable(false)
-                .setPositiveButton("Turn on", (d, w) -> setUpdateOnStart(true))
-                .setNegativeButton("No thanks", (d, w) -> setUpdateOnStart(false))
+                .setPositiveButton(Tr.t("Turn on"), (d, w) -> setUpdateOnStart(true))
+                .setNegativeButton(Tr.t("No thanks"), (d, w) -> setUpdateOnStart(false))
                 .show();
     }
 
@@ -499,7 +499,7 @@ public class MainActivity extends Activity {
         // A page that shows live numbers refreshes itself when it comes back into view.
         if (page.getTag() instanceof Runnable) ((Runnable) page.getTag()).run();
         if (getActionBar() != null) {
-            getActionBar().setTitle(titles.get(titles.size() - 1));
+            getActionBar().setTitle(Tr.t(titles.get(titles.size() - 1)));
             getActionBar().setDisplayHomeAsUpEnabled(pages.size() > 1);
         }
     }
@@ -563,16 +563,22 @@ public class MainActivity extends Activity {
         boolean running = Shell.running();
         boolean ready = Shell.ready();
         if (!installed) {
-            shizukuText.setText("Shizuku is not installed");
-            shizukuButton.setText("Get Shizuku");
+            shizukuText.setText(Tr.t("Shizuku is not installed"));
+            shizukuButton.setText(Tr.t("Get Shizuku"));
             shizukuButton.setOnClickListener(v -> showInstall());
         } else if (running && !ready) {
-            shizukuText.setText("Shizuku is running. Allow TinyKit to use it.");
-            shizukuButton.setText("Allow");
-            shizukuButton.setOnClickListener(v -> Shizuku.requestPermission(REQUEST_SHIZUKU));
+            shizukuText.setText(Tr.t("Shizuku is running. Allow TinyKit to use it."));
+            shizukuButton.setText(Tr.t("Allow"));
+            shizukuButton.setOnClickListener(v -> {
+                try {
+                    Shizuku.requestPermission(REQUEST_SHIZUKU);
+                } catch (RuntimeException e) {
+                    toast(Tr.t("Shizuku isn't ready yet. Open Shizuku, make sure it is running, then try again."));
+                }
+            });
         } else {
-            shizukuText.setText(running ? "Shizuku is running  ✓" : "Shizuku is not running");
-            shizukuButton.setText("Open Shizuku");
+            shizukuText.setText(Tr.t(running ? "Shizuku is running  ✓" : "Shizuku is not running"));
+            shizukuButton.setText(Tr.t("Open Shizuku"));
             shizukuButton.setOnClickListener(v -> openApp(SHIZUKU_PKG));
         }
         if (starting && running) {
@@ -580,11 +586,11 @@ public class MainActivity extends Activity {
             main.removeCallbacks(startTimeout);
         }
         startButton.setEnabled(installed && !starting && !running);
-        startButton.setText(starting ? "Starting…" : "Start");
+        startButton.setText(Tr.t(starting ? "Starting…" : "Start"));
         stopButton.setEnabled(running);
-        tokenText.setText(token().isEmpty()
+        tokenText.setText(Tr.t(token().isEmpty()
                 ? "Not set. Tap to paste it from Shizuku's settings."
-                : "Set. Start and Stop go straight to Shizuku.");
+                : "Set. Start and Stop go straight to Shizuku."));
         for (View row : shizukuRows) row.setAlpha(ready ? 1f : 0.4f);
         for (View label : shizukuLabels) label.setVisibility(ready ? View.GONE : View.VISIBLE);
         if (ready) {
@@ -597,7 +603,7 @@ public class MainActivity extends Activity {
             // Fake permissions Android reset to Real in the meantime go back to Fake.
             worker.execute(() -> {
                 String fixed = FakePolicy.enforce(this, prefs);
-                if (fixed != null && !fixed.isEmpty()) main.post(() -> toast(fixed));
+                if (fixed != null && !fixed.isEmpty()) main.post(() -> toast(Tr.t(fixed)));
             });
         }
     }
@@ -647,7 +653,7 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
             else startService(intent);
         } catch (RuntimeException e) {
-            toast("Could not reach Termux. Open Termux once, then try again.");
+            toast(Tr.t("Could not reach Termux. Open Termux once, then try again."));
             return;
         }
         starting = true;
@@ -671,10 +677,10 @@ public class MainActivity extends Activity {
     private void openShizukuToStart() {
         Intent launch = getPackageManager().getLaunchIntentForPackage(SHIZUKU_PKG);
         if (launch == null) {
-            toast("Install Shizuku first.");
+            toast(Tr.t("Install Shizuku first."));
             return;
         }
-        toast("Tap Start in Shizuku. TinyKit connects by itself once it's running.");
+        toast(Tr.t("Tap Start in Shizuku. TinyKit connects by itself once it's running."));
         startActivity(launch);
     }
 
@@ -686,28 +692,28 @@ public class MainActivity extends Activity {
         if (!token().isEmpty() && hasStartIntent()) {
             sendBroadcast(new Intent(SHIZUKU_PKG + ".STOP").setPackage(SHIZUKU_PKG)
                     .putExtra("auth", token()));
-            toast("Stopping Shizuku…");
+            toast(Tr.t("Stopping Shizuku…"));
             main.postDelayed(this::refreshShizuku, 1500);
             return;
         }
         if (!Shell.ready()) {
-            toast("Allow TinyKit in Shizuku first, or set the auth token below.");
+            toast(Tr.t("Allow TinyKit in Shizuku first, or set the auth token below."));
             return;
         }
         if (!hasStartIntent()) {
             // The standard Shizuku app has no Watchdog, so ending the server stops it for good.
             worker.execute(() -> Shell.run("pkill -f shizuku_server || killall shizuku_server"));
-            toast("Stopping Shizuku…");
+            toast(Tr.t("Stopping Shizuku…"));
             main.postDelayed(this::refreshShizuku, 1500);
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("Stop Shizuku?")
-                .setMessage("Without the auth token TinyKit ends Shizuku's process. If Shizuku's "
-                        + "Watchdog is on, it will start Shizuku again. Set the auth token to stop it properly.")
-                .setPositiveButton("Stop anyway", (d, w) -> worker.execute(() ->
+                .setTitle(Tr.t("Stop Shizuku?"))
+                .setMessage(Tr.t("Without the auth token TinyKit ends Shizuku's process. If Shizuku's "
+                        + "Watchdog is on, it will start Shizuku again. Set the auth token to stop it properly."))
+                .setPositiveButton(Tr.t("Stop anyway"), (d, w) -> worker.execute(() ->
                         Shell.run("pkill -f shizuku_server || killall shizuku_server")))
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -718,25 +724,25 @@ public class MainActivity extends Activity {
     private void editToken() {
         EditText input = new EditText(this);
         input.setSingleLine(true);
-        input.setText(token());
-        input.setHint("Auth token");
+        input.setText(Tr.t(token()));
+        input.setHint(Tr.t("Auth token"));
         FrameLayout box = new FrameLayout(this);
         box.setPadding(dp(20), dp(8), dp(20), 0);
         box.addView(input);
         new AlertDialog.Builder(this)
-                .setTitle("Shizuku auth token")
-                .setMessage("Copy it from Shizuku: Settings, where the start/stop intent "
-                        + "parameters are listed.")
+                .setTitle(Tr.t("Shizuku auth token"))
+                .setMessage(Tr.t("Copy it from Shizuku: Settings, where the start/stop intent "
+                        + "parameters are listed."))
                 .setView(box)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(Tr.t("Save"), (d, w) -> {
                     prefs.edit().putString("auth", input.getText().toString().trim()).apply();
                     refreshShizuku();
                 })
-                .setNeutralButton("Clear", (d, w) -> {
+                .setNeutralButton(Tr.t("Clear"), (d, w) -> {
                     prefs.edit().remove("auth").apply();
                     refreshShizuku();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -744,7 +750,7 @@ public class MainActivity extends Activity {
         main.removeCallbacks(startTimeout);
         starting = false;
         refreshShizuku();
-        if (!Shell.running() && !TextUtils.isEmpty(message)) toast(message);
+        if (!Shell.running() && !TextUtils.isEmpty(message)) toast(Tr.t(message));
     }
 
     private static String termuxMessage(Bundle result) {
@@ -769,7 +775,7 @@ public class MainActivity extends Activity {
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
             startShizuku();
         } else {
-            toast("Allow \"Run commands in Termux environment\" for TinyKit to start Shizuku.");
+            toast(Tr.t("Allow \"Run commands in Termux environment\" for TinyKit to start Shizuku."));
         }
     }
 
@@ -844,7 +850,7 @@ public class MainActivity extends Activity {
     private View withSearch(View home) {
         LinearLayout outer = vertical();
         EditText search = new EditText(this);
-        search.setHint("Search all settings & tools");
+        search.setHint(Tr.t("Search all settings & tools"));
         search.setSingleLine(true);
         search.setPadding(dp(16), dp(10), dp(16), dp(10));
         outer.addView(search);
@@ -858,8 +864,8 @@ public class MainActivity extends Activity {
 
         List<Feature> all = features();
         Adapter<Feature> adapter = new Adapter<>(false, (f, row) -> {
-            row.first.setText(f.title);
-            row.second.setText(f.summary);
+            row.first.setText(Tr.t(f.title));
+            row.second.setText(Tr.t(f.summary));
         });
         results.setAdapter(adapter);
         results.setOnItemClickListener((parent, view, position, id) -> adapter.getItem(position).open.run());
@@ -979,23 +985,23 @@ public class MainActivity extends Activity {
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("Add the " + label + " tile")
-                .setMessage("Open System > Edit quick panel in TinyKit and add \"" + label + "\", or:\n\n"
+                .setTitle(Tr.t("Add the " + label + " tile"))
+                .setMessage(Tr.t("Open System > Edit quick panel in TinyKit and add \"" + label + "\", or:\n\n"
                         + "1. Pull down the quick panel.\n2. Tap the edit (pencil) button.\n"
-                        + "3. Drag \"" + label + "\" into your tiles.\n\n" + about)
-                .setPositiveButton("OK", null)
+                        + "3. Drag \"" + label + "\" into your tiles.\n\n" + about))
+                .setPositiveButton(Tr.t("OK"), null)
                 .show();
     }
 
     private void showInstall() {
         new AlertDialog.Builder(this)
-                .setTitle("Install")
-                .setItems(new String[]{
+                .setTitle(Tr.t("Install"))
+                .setItems(Tr.all(new String[]{
                         "Shizuku (thedjchi's fork, recommended): its Watchdog restarts Shizuku if Android kills it",
                         "Termux from F-Droid: needed to start Shizuku without a computer",
-                        "Original Shizuku"}, (d, which) -> openUrl(new String[]{
+                        "Original Shizuku"}), (d, which) -> openUrl(new String[]{
                         SHIZUKU_DOWNLOAD, TERMUX_DOWNLOAD, SHIZUKU_ORIGINAL}[which]))
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -1232,9 +1238,9 @@ public class MainActivity extends Activity {
         Runnable showBackground = () -> {
             boolean on = prefs.getBoolean(NewAppService.PREF, false);
             backgroundSwitch.setChecked(on);
-            backgroundStatus.setText(NewAppService.isRunning() ? "Running in the background now."
+            backgroundStatus.setText(Tr.t(NewAppService.isRunning() ? "Running in the background now."
                     : on ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
-                    : "Off. TinyKit never runs by itself.");
+                    : "Off. TinyKit never runs by itself."));
         };
         showBackground.run();
         row(list, "Run in the background", "Off: TinyKit never runs by itself, apart from a short check when "
@@ -1242,7 +1248,7 @@ public class MainActivity extends Activity {
                 + "is blocked the moment it is installed (Block internet per app). TinyKit is also asked not to "
                 + "be put to sleep. It uses almost no battery or memory.", backgroundSwitch, () -> {
                     if (!FirewallPolicy.supported()) {
-                        toast("This is only used by Block internet per app, which needs Android 14 or newer.");
+                        toast(Tr.t("This is only used by Block internet per app, which needs Android 14 or newer."));
                         return;
                     }
                     boolean on = !prefs.getBoolean(NewAppService.PREF, false);
@@ -1352,7 +1358,7 @@ public class MainActivity extends Activity {
 
     private void openFirewall() {
         if (!FirewallPolicy.supported()) {
-            toast("Blocking an app's internet needs Android 14 or newer.");
+            toast(Tr.t("Blocking an app's internet needs Android 14 or newer."));
             return;
         }
         LinearLayout list = vertical();
@@ -1380,19 +1386,19 @@ public class MainActivity extends Activity {
             boolean watch = prefs.getBoolean(NewAppService.PREF, false);
             watchSwitch.setChecked(watch);
             pauseSwitch.setChecked(FirewallPolicy.paused(prefs));
-            watchStatus.setText(NewAppService.isRunning()
+            watchStatus.setText(Tr.t(NewAppService.isRunning()
                     ? "Running in the background now. New apps are blocked the moment they are installed."
                     : watch ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
-                    : "Not running. Apps you install are blocked the next time you open TinyKit.");
-            ((TextView) choose[0].getTag()).setText(allow
+                    : "Not running. Apps you install are blocked the next time you open TinyKit."));
+            ((TextView) choose[0].getTag()).setText(Tr.t(allow
                     ? "Pick the apps that may use the internet. Everything else is blocked."
-                    : "Pick the apps to cut off.");
-            status.setText("…");
+                    : "Pick the apps to cut off."));
+            status.setText(Tr.t("…"));
             worker.execute(() -> {
                 int n = FirewallPolicy.blockedCount(this, prefs);
-                main.post(() -> status.setText(FirewallPolicy.paused(prefs)
+                main.post(() -> status.setText(Tr.t(FirewallPolicy.paused(prefs)
                         ? "Paused. No app is blocked until you resume." : n == 0 ? "No app is blocked."
-                        : n + (n == 1 ? " app is" : " apps are") + " blocked."));
+                        : n + (n == 1 ? " app is" : " apps are") + " blocked.")));
             });
         };
         choose[0] = row(list, "Choose apps", "", arrow(), this::openFirewallApps, true);
@@ -1405,12 +1411,12 @@ public class MainActivity extends Activity {
                         return;
                     }
                     new AlertDialog.Builder(this)
-                            .setTitle("Block everything except allowed apps?")
-                            .setMessage("Every app that isn't on your allow list loses Wi-Fi and mobile data "
+                            .setTitle(Tr.t("Block everything except allowed apps?"))
+                            .setMessage(Tr.t("Every app that isn't on your allow list loses Wi-Fi and mobile data "
                                     + "right away, including system apps like Google Play services. "
-                                    + "Pick the apps to allow next.")
-                            .setPositiveButton("Turn on", (d, w) -> setFirewallMode(true, refresh))
-                            .setNegativeButton("Cancel", null)
+                                    + "Pick the apps to allow next."))
+                            .setPositiveButton(Tr.t("Turn on"), (d, w) -> setFirewallMode(true, refresh))
+                            .setNegativeButton(Tr.t("Cancel"), null)
                             .show();
                 }, true);
         row(list, "Pause blocking", "Let every app use the internet for now and keep your lists. Also on the "
@@ -1421,7 +1427,7 @@ public class MainActivity extends Activity {
                         String error = FirewallPolicy.apply(this, prefs, true);
                         main.post(() -> {
                             refresh.run();
-                            if (error != null) toast(error);
+                            if (error != null) toast(Tr.t(error));
                         });
                     });
                 }, true);
@@ -1458,7 +1464,7 @@ public class MainActivity extends Activity {
             String error = FirewallPolicy.apply(this, prefs, true);
             main.post(() -> {
                 refresh.run();
-                if (error != null) toast(error);
+                if (error != null) toast(Tr.t(error));
             });
         });
     }
@@ -1483,8 +1489,8 @@ public class MainActivity extends Activity {
                     List<String> same = new ArrayList<>();
                     for (String other : FirewallPolicy.sharing(this, pkg)) same.add(label(other));
                     if (!same.isEmpty()) {
-                        main.post(() -> toast("Also " + (on != allow ? "blocked: " : "allowed: ")
-                                + TextUtils.join(", ", same)));
+                        main.post(() -> toast(Tr.t("Also " + (on != allow ? "blocked: " : "allowed: ")
+                                + TextUtils.join(", ", same))));
                     }
                     return null;
                 }, null, true);
@@ -1582,7 +1588,7 @@ public class MainActivity extends Activity {
     private void openDebloat() {
         // Android 7 has no "pm install-existing", so a removed app could not be brought back.
         if (Build.VERSION.SDK_INT < 26) {
-            toast("The Debloater needs Android 8 or newer, so removed apps can be restored.");
+            toast(Tr.t("The Debloater needs Android 8 or newer, so removed apps can be restored."));
             return;
         }
         LinearLayout page = vertical();
@@ -1593,11 +1599,11 @@ public class MainActivity extends Activity {
         help.setAlpha(0.8f);
         page.addView(help);
         EditText search = new EditText(this);
-        search.setHint("Search apps");
+        search.setHint(Tr.t("Search apps"));
         search.setSingleLine(true);
         page.addView(search);
         CheckBox mine = new CheckBox(this);
-        mine.setText("Also show apps I installed");
+        mine.setText(Tr.t("Also show apps I installed"));
         page.addView(mine);
         TextView loading = text("Reading apps…", 14, false);
         page.addView(loading);
@@ -1613,9 +1619,9 @@ public class MainActivity extends Activity {
         final int[] levelFilter = {-1};
         List<Pkg> all = new ArrayList<>();
         Adapter<Pkg> adapter = new Adapter<>(true, (p, row) -> {
-            row.first.setText(p.label);
-            row.second.setText(p.pkg);
-            row.third.setText(Bloat.LEVELS[p.level] + " · " + p.note);
+            row.first.setText(Tr.t(p.label));
+            row.second.setText(Tr.t(p.pkg));
+            row.third.setText(Tr.t(Bloat.LEVELS[p.level] + " · " + p.note));
             row.third.setTextColor(LEVEL_COLORS[p.level]);
             row.check.setChecked(p.checked);
             row.check.setVisibility(p.locked ? View.INVISIBLE : View.VISIBLE);
@@ -1636,13 +1642,13 @@ public class MainActivity extends Activity {
                     : x.label.compareToIgnoreCase(y.label));
             adapter.set(shown);
             go.setVisibility(picked > 0 ? View.VISIBLE : View.GONE);
-            go.setText((removedView[0] ? "Restore " : "Remove ") + picked + (picked == 1 ? " app" : " apps"));
+            go.setText(Tr.t((removedView[0] ? "Restore " : "Remove ") + picked + (picked == 1 ? " app" : " apps")));
         };
         Runnable load = () -> {
             boolean wanted = removedView[0];
             all.clear();
             filter.run();
-            loading.setText("Reading apps…");
+            loading.setText(Tr.t("Reading apps…"));
             loading.setVisibility(View.VISIBLE);
             worker.execute(() -> {
                 List<Pkg> list = debloatList(wanted);
@@ -1650,7 +1656,7 @@ public class MainActivity extends Activity {
                     if (wanted != removedView[0]) return;
                     all.clear();
                     all.addAll(list);
-                    loading.setText("No apps here.");
+                    loading.setText(Tr.t("No apps here."));
                     loading.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
                     filter.run();
                 });
@@ -1673,7 +1679,7 @@ public class MainActivity extends Activity {
         listView.setOnItemClickListener((parent, view, position, id) -> {
             Pkg p = adapter.getItem(position);
             if (p.locked) {
-                toast(p.label + ": " + p.note + ". It can't be removed.");
+                toast(Tr.t(p.label + ": " + p.note + ". It can't be removed."));
                 return;
             }
             p.checked = !p.checked;
@@ -1682,10 +1688,10 @@ public class MainActivity extends Activity {
         listView.setOnItemLongClickListener((parent, view, position, id) -> {
             Pkg p = adapter.getItem(position);
             new AlertDialog.Builder(this)
-                    .setTitle(p.label)
-                    .setMessage(Bloat.LEVELS[p.level] + ": " + Bloat.MEANING[p.level] + "\n\n" + p.note
-                            + "\n\n" + p.pkg + (versionName(p.pkg).isEmpty() ? "" : "\nVersion " + versionName(p.pkg)))
-                    .setPositiveButton("OK", null)
+                    .setTitle(Tr.t(p.label))
+                    .setMessage(Tr.t(Bloat.LEVELS[p.level] + ": " + Bloat.MEANING[p.level] + "\n\n" + p.note
+                            + "\n\n" + p.pkg + (versionName(p.pkg).isEmpty() ? "" : "\nVersion " + versionName(p.pkg))))
+                    .setPositiveButton(Tr.t("OK"), null)
                     .show();
             return true;
         });
@@ -1702,15 +1708,15 @@ public class MainActivity extends Activity {
             for (int i = 0; i < picked.size() && i < 12; i++) names.append("• ").append(picked.get(i).label).append('\n');
             if (picked.size() > 12) names.append("and ").append(picked.size() - 12).append(" more\n");
             new AlertDialog.Builder(this)
-                    .setTitle((restore ? "Restore " : "Remove ") + picked.size() + (picked.size() == 1 ? " app?" : " apps?"))
-                    .setMessage(names + (restore
+                    .setTitle(Tr.t((restore ? "Restore " : "Remove ") + picked.size() + (picked.size() == 1 ? " app?" : " apps?")))
+                    .setMessage(Tr.t(names + (restore
                             ? "\nThey come back as they were."
                             : (picked.size() == 1 ? "\nIt disappears" : "\nThey disappear")
                                     + " for you only and can be restored from Removed."
                                     + (worst >= Bloat.EXPERT ? "\n\nSome of these are marked Expert: other "
-                                    + "apps or features may depend on them." : "")))
-                    .setPositiveButton(restore ? "Restore" : "Remove", (d, w) -> runDebloat(picked, restore, load))
-                    .setNegativeButton("Cancel", null)
+                                    + "apps or features may depend on them." : ""))))
+                    .setPositiveButton(Tr.t(restore ? "Restore" : "Remove"), (d, w) -> runDebloat(picked, restore, load))
+                    .setNegativeButton(Tr.t("Cancel"), null)
                     .show();
         });
         load.run();
@@ -1719,7 +1725,7 @@ public class MainActivity extends Activity {
     private void runDebloat(List<Pkg> picked, boolean restore, Runnable done) {
         TextView message = text((restore ? "Restoring " : "Removing ") + picked.size() + "…", 15, false);
         message.setPadding(dp(24), dp(16), dp(24), dp(8));
-        AlertDialog progress = new AlertDialog.Builder(this).setTitle("Working")
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle(Tr.t("Working"))
                 .setView(message).setCancelable(false).show();
         worker.execute(() -> {
             StringBuilder script = new StringBuilder();
@@ -1761,11 +1767,11 @@ public class MainActivity extends Activity {
                 done.run();
                 String summary = (restore ? "Restored " : "Removed ") + count + (count == 1 ? " app." : " apps.");
                 if (failed.isEmpty() && count > 0) {
-                    toast(summary);
+                    toast(Tr.t(summary));
                 } else {
-                    new AlertDialog.Builder(this).setTitle(summary)
-                            .setMessage(failed.isEmpty() ? "Nothing changed." : TextUtils.join("\n", failed))
-                            .setPositiveButton("OK", null).show();
+                    new AlertDialog.Builder(this).setTitle(Tr.t(summary))
+                            .setMessage(Tr.t(failed.isEmpty() ? "Nothing changed." : TextUtils.join("\n", failed)))
+                            .setPositiveButton(Tr.t("OK"), null).show();
                 }
             });
         });
@@ -1832,7 +1838,7 @@ public class MainActivity extends Activity {
 
     private void openAppLanguage() {
         if (Build.VERSION.SDK_INT < 33) {
-            toast("A language for each app needs Android 13 or newer.");
+            toast(Tr.t("A language for each app needs Android 13 or newer."));
             return;
         }
         openAppList("App language", "Pick an app to give it its own language. It only takes effect for "
@@ -1862,14 +1868,14 @@ public class MainActivity extends Activity {
                 names[i] = (options.get(i)[0].equals(current) ? "●  " : "") + options.get(i)[1];
             }
             main.post(() -> new AlertDialog.Builder(this)
-                    .setTitle(label(pkg))
-                    .setItems(names, (d, which) -> worker.execute(() -> {
+                    .setTitle(Tr.t(label(pkg)))
+                    .setItems(Tr.all(names), (d, which) -> worker.execute(() -> {
                         String tag = options.get(which)[0];
                         String error = error(Shell.run("cmd locale set-app-locales " + Shell.quote(pkg)
                                 + " --user 0" + (tag.isEmpty() ? "" : " --locales " + Shell.quote(tag))));
-                        main.post(() -> toast(error != null ? error : label(pkg) + ": " + options.get(which)[1]));
+                        main.post(() -> toast(Tr.t(error != null ? error : label(pkg) + ": " + options.get(which)[1])));
                     }))
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(Tr.t("Cancel"), null)
                     .show());
         });
     }
@@ -1926,9 +1932,9 @@ public class MainActivity extends Activity {
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
         View view = page;
         Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
-            row.first.setText(a[1]);
-            row.second.setText(a[0]);
-            row.third.setText(a[2]);
+            row.first.setText(Tr.t(a[1]));
+            row.second.setText(Tr.t(a[0]));
+            row.third.setText(Tr.t(a[2]));
             showIcon(row, a[0]);
         });
         listView.setAdapter(adapter);
@@ -1936,7 +1942,7 @@ public class MainActivity extends Activity {
             reloadApps();
             List<String[]> rows = installedByTinyKit();
             main.post(() -> {
-                loading.setText("Nothing yet. Apps you install with TinyKit from now on show up here.");
+                loading.setText(Tr.t("Nothing yet. Apps you install with TinyKit from now on show up here."));
                 loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
                 adapter.set(rows);
             });
@@ -1944,23 +1950,23 @@ public class MainActivity extends Activity {
         listView.setOnItemClickListener((parent, v, position, id) -> {
             String[] a = adapter.getItem(position);
             new AlertDialog.Builder(this)
-                    .setTitle(a[1])
-                    .setMessage(a[2] + "\n\nRemoving it deletes the app and its data. TinyKit keeps no copy "
-                            + "of the file, so an older version can't be put back.")
-                    .setPositiveButton("Open", (d, w) -> openApp(a[0]))
-                    .setNegativeButton("Remove", (d, w) -> new AlertDialog.Builder(this)
-                            .setTitle("Remove " + a[1] + "?")
-                            .setMessage("The app and its data are deleted.")
-                            .setPositiveButton("Remove", (d2, w2) -> worker.execute(() -> {
+                    .setTitle(Tr.t(a[1]))
+                    .setMessage(Tr.t(a[2] + "\n\nRemoving it deletes the app and its data. TinyKit keeps no copy "
+                            + "of the file, so an older version can't be put back."))
+                    .setPositiveButton(Tr.t("Open"), (d, w) -> openApp(a[0]))
+                    .setNegativeButton(Tr.t("Remove"), (d, w) -> new AlertDialog.Builder(this)
+                            .setTitle(Tr.t("Remove " + a[1] + "?"))
+                            .setMessage(Tr.t("The app and its data are deleted."))
+                            .setPositiveButton(Tr.t("Remove"), (d2, w2) -> worker.execute(() -> {
                                 String error = error(Shell.run("pm uninstall " + Shell.quote(a[0])));
                                 main.post(() -> {
-                                    toast(error != null ? error : "Removed.");
+                                    toast(Tr.t(error != null ? error : "Removed."));
                                     load.run();
                                 });
                             }))
-                            .setNegativeButton("Cancel", null)
+                            .setNegativeButton(Tr.t("Cancel"), null)
                             .show())
-                    .setNeutralButton("Close", null)
+                    .setNeutralButton(Tr.t("Close"), null)
                     .show();
         });
         push("Installed with TinyKit", view);
@@ -1991,15 +1997,15 @@ public class MainActivity extends Activity {
         int options = prefs.getInt(ApkInstaller.PREF, 0);
         for (int i = 0; i < checked.length; i++) checked[i] = (options & INSTALL_OPTION_BITS[i]) != 0;
         new AlertDialog.Builder(this)
-                .setTitle("Install options")
-                .setMultiChoiceItems(INSTALL_OPTION_NAMES, checked, (d, which, on) -> checked[which] = on)
-                .setPositiveButton("Save", (d, w) -> {
+                .setTitle(Tr.t("Install options"))
+                .setMultiChoiceItems(Tr.all(INSTALL_OPTION_NAMES), checked, (d, which, on) -> checked[which] = on)
+                .setPositiveButton(Tr.t("Save"), (d, w) -> {
                     int bits = 0;
                     for (int i = 0; i < checked.length; i++) if (checked[i]) bits |= INSTALL_OPTION_BITS[i];
                     prefs.edit().putInt(ApkInstaller.PREF, bits).apply();
-                    if (summary != null) summary.setText(installOptionsSummary());
+                    if (summary != null) summary.setText(Tr.t(installOptionsSummary()));
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -2019,7 +2025,7 @@ public class MainActivity extends Activity {
         help.setAlpha(0.8f);
         page.addView(help);
         CheckBox system = new CheckBox(this);
-        system.setText("Show system apps");
+        system.setText(Tr.t("Show system apps"));
         page.addView(system);
         TextView loading = text("Scanning apps…", 14, false);
         page.addView(loading);
@@ -2031,9 +2037,9 @@ public class MainActivity extends Activity {
         // {package, label, "A, B, C", count, system}
         List<String[]> all = new ArrayList<>();
         Adapter<String[]> adapter = new Adapter<>(false, (t, row) -> {
-            row.first.setText(t[1]);
-            row.second.setText(t[3] + (t[3].equals("1") ? " tracker" : " trackers"));
-            row.third.setText(t[2]);
+            row.first.setText(Tr.t(t[1]));
+            row.second.setText(Tr.t(t[3] + (t[3].equals("1") ? " tracker" : " trackers")));
+            row.third.setText(Tr.t(t[2]));
             showIcon(row, t[0]);
         });
         listView.setAdapter(adapter);
@@ -2041,7 +2047,7 @@ public class MainActivity extends Activity {
             List<String[]> shown = new ArrayList<>();
             for (String[] t : all) if (system.isChecked() || t[4].equals("0")) shown.add(t);
             adapter.set(shown);
-            loading.setText("No trackers found.");
+            loading.setText(Tr.t("No trackers found."));
             loading.setVisibility(shown.isEmpty() ? View.VISIBLE : View.GONE);
         };
         system.setOnCheckedChangeListener((v, on) -> filter.run());
@@ -2078,14 +2084,14 @@ public class MainActivity extends Activity {
         listView.setOnItemClickListener((parent, view, position, id) -> {
             String[] t = adapter.getItem(position);
             AlertDialog.Builder d = new AlertDialog.Builder(this)
-                    .setTitle(t[1])
-                    .setMessage(t[2] + "\n\nThese are declared inside " + t[0] + ". TinyKit can't switch them off "
-                            + "one by one (Android doesn't allow it from the shell).")
-                    .setNegativeButton("Close", null);
+                    .setTitle(Tr.t(t[1]))
+                    .setMessage(Tr.t(t[2] + "\n\nThese are declared inside " + t[0] + ". TinyKit can't switch them off "
+                            + "one by one (Android doesn't allow it from the shell)."))
+                    .setNegativeButton(Tr.t("Close"), null);
             if (FirewallPolicy.supported() && Shell.ready()) {
-                d.setPositiveButton("Block internet", (x, w) -> worker.execute(() -> {
+                d.setPositiveButton(Tr.t("Block internet"), (x, w) -> worker.execute(() -> {
                     String error = FirewallPolicy.choose(this, prefs, t[0], true);
-                    main.post(() -> toast(error != null ? error : t[1] + " is blocked from the internet."));
+                    main.post(() -> toast(Tr.t(error != null ? error : t[1] + " is blocked from the internet.")));
                 }));
             }
             d.show();
@@ -2096,7 +2102,7 @@ public class MainActivity extends Activity {
 
     private void openChannelsApp() {
         if (Build.VERSION.SDK_INT < 26) {
-            toast("Notification channels need Android 8 or newer.");
+            toast(Tr.t("Notification channels need Android 8 or newer."));
             return;
         }
         openAppList("Notification channels", "Pick an app to choose which kinds of notification it may show.",
@@ -2133,8 +2139,8 @@ public class MainActivity extends Activity {
 
         // {id, name, importance}
         Adapter<String[]> adapter = new Adapter<>(true, (ch, row) -> {
-            row.first.setText(ch[1]);
-            row.second.setText(importanceName(Integer.parseInt(ch[2])));
+            row.first.setText(Tr.t(ch[1]));
+            row.second.setText(Tr.t(importanceName(Integer.parseInt(ch[2]))));
             row.check.setChecked(!ch[2].equals("0"));
         });
         listView.setAdapter(adapter);
@@ -2155,8 +2161,8 @@ public class MainActivity extends Activity {
             }
             Collections.sort(rows, (x, y) -> x[1].compareToIgnoreCase(y[1]));
             main.post(() -> {
-                loading.setText(r.ok() ? "This app hasn't created any notification channels yet."
-                        : "Couldn't read them: " + r.out);
+                loading.setText(Tr.t(r.ok() ? "This app hasn't created any notification channels yet."
+                        : "Couldn't read them: " + r.out));
                 loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
                 adapter.set(rows);
             });
@@ -2172,7 +2178,7 @@ public class MainActivity extends Activity {
                 Shell.Result r = Shell.run(channelsCmd(this, "set " + Shell.quote(pkg) + " " + uid + " "
                         + Shell.quote(ch[0]) + " " + target));
                 main.post(() -> {
-                    if (!r.ok()) toast(r.out);
+                    if (!r.ok()) toast(Tr.t(r.out));
                     load.run();
                 });
             });
@@ -2197,21 +2203,21 @@ public class MainActivity extends Activity {
         listView.setFastScrollEnabled(true);
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
         Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
-            row.first.setText(a[1]);
-            row.second.setText(a[2]);
+            row.first.setText(Tr.t(a[1]));
+            row.second.setText(Tr.t(a[2]));
             showIcon(row, a[0]);
         });
         listView.setAdapter(adapter);
         listView.setOnItemClickListener((parent, v, position, id) -> openAppInfo(adapter.getItem(position)[0]));
         final int[] range = {0};
         Runnable load = () -> {
-            loading.setText("Reading usage…");
+            loading.setText(Tr.t("Reading usage…"));
             loading.setVisibility(View.VISIBLE);
             worker.execute(() -> {
                 if (!Tweak.usageAllowed(this)) Tweak.grantSelf(this);
                 if (!Tweak.usageAllowed(this)) {
-                    main.post(() -> loading.setText("TinyKit needs usage access. Start Shizuku once and "
-                            + "reopen this page, or allow it in Settings > Apps > Special access."));
+                    main.post(() -> loading.setText(Tr.t("TinyKit needs usage access. Start Shizuku once and "
+                            + "reopen this page, or allow it in Settings > Apps > Special access.")));
                     return;
                 }
                 Calendar midnight = Calendar.getInstance();
@@ -2227,8 +2233,8 @@ public class MainActivity extends Activity {
                 long[] sum = {0};
                 List<String[]> rows = screenTime(from, to, sum);
                 main.post(() -> {
-                    total.setText(sum[0] == 0 ? "" : "Total on screen: " + duration(sum[0]));
-                    loading.setText("No app use recorded in this time.");
+                    total.setText(Tr.t(sum[0] == 0 ? "" : "Total on screen: " + duration(sum[0])));
+                    loading.setText(Tr.t("No app use recorded in this time."));
                     loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
                     adapter.set(rows);
                 });
@@ -2297,7 +2303,7 @@ public class MainActivity extends Activity {
 
     private void pickApks() {
         if (!Shell.ready()) {
-            toast("Start Shizuku and allow TinyKit first.");
+            toast(Tr.t("Start Shizuku and allow TinyKit first."));
             return;
         }
         Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
@@ -2305,7 +2311,7 @@ public class MainActivity extends Activity {
         try {
             startActivityForResult(pick, REQUEST_PICK_APK);
         } catch (ActivityNotFoundException e) {
-            toast("No file picker found on this phone.");
+            toast(Tr.t("No file picker found on this phone."));
         }
     }
 
@@ -2324,15 +2330,15 @@ public class MainActivity extends Activity {
         if (uris.isEmpty()) return;
         TextView message = text("Reading files…", 15, false);
         message.setPadding(dp(24), dp(16), dp(24), dp(8));
-        AlertDialog progress = new AlertDialog.Builder(this).setTitle("Installing")
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle(Tr.t("Installing"))
                 .setView(message).setCancelable(false).show();
         // Its own thread: an install can take a while and shouldn't hold up the other commands.
         new Thread(() -> {
-            String result = ApkInstaller.install(this, uris, text -> main.post(() -> message.setText(text)));
+            String result = ApkInstaller.install(this, uris, text -> main.post(() -> message.setText(Tr.t(text))));
             main.post(() -> {
                 progress.dismiss();
-                new AlertDialog.Builder(this).setTitle("Install").setMessage(result)
-                        .setPositiveButton("OK", null).show();
+                new AlertDialog.Builder(this).setTitle(Tr.t("Install")).setMessage(Tr.t(result))
+                        .setPositiveButton(Tr.t("OK"), null).show();
             });
             reloadApps();
         }, "install").start();
@@ -2352,7 +2358,7 @@ public class MainActivity extends Activity {
                     if (!r.ok()) return r.out.isEmpty() ? "Could not copy the APK." : r.out;
                     String where = "Download/TinyKit/" + name + (r.out.endsWith("split")
                             ? "/ (split APK: install all files together)" : ".apk");
-                    main.post(() -> toast("Saved to " + where));
+                    main.post(() -> toast(Tr.t("Saved to " + where)));
                     return null;
                 });
     }
@@ -2376,18 +2382,18 @@ public class MainActivity extends Activity {
         helpView.setAlpha(0.8f);
         page.addView(helpView);
         EditText search = new EditText(this);
-        search.setHint("Search apps");
+        search.setHint(Tr.t("Search apps"));
         search.setSingleLine(true);
         page.addView(search);
         CheckBox system = new CheckBox(this);
-        system.setText("Show system apps");
+        system.setText(Tr.t("Show system apps"));
         page.addView(system);
         CheckBox net = null;
         final Set<String> withInternet = Collections.synchronizedSet(new HashSet<>());
         final boolean[] netReady = {false};
         if (internetFilter) {
             net = new CheckBox(this);
-            net.setText("Only apps with internet permission");
+            net.setText(Tr.t("Only apps with internet permission"));
             net.setChecked(prefs.getBoolean(PREF_NET_ONLY, true));
             page.addView(net);
         }
@@ -2404,8 +2410,8 @@ public class MainActivity extends Activity {
         final Set<String> only = Collections.synchronizedSet(new HashSet<>());
         final boolean[] limited = {eligible != null};
         Adapter<App> adapter = new Adapter<>(checkable, (app, row) -> {
-            row.first.setText(app.label);
-            row.second.setText(app.pkg);
+            row.first.setText(Tr.t(app.label));
+            row.second.setText(Tr.t(app.pkg));
             row.check.setChecked(app.checked);
             showIcon(row, app.pkg);
         });
@@ -2457,7 +2463,7 @@ public class MainActivity extends Activity {
                 app.checked = on;
                 adapter.notifyDataSetChanged();
             } else {
-                toast("Saving " + app.label + "…");
+                toast(Tr.t("Saving " + app.label + "…"));
             }
             worker.execute(() -> {
                 String error = change.apply(app.pkg, on);
@@ -2465,7 +2471,7 @@ public class MainActivity extends Activity {
                     if (error != null) {
                         if (checkable) app.checked = !on;
                         adapter.notifyDataSetChanged();
-                        toast(error);
+                        toast(Tr.t(error));
                     }
                 });
             });
@@ -2498,7 +2504,7 @@ public class MainActivity extends Activity {
             });
         }
         if (loader != null) {
-            loading.setText("Reading current state…");
+            loading.setText(Tr.t("Reading current state…"));
             loading.setVisibility(View.VISIBLE);
             worker.execute(() -> {
                 Set<String> checked = loader.load();
@@ -2588,9 +2594,9 @@ public class MainActivity extends Activity {
         push("Running apps", page);
 
         Adapter<Proc> adapter = new Adapter<>(false, (p, row) -> {
-            row.first.setText(p.label);
-            row.second.setText(Formatter.formatShortFileSize(this, p.kb * 1024)
-                    + (p.label.equals(p.name) ? "" : "  ·  " + p.name));
+            row.first.setText(Tr.t(p.label));
+            row.second.setText(Tr.t(Formatter.formatShortFileSize(this, p.kb * 1024)
+                    + (p.label.equals(p.name) ? "" : "  ·  " + p.name)));
             showIcon(row, p.name.split(":")[0]);
         });
         listView.setAdapter(adapter);
@@ -2611,8 +2617,8 @@ public class MainActivity extends Activity {
             ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
             ((ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mem);
             main.post(() -> {
-                summary.setText("Memory: " + Formatter.formatShortFileSize(this, mem.totalMem - mem.availMem)
-                        + " used of " + Formatter.formatShortFileSize(this, mem.totalMem));
+                summary.setText(Tr.t("Memory: " + Formatter.formatShortFileSize(this, mem.totalMem - mem.availMem)
+                        + " used of " + Formatter.formatShortFileSize(this, mem.totalMem)));
                 procs.clear();
                 procs.addAll(found);
                 apply.run();
@@ -2621,20 +2627,20 @@ public class MainActivity extends Activity {
         listView.setOnItemClickListener((parent, view, position, id) -> {
             Proc p = adapter.getItem(position);
             if (p.pkg == null) {
-                toast("This is a system process and can't be stopped.");
+                toast(Tr.t("This is a system process and can't be stopped."));
                 return;
             }
             new AlertDialog.Builder(this)
-                    .setTitle("Stop " + p.label + "?")
-                    .setMessage("It closes now and can start again when you open it or it's needed.")
-                    .setPositiveButton("Stop", (d, w) -> worker.execute(() -> {
+                    .setTitle(Tr.t("Stop " + p.label + "?"))
+                    .setMessage(Tr.t("It closes now and can start again when you open it or it's needed."))
+                    .setPositiveButton(Tr.t("Stop"), (d, w) -> worker.execute(() -> {
                         String error = error(Shell.run("am force-stop " + Shell.quote(p.pkg)));
                         main.post(() -> {
-                            if (error != null) toast(error);
+                            if (error != null) toast(Tr.t(error));
                             load[0].run();
                         });
                     }))
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(Tr.t("Cancel"), null)
                     .show();
         });
         load[0].run();
@@ -2720,7 +2726,7 @@ public class MainActivity extends Activity {
         push(title, page);
         Runnable load = () -> worker.execute(() -> {
             String out = Shell.run(command).out;
-            main.post(() -> log.setText(out.trim().isEmpty() ? empty : out));
+            main.post(() -> log.setText(Tr.t(out.trim().isEmpty() ? empty : out)));
         });
         refresh.setOnClickListener(v -> load.run());
         load.run();
@@ -2860,10 +2866,10 @@ public class MainActivity extends Activity {
 
     private void showUpdate(String version, String download) {
         new AlertDialog.Builder(this)
-                .setTitle("Update available")
-                .setMessage("TinyKit " + version + " is out (you have " + versionName(getPackageName()) + ").")
-                .setPositiveButton("Download", (d, w) -> openUrl(download))
-                .setNegativeButton("Later", null)
+                .setTitle(Tr.t("Update available"))
+                .setMessage(Tr.t("TinyKit " + version + " is out (you have " + versionName(getPackageName()) + ")."))
+                .setPositiveButton(Tr.t("Download"), (d, w) -> openUrl(download))
+                .setNegativeButton(Tr.t("Later"), null)
                 .show();
     }
 
@@ -2875,10 +2881,10 @@ public class MainActivity extends Activity {
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("Add the widget")
-                .setMessage("Touch and hold an empty spot on your home screen, tap Widgets, then drag "
-                        + "TinyKit's \"Speed up\" widget onto the screen.")
-                .setPositiveButton("OK", null)
+                .setTitle(Tr.t("Add the widget"))
+                .setMessage(Tr.t("Touch and hold an empty spot on your home screen, tap Widgets, then drag "
+                        + "TinyKit's \"Speed up\" widget onto the screen."))
+                .setPositiveButton(Tr.t("OK"), null)
                 .show();
     }
 
@@ -2886,7 +2892,7 @@ public class MainActivity extends Activity {
         TextView status = (TextView) row.getTag();
         if (!row.isEnabled()) return;
         row.setEnabled(false);
-        status.setText("Checking…");
+        status.setText(Tr.t("Checking…"));
         worker.execute(() -> {
             String[] latest = latestRelease();
             String current = versionName(getPackageName());
@@ -2895,17 +2901,17 @@ public class MainActivity extends Activity {
             main.post(() -> {
                 row.setEnabled(true);
                 if (found == null) {
-                    status.setText("Couldn't reach GitHub. Check your internet and try again.");
+                    status.setText(Tr.t("Couldn't reach GitHub. Check your internet and try again."));
                 } else if (compareVersions(found, current) > 0) {
-                    status.setText("Version " + found + " is available.");
+                    status.setText(Tr.t("Version " + found + " is available."));
                     new AlertDialog.Builder(this)
-                            .setTitle("Update available")
-                            .setMessage("TinyKit " + found + " is out (you have " + current + ").")
-                            .setPositiveButton("Download", (d, w) -> openUrl(download))
-                            .setNegativeButton("Later", null)
+                            .setTitle(Tr.t("Update available"))
+                            .setMessage(Tr.t("TinyKit " + found + " is out (you have " + current + ")."))
+                            .setPositiveButton(Tr.t("Download"), (d, w) -> openUrl(download))
+                            .setNegativeButton(Tr.t("Later"), null)
                             .show();
                 } else {
-                    status.setText("You have the latest version (" + current + ").");
+                    status.setText(Tr.t("You have the latest version (" + current + ")."));
                 }
             });
         });
@@ -2931,11 +2937,11 @@ public class MainActivity extends Activity {
 
     private void showAbout() {
         new AlertDialog.Builder(this)
-                .setTitle(getString(R.string.app_name) + " " + versionName(getPackageName()))
-                .setMessage("Made by Ali Alakbar\n\nSmall Android tweaks powered by Shizuku. "
-                        + "Free and open source (MIT).\n\n" + REPO)
-                .setPositiveButton("GitHub", (d, w) -> openUrl(REPO))
-                .setNegativeButton("Close", null)
+                .setTitle(Tr.t(getString(R.string.app_name) + " " + versionName(getPackageName())))
+                .setMessage(Tr.t("Made by Ali Alakbar\n\nSmall Android tweaks powered by Shizuku. "
+                        + "Free and open source (MIT).\n\n" + REPO))
+                .setPositiveButton(Tr.t("GitHub"), (d, w) -> openUrl(REPO))
+                .setNegativeButton(Tr.t("Close"), null)
                 .show();
     }
 
@@ -2962,9 +2968,9 @@ public class MainActivity extends Activity {
         Runnable load = () -> worker.execute(() -> {
             String out = Shell.run("logcat -b crash -d -v time -t 500 | grep -v '^--------- beginning'").out;
             main.post(() -> {
-                log.setText(out.isEmpty()
+                log.setText(Tr.t(out.isEmpty()
                         ? "No crashes recorded since the phone started.\n\nAndroid clears this log on restart."
-                        : out);
+                        : out));
                 scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
             });
         });
@@ -3022,7 +3028,7 @@ public class MainActivity extends Activity {
         page.setPadding(dp(16), dp(12), dp(16), 0);
         page.addView(note("Runs as the shell (adb) user through Shizuku. Output and exit code show below."));
         EditText input = new EditText(this);
-        input.setHint("e.g. getprop ro.product.model");
+        input.setHint(Tr.t("e.g. getprop ro.product.model"));
         input.setSingleLine(false);
         input.setTypeface(Typeface.MONOSPACE);
         page.addView(input);
@@ -3042,14 +3048,14 @@ public class MainActivity extends Activity {
             String cmd = input.getText().toString().trim();
             if (cmd.isEmpty()) return;
             if (!Shell.ready()) {
-                toast("Start Shizuku and allow TinyKit first.");
+                toast(Tr.t("Start Shizuku and allow TinyKit first."));
                 return;
             }
-            output.setText("Running…");
+            output.setText(Tr.t("Running…"));
             worker.execute(() -> {
                 Shell.Result r = Shell.run(cmd);
-                main.post(() -> output.setText((r.out.isEmpty() ? "(no output)" : r.out)
-                        + "\n\n[exit " + r.code + "]"));
+                main.post(() -> output.setText(Tr.t((r.out.isEmpty() ? "(no output)" : r.out)
+                        + "\n\n[exit " + r.code + "]")));
             });
         });
     }
@@ -3092,10 +3098,10 @@ public class MainActivity extends Activity {
         listView.setOnItemClickListener((parent, view, position, id) -> {
             Deleted item = adapter.getItem(position);
             new AlertDialog.Builder(this)
-                    .setTitle("Restore this file?")
-                    .setMessage(item.name + "\n\nCopied to Download/TinyKit/Recovered. The original stays in the bin.")
-                    .setPositiveButton("Restore", (d, w) -> restoreFile(item))
-                    .setNegativeButton("Cancel", null)
+                    .setTitle(Tr.t("Restore this file?"))
+                    .setMessage(Tr.t(item.name + "\n\nCopied to Download/TinyKit/Recovered. The original stays in the bin."))
+                    .setPositiveButton(Tr.t("Restore"), (d, w) -> restoreFile(item))
+                    .setNegativeButton(Tr.t("Cancel"), null)
                     .show();
         });
         final List<Deleted> items = new ArrayList<>();
@@ -3114,7 +3120,7 @@ public class MainActivity extends Activity {
             List<Deleted> found = scanRecoverable();
             main.post(() -> {
                 loading.setVisibility(found.isEmpty() ? View.VISIBLE : View.GONE);
-                if (found.isEmpty()) loading.setText("Nothing found in any recycle bin or trash.");
+                if (found.isEmpty()) loading.setText(Tr.t("Nothing found in any recycle bin or trash."));
                 items.clear();
                 items.addAll(found);
                 apply.run();
@@ -3243,8 +3249,8 @@ public class MainActivity extends Activity {
                 sub = (TextView) tag[2];
             }
             Deleted d = items.get(position);
-            name.setText(d.name);
-            sub.setText(d.source + "  ·  " + d.sizeText + (d.date.isEmpty() ? "" : "  ·  " + d.date));
+            name.setText(Tr.t(d.name));
+            sub.setText(Tr.t(d.source + "  ·  " + d.sizeText + (d.date.isEmpty() ? "" : "  ·  " + d.date)));
             icon.setTag(d.path);
             Bitmap cached = thumbCache.get(d.path);
             if (cached != null) {
@@ -3328,7 +3334,7 @@ public class MainActivity extends Activity {
     }
 
     private void restoreFile(Deleted item) {
-        toast("Restoring " + item.name + "…");
+        toast(Tr.t("Restoring " + item.name + "…"));
         worker.execute(() -> {
             String dest = RECOVER_DIR + "/" + fileName(item.name);
             Shell.Result r = Shell.run("mkdir -p " + RECOVER_DIR + "; cp " + Shell.quote(item.path)
@@ -3336,9 +3342,9 @@ public class MainActivity extends Activity {
             main.post(() -> {
                 if (r.ok()) {
                     MediaScannerConnection.scanFile(this, new String[]{dest}, null, null);
-                    toast("Restored to Download/TinyKit/Recovered");
+                    toast(Tr.t("Restored to Download/TinyKit/Recovered"));
                 } else {
-                    toast(r.out.isEmpty() ? "Couldn't restore it." : r.out);
+                    toast(Tr.t(r.out.isEmpty() ? "Couldn't restore it." : r.out));
                 }
             });
         });
@@ -3353,7 +3359,7 @@ public class MainActivity extends Activity {
         TextView sub = (TextView) row.getTag();
         worker.execute(() -> {
             String label = animLabel(animScale());
-            main.post(() -> sub.setText(label));
+            main.post(() -> sub.setText(Tr.t(label)));
         });
     }
 
@@ -3381,8 +3387,8 @@ public class MainActivity extends Activity {
             }
             int finalSel = selected;
             main.post(() -> new AlertDialog.Builder(this)
-                    .setTitle("Animation speed")
-                    .setSingleChoiceItems(ANIM_LABELS, finalSel, (d, which) -> {
+                    .setTitle(Tr.t("Animation speed"))
+                    .setSingleChoiceItems(Tr.all(ANIM_LABELS), finalSel, (d, which) -> {
                         d.dismiss();
                         float s = ANIM_SCALES[which];
                         worker.execute(() -> {
@@ -3390,12 +3396,12 @@ public class MainActivity extends Activity {
                                     + "; settings put global transition_animation_scale " + s
                                     + "; settings put global animator_duration_scale " + s));
                             main.post(() -> {
-                                if (err != null) toast(err);
+                                if (err != null) toast(Tr.t(err));
                                 refreshAnimationSpeed(row);
                             });
                         });
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(Tr.t("Cancel"), null)
                     .show());
         });
     }
@@ -3409,9 +3415,9 @@ public class MainActivity extends Activity {
         String[] notes = {"", "", "",
                 "Restarts Android without a full reboot. Needs Android 11+; otherwise it reboots normally."};
         new AlertDialog.Builder(this)
-                .setTitle("Advanced reboot")
-                .setItems(labels, (d, which) -> confirmReboot(labels[which], cmds[which], notes[which]))
-                .setNegativeButton("Cancel", null)
+                .setTitle(Tr.t("Advanced reboot"))
+                .setItems(Tr.all(labels), (d, which) -> confirmReboot(labels[which], cmds[which], notes[which]))
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -3420,18 +3426,18 @@ public class MainActivity extends Activity {
                 ? "The phone will restart into that mode now."
                 : "The phone will restart now.") + (note.isEmpty() ? "" : "\n\n" + note);
         new AlertDialog.Builder(this)
-                .setTitle(label + "?")
-                .setMessage(message)
-                .setPositiveButton(label, (d, w) -> {
-                    toast(label + "…");
+                .setTitle(Tr.t(label + "?"))
+                .setMessage(Tr.t(message))
+                .setPositiveButton(Tr.t(label), (d, w) -> {
+                    toast(Tr.t(label + "…"));
                     worker.execute(() -> {
                         Shell.Result r = Shell.run(cmd);
                         if (!r.ok()) {
-                            main.post(() -> toast("Couldn't do that. " + (r.out.isEmpty() ? "" : r.out)));
+                            main.post(() -> toast(Tr.t("Couldn't do that. " + (r.out.isEmpty() ? "" : r.out))));
                         }
                     });
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -3442,7 +3448,7 @@ public class MainActivity extends Activity {
     /** Asks what to reset, saves a backup, resets the chosen groups and shows exactly what happened. */
     private void confirmResetEverything() {
         if (!Shell.ready()) {
-            toast("Start Shizuku and allow TinyKit first.");
+            toast(Tr.t("Start Shizuku and allow TinyKit first."));
             return;
         }
         String[] names = {
@@ -3464,7 +3470,7 @@ public class MainActivity extends Activity {
         for (int i = 0; i < names.length; i++) {
             final int index = i;
             CheckBox cb = new CheckBox(this);
-            cb.setText(names[i]);
+            cb.setText(Tr.t(names[i]));
             cb.setChecked(on[i]);
             cb.setOnCheckedChangeListener((v, checked) -> on[index] = checked);
             box.addView(cb);
@@ -3472,37 +3478,37 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.addView(box);
         new AlertDialog.Builder(this)
-                .setTitle("Reset everything TinyKit changed?")
+                .setTitle(Tr.t("Reset everything TinyKit changed?"))
                 .setView(scroll)
-                .setPositiveButton("Reset", (d, w) -> runReset(on[0], on[1], on[2], on[3], on[4]))
-                .setNegativeButton("Cancel", null)
+                .setPositiveButton(Tr.t("Reset"), (d, w) -> runReset(on[0], on[1], on[2], on[3], on[4]))
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
     /** The small version for the permissions: Real, Fake and Off choices, and what they broke. */
     private void confirmResetPermissions() {
         if (!Shell.ready()) {
-            toast("Start Shizuku and allow TinyKit first.");
+            toast(Tr.t("Start Shizuku and allow TinyKit first."));
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("Reset permission changes?")
-                .setMessage("Fake and Off permissions become not allowed, so Android asks the app again. Real "
+                .setTitle(Tr.t("Reset permission changes?"))
+                .setMessage(Tr.t("Fake and Off permissions become not allowed, so Android asks the app again. Real "
                         + "ones stay allowed. Anything Fake changed on apps you never picked, like the camera, "
-                        + "is repaired. A backup is saved to Download/TinyKit first.")
-                .setPositiveButton("Reset", (d, w) -> runReset(false, true, false, false, false))
-                .setNegativeButton("Cancel", null)
+                        + "is repaired. A backup is saved to Download/TinyKit first."))
+                .setPositiveButton(Tr.t("Reset"), (d, w) -> runReset(false, true, false, false, false))
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
     private void runReset(boolean internet, boolean permissions, boolean apps, boolean switches, boolean limits) {
         if (!internet && !permissions && !apps && !switches && !limits) {
-            toast("Nothing was picked.");
+            toast(Tr.t("Nothing was picked."));
             return;
         }
         TextView message = text("Saving a backup, then resetting…", 15, false);
         message.setPadding(dp(24), dp(16), dp(24), dp(8));
-        AlertDialog progress = new AlertDialog.Builder(this).setTitle("Working").setView(message)
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle(Tr.t("Working")).setView(message)
                 .setCancelable(false).show();
         worker.execute(() -> {
             // The safety net first: if it can't be saved, nothing is changed.
@@ -3521,8 +3527,8 @@ public class MainActivity extends Activity {
             String result = String.join("\n\n", lines);
             main.post(() -> {
                 progress.dismiss();
-                new AlertDialog.Builder(this).setTitle("Reset").setMessage(result)
-                        .setPositiveButton("OK", null).show();
+                new AlertDialog.Builder(this).setTitle(Tr.t("Reset")).setMessage(Tr.t(result))
+                        .setPositiveButton(Tr.t("OK"), null).show();
             });
         });
     }
@@ -3600,19 +3606,19 @@ public class MainActivity extends Activity {
             }
             main.post(() -> {
                 if (files.isEmpty()) {
-                    toast("No setup backups yet. Back up first.");
+                    toast(Tr.t("No setup backups yet. Back up first."));
                     return;
                 }
                 String[] names = new String[files.size()];
                 for (int i = 0; i < names.length; i++) names[i] = files.get(i).substring(files.get(i).lastIndexOf('/') + 1);
                 new AlertDialog.Builder(this)
-                        .setTitle("Restore which setup?")
-                        .setItems(names, (d, which) -> worker.execute(() -> {
+                        .setTitle(Tr.t("Restore which setup?"))
+                        .setItems(Tr.all(names), (d, which) -> worker.execute(() -> {
                             String result = restoreSetup(files.get(which));
-                            main.post(() -> new AlertDialog.Builder(this).setTitle("Restore")
-                                    .setMessage(result).setPositiveButton("OK", null).show());
+                            main.post(() -> new AlertDialog.Builder(this).setTitle(Tr.t("Restore"))
+                                    .setMessage(Tr.t(result)).setPositiveButton(Tr.t("OK"), null).show());
                         }))
-                        .setNegativeButton("Cancel", null)
+                        .setNegativeButton(Tr.t("Cancel"), null)
                         .show();
             });
         });
@@ -3687,7 +3693,7 @@ public class MainActivity extends Activity {
             for (String line : out.split("\n")) if (!line.trim().isEmpty()) files.add(line.trim());
             main.post(() -> {
                 if (files.isEmpty()) {
-                    toast("No backups yet. Back up first.");
+                    toast(Tr.t("No backups yet. Back up first."));
                     return;
                 }
                 String[] names = new String[files.size()];
@@ -3695,9 +3701,9 @@ public class MainActivity extends Activity {
                     names[i] = files.get(i).substring(files.get(i).lastIndexOf('/') + 1);
                 }
                 new AlertDialog.Builder(this)
-                        .setTitle("Restore which backup?")
-                        .setItems(names, (d, which) -> confirmRestore(files.get(which)))
-                        .setNegativeButton("Cancel", null)
+                        .setTitle(Tr.t("Restore which backup?"))
+                        .setItems(Tr.all(names), (d, which) -> confirmRestore(files.get(which)))
+                        .setNegativeButton(Tr.t("Cancel"), null)
                         .show();
             });
         });
@@ -3705,16 +3711,16 @@ public class MainActivity extends Activity {
 
     private void confirmRestore(String file) {
         new AlertDialog.Builder(this)
-                .setTitle("Restore settings?")
-                .setMessage("This writes the saved settings back. Read-only keys are skipped. "
-                        + "Some changes may need a restart.")
-                .setPositiveButton("Restore", (d, w) -> worker.execute(() -> {
+                .setTitle(Tr.t("Restore settings?"))
+                .setMessage(Tr.t("This writes the saved settings back. Read-only keys are skipped. "
+                        + "Some changes may need a restart."))
+                .setPositiveButton(Tr.t("Restore"), (d, w) -> worker.execute(() -> {
                     Shell.Result r = Shell.run("while read t rest; do key=${rest%%=*}; val=${rest#*=}; "
                             + "[ -n \"$key\" ] && settings put $t \"$key\" \"$val\" 2>/dev/null; done < "
                             + Shell.quote(file) + "; echo done");
-                    main.post(() -> toast(r.ok() ? "Settings restored." : "Failed: " + r.out));
+                    main.post(() -> toast(Tr.t(r.ok() ? "Settings restored." : "Failed: " + r.out)));
                 }))
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -3791,14 +3797,14 @@ public class MainActivity extends Activity {
         TextView publicIp = addKv(page, "Public IP", "Checking…");
         boolean online = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         if (!online) {
-            publicIp.setText("Offline");
+            publicIp.setText(Tr.t("Offline"));
         } else {
             worker.execute(() -> {
                 String pub = httpGet("https://api.ipify.org", 3000);
                 if (pub == null) pub = httpGet("https://ifconfig.me/ip", 3000);
                 String result = pub != null && pub.length() <= 45 && pub.matches("[0-9a-fA-F:.]+")
                         ? pub : "Couldn't reach the internet";
-                main.post(() -> publicIp.setText(result));
+                main.post(() -> publicIp.setText(Tr.t(result)));
             });
         }
     }
@@ -4122,8 +4128,8 @@ public class MainActivity extends Activity {
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
         push(title, page);
         Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
-            row.first.setText(a[0]);
-            row.second.setText(a[1]);
+            row.first.setText(Tr.t(a[0]));
+            row.second.setText(Tr.t(a[1]));
             if (a.length > 2 && a[2] != null && a[2].contains(".")) showIcon(row, a[2]);
         });
         listView.setAdapter(adapter);
@@ -4151,7 +4157,7 @@ public class MainActivity extends Activity {
             final List<String[]> shownRows = rows;
             main.post(() -> {
                 loading.setVisibility(shownRows.isEmpty() ? View.VISIBLE : View.GONE);
-                if (shownRows.isEmpty()) loading.setText(empty);
+                if (shownRows.isEmpty()) loading.setText(Tr.t(empty));
                 original.clear();
                 original.addAll(shownRows);
                 apply.run();
@@ -4207,11 +4213,11 @@ public class MainActivity extends Activity {
         helpView.setAlpha(0.8f);
         page.addView(helpView);
         EditText search = new EditText(this);
-        search.setHint("Search apps");
+        search.setHint(Tr.t("Search apps"));
         search.setSingleLine(true);
         page.addView(search);
         CheckBox system = new CheckBox(this);
-        system.setText("Show system apps");
+        system.setText(Tr.t("Show system apps"));
         page.addView(system);
         final int[] sort = {0};
         TextView loading = text("Loading apps…", 14, false);
@@ -4223,8 +4229,8 @@ public class MainActivity extends Activity {
 
         List<App> all = new ArrayList<>();
         Adapter<App> adapter = new Adapter<>(false, (app, row) -> {
-            row.first.setText(app.label);
-            row.second.setText(app.pkg);
+            row.first.setText(Tr.t(app.label));
+            row.second.setText(Tr.t(app.pkg));
             showIcon(row, app.pkg);
         });
         listView.setAdapter(adapter);
@@ -4343,7 +4349,7 @@ public class MainActivity extends Activity {
             pill.setPadding(0, dp(9), 0, dp(9));
             pill.setOnClickListener(v -> {
                 if (!Shell.ready()) {
-                    toast("Start Shizuku and allow TinyKit first.");
+                    toast(Tr.t("Start Shizuku and allow TinyKit first."));
                     return;
                 }
                 if (target.equals(state[0])) return;
@@ -4357,7 +4363,7 @@ public class MainActivity extends Activity {
                     main.post(() -> {
                         state[0] = now;
                         render.run();
-                        if (err != null) toast(err);
+                        if (err != null) toast(Tr.t(err));
                     });
                 });
             });
@@ -4528,7 +4534,7 @@ public class MainActivity extends Activity {
                                     String err = error(Shell.run("cmd role add-role-holder "
                                             + role[0] + " " + Shell.quote(pkg)));
                                     main.post(() -> {
-                                        if (err != null) toast(err);
+                                        if (err != null) toast(Tr.t(err));
                                         refreshRole(role, holder[0]);
                                     });
                                 });
@@ -4563,9 +4569,9 @@ public class MainActivity extends Activity {
                             + "TinyKit shows the current default above.");
                 }
                 new AlertDialog.Builder(this)
-                        .setTitle(type[0])
-                        .setMessage(msg.toString())
-                        .setPositiveButton("OK", null)
+                        .setTitle(Tr.t(type[0]))
+                        .setMessage(Tr.t(msg.toString()))
+                        .setPositiveButton(Tr.t("OK"), null)
                         .show();
             });
         });
@@ -4600,7 +4606,7 @@ public class MainActivity extends Activity {
             } else {
                 text = label(pkg);
             }
-            main.post(() -> sub.setText(text));
+            main.post(() -> sub.setText(Tr.t(text)));
         });
     }
 
@@ -4615,7 +4621,7 @@ public class MainActivity extends Activity {
             Matcher m = PACKAGE.matcher(out);
             String holder = m.find() ? m.group() : null;
             String text = holder == null ? "None set" : label(holder);
-            main.post(() -> sub.setText(text));
+            main.post(() -> sub.setText(Tr.t(text)));
         });
     }
 
@@ -4632,8 +4638,8 @@ public class MainActivity extends Activity {
         push("Unused apps", page);
 
         Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
-            row.first.setText(a[1]);
-            row.second.setText(a[2]);
+            row.first.setText(Tr.t(a[1]));
+            row.second.setText(Tr.t(a[2]));
             showIcon(row, a[0]);
         });
         listView.setAdapter(adapter);
@@ -4665,7 +4671,7 @@ public class MainActivity extends Activity {
             }
             main.post(() -> {
                 loading.setVisibility(found.isEmpty() ? View.VISIBLE : View.GONE);
-                if (found.isEmpty()) loading.setText("Couldn't read usage. Start Shizuku so TinyKit can turn it on.");
+                if (found.isEmpty()) loading.setText(Tr.t("Couldn't read usage. Start Shizuku so TinyKit can turn it on."));
                 rows.clear();
                 rows.addAll(found);
                 apply.run();
@@ -4710,7 +4716,7 @@ public class MainActivity extends Activity {
     @android.annotation.TargetApi(26) // guarded below: StorageStatsManager is Android 8+
     private void openStorage() {
         if (Build.VERSION.SDK_INT < 26) {
-            toast("Storage by app needs Android 8 or newer.");
+            toast(Tr.t("Storage by app needs Android 8 or newer."));
             return;
         }
         LinearLayout page = vertical();
@@ -4722,8 +4728,8 @@ public class MainActivity extends Activity {
         push("Storage by app", page);
 
         Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
-            row.first.setText(a[1]);
-            row.second.setText(a[2]);
+            row.first.setText(Tr.t(a[1]));
+            row.second.setText(Tr.t(a[2]));
             showIcon(row, a[0]);
         });
         listView.setAdapter(adapter);
@@ -4760,9 +4766,9 @@ public class MainActivity extends Activity {
             }
             long used = total;
             main.post(() -> {
-                summary.setText(found.isEmpty()
+                summary.setText(Tr.t(found.isEmpty()
                         ? "Couldn't measure storage. Start Shizuku so TinyKit can turn usage access on."
-                        : "Apps use " + Formatter.formatShortFileSize(this, used) + " in total");
+                        : "Apps use " + Formatter.formatShortFileSize(this, used) + " in total"));
                 rows.clear();
                 rows.addAll(found);
                 apply.run();
@@ -4783,8 +4789,8 @@ public class MainActivity extends Activity {
         push("Recent access", page);
 
         Adapter<String[]> adapter = new Adapter<>(false, (a, row) -> {
-            row.first.setText(a[0]);
-            row.second.setText(a[1] + "  ·  " + a[2]);
+            row.first.setText(Tr.t(a[0]));
+            row.second.setText(Tr.t(a[1] + "  ·  " + a[2]));
             showIcon(row, a[3]);
         });
         listView.setAdapter(adapter);
@@ -4793,7 +4799,7 @@ public class MainActivity extends Activity {
             List<String[]> rows = recentAccess();
             main.post(() -> {
                 loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
-                if (rows.isEmpty()) loading.setText("This phone doesn't record recent access, or nothing recent.");
+                if (rows.isEmpty()) loading.setText(Tr.t("This phone doesn't record recent access, or nothing recent."));
                 adapter.set(rows);
             });
         });
@@ -4844,7 +4850,7 @@ public class MainActivity extends Activity {
             startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:" + pkg)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (RuntimeException e) {
-            toast("Couldn't open app settings.");
+            toast(Tr.t("Couldn't open app settings."));
         }
     }
 
@@ -4863,11 +4869,11 @@ public class MainActivity extends Activity {
         help.setAlpha(0.7f);
         page.addView(help);
         EditText search = new EditText(this);
-        search.setHint("Search apps");
+        search.setHint(Tr.t("Search apps"));
         search.setSingleLine(true);
         page.addView(search);
         CheckBox system = new CheckBox(this);
-        system.setText("Show system apps");
+        system.setText(Tr.t("Show system apps"));
         page.addView(system);
         final int[] sort = {0};
         ListView listView = new ListView(this);
@@ -4878,8 +4884,8 @@ public class MainActivity extends Activity {
         audioState.clear();
         List<App> all = new ArrayList<>();
         Adapter<App> adapter = new Adapter<>(false, (app, row) -> {
-            row.first.setText(app.label);
-            row.second.setText(audioStateText(app.pkg));
+            row.first.setText(Tr.t(app.label));
+            row.second.setText(Tr.t(audioStateText(app.pkg)));
             showIcon(row, app.pkg);
         });
         listView.setAdapter(adapter);
@@ -4974,13 +4980,13 @@ public class MainActivity extends Activity {
         String[] labels = actions.keySet().toArray(new String[0]);
         String[] cmds = actions.values().toArray(new String[0]);
         new AlertDialog.Builder(this)
-                .setTitle(app.label)
-                .setItems(labels, (d, which) -> worker.execute(() -> {
+                .setTitle(Tr.t(app.label))
+                .setItems(Tr.all(labels), (d, which) -> worker.execute(() -> {
                     String err = error(Shell.run(cmds[which]));
-                    if (err != null) main.post(() -> toast(err));
+                    if (err != null) main.post(() -> toast(Tr.t(err)));
                     loadAudioState(refresh);
                 }))
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
 
@@ -5032,7 +5038,7 @@ public class MainActivity extends Activity {
                 main.post(() -> {
                     view.setEnabled(true);
                     if (now != null) view.setChecked(now);
-                    if (err != null) toast(err);
+                    if (err != null) toast(Tr.t(err));
                 });
             });
         }, true);
@@ -5044,7 +5050,7 @@ public class MainActivity extends Activity {
                     row.setEnabled(false);
                     row.setAlpha(0.4f);
                     view.setEnabled(false);
-                    sub.setText(summary + "  ·  Not on this phone");
+                    sub.setText(Tr.t(summary + "  ·  Not on this phone"));
                 } else {
                     view.setChecked(state);
                 }
@@ -5118,7 +5124,7 @@ public class MainActivity extends Activity {
         help.setAlpha(0.7f);
         page.addView(help);
         EditText search = new EditText(this);
-        search.setHint("Search networks");
+        search.setHint(Tr.t("Search networks"));
         search.setSingleLine(true);
         page.addView(search);
         TextView loading = text("Reading saved networks…", 14, false);
@@ -5129,9 +5135,9 @@ public class MainActivity extends Activity {
         push("Saved Wi-Fi", page);
 
         Adapter<String[]> adapter = new Adapter<>(false, (n, row) -> {
-            row.first.setText(n[0]);
-            row.second.setText("nopass".equals(n[1]) ? "Open network"
-                    : n[2].isEmpty() ? n[1] : n[1] + "  ·  " + n[2]);
+            row.first.setText(Tr.t(n[0]));
+            row.second.setText(Tr.t("nopass".equals(n[1]) ? "Open network"
+                    : n[2].isEmpty() ? n[1] : n[1] + "  ·  " + n[2]));
         });
         listView.setAdapter(adapter);
         listView.setOnItemClickListener((parent, view, position, id) -> showWifi(adapter.getItem(position)));
@@ -5150,7 +5156,7 @@ public class MainActivity extends Activity {
                 filter.run();
                 loading.setVisibility(nets.isEmpty() ? View.VISIBLE : View.GONE);
                 if (nets.isEmpty()) {
-                    loading.setText("No saved networks, or this phone doesn't allow reading them.");
+                    loading.setText(Tr.t("No saved networks, or this phone doesn't allow reading them."));
                 }
             });
         });
@@ -5191,13 +5197,13 @@ public class MainActivity extends Activity {
         detail.setGravity(Gravity.CENTER);
         box.addView(detail);
         new AlertDialog.Builder(this)
-                .setTitle(ssid)
+                .setTitle(Tr.t(ssid))
                 .setView(box)
-                .setPositiveButton("Close", null)
-                .setNeutralButton("Copy password", "nopass".equals(type) ? null : (d, w) -> {
+                .setPositiveButton(Tr.t("Close"), null)
+                .setNeutralButton(Tr.t("Copy password"), "nopass".equals(type) ? null : (d, w) -> {
                     ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
                             .setPrimaryClip(android.content.ClipData.newPlainText("Wi-Fi password", password));
-                    toast("Password copied");
+                    toast(Tr.t("Password copied"));
                 })
                 .show();
     }
@@ -5746,7 +5752,7 @@ public class MainActivity extends Activity {
                     + Shell.quote(TextUtils.join(",", next)));
             if (r.ok()) return;
             main.post(() -> {
-                toast(r.out.isEmpty() ? "Couldn't change the quick panel." : r.out);
+                toast(Tr.t(r.out.isEmpty() ? "Couldn't change the quick panel." : r.out));
                 renderQuickPanel(list, old);
             });
         });
@@ -5913,20 +5919,20 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-2, -2);
         margin.setMargins(0, 0, dp(8), 0);
         chip.setLayoutParams(margin);
-        Runnable render = () -> chip.setText(icon + title + ": " + options[sel[0]]);
+        Runnable render = () -> chip.setText(Tr.t(icon + title + ": " + options[sel[0]]));
         chip.setOnClickListener(v -> {
             String[] items = new String[options.length];
             for (int i = 0; i < options.length; i++) {
                 items[i] = (i == sel[0] ? "●  " : "○  ") + options[i];
             }
             new AlertDialog.Builder(this)
-                    .setTitle(title)
-                    .setItems(items, (d, which) -> {
+                    .setTitle(Tr.t(title))
+                    .setItems(Tr.all(items), (d, which) -> {
                         sel[0] = which;
                         render.run();
                         onSelect.run(which);
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(Tr.t("Cancel"), null)
                     .show();
         });
         render.run();
@@ -5936,7 +5942,7 @@ public class MainActivity extends Activity {
     // ---- Rows and widgets ---------------------------------------------------------------------------
 
     private void section(LinearLayout list, String title) {
-        TextView view = text(title.toUpperCase(Locale.ROOT), 13, true);
+        TextView view = text(Tr.t(title).toUpperCase(Locale.ROOT), 13, true);
         view.setTextColor(attrColor(android.R.attr.colorAccent));
         view.setPadding(dp(16), dp(20), dp(16), dp(4));
         list.addView(view);
@@ -5961,7 +5967,7 @@ public class MainActivity extends Activity {
                     view.setEnabled(true);
                     settings = values;
                     for (Toggle other : toggles) other.view.setChecked(other.isOn.test(values));
-                    if (!r.ok()) toast(r.out.isEmpty() ? "Failed." : r.out);
+                    if (!r.ok()) toast(Tr.t(r.out.isEmpty() ? "Failed." : r.out));
                 });
             });
         }, true);
@@ -5982,12 +5988,12 @@ public class MainActivity extends Activity {
             TextView status = (TextView) holder[0].getTag();
             if (!holder[0].isEnabled()) return;
             holder[0].setEnabled(false);
-            status.setText("Working…");
+            status.setText(Tr.t("Working…"));
             worker.execute(() -> {
                 String result = job.run();
                 main.post(() -> {
                     holder[0].setEnabled(true);
-                    status.setText(result);
+                    status.setText(Tr.t(result));
                 });
             });
         }, needsShizuku);
@@ -6018,7 +6024,7 @@ public class MainActivity extends Activity {
         row.setTag(sub);
         row.setOnClickListener(v -> {
             if (needsShizuku && !Shell.ready()) {
-                toast("Start Shizuku and allow TinyKit first.");
+                toast(Tr.t("Start Shizuku and allow TinyKit first."));
                 return;
             }
             onClick.run();
@@ -6135,7 +6141,7 @@ public class MainActivity extends Activity {
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             Row row = convertView == null ? new Row(checkable) : (Row) convertView.getTag();
-            row.third.setText("");
+            row.third.setText(Tr.t(""));
             row.icon.setVisibility(View.GONE);
             row.icon.setTag(null);
             binder.bind(getItem(position), row);
@@ -6153,7 +6159,7 @@ public class MainActivity extends Activity {
 
     private TextView text(String value, int sp, boolean bold) {
         TextView view = new TextView(this);
-        view.setText(value);
+        view.setText(Tr.t(value));
         view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         if (bold) view.setTypeface(Typeface.DEFAULT_BOLD);
         return view;
@@ -6161,7 +6167,7 @@ public class MainActivity extends Activity {
 
     private Button button(String label, View.OnClickListener listener) {
         Button button = new Button(this);
-        button.setText(label);
+        button.setText(Tr.t(label));
         button.setAllCaps(false);
         button.setOnClickListener(listener);
         return button;
@@ -6239,14 +6245,14 @@ public class MainActivity extends Activity {
     }
 
     private void toast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, Tr.t(message), Toast.LENGTH_LONG).show();
     }
 
     private void openUrl(String url) {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
         } catch (RuntimeException e) {
-            toast(url);
+            toast(Tr.t(url));
         }
     }
 

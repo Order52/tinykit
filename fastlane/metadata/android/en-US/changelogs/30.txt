@@ -1,0 +1,1 @@
+New: Spanish (Latin America), picked by your phone language. Fixed a crash ("Not an attached client") when Shizuku restarts or is not attached yet.

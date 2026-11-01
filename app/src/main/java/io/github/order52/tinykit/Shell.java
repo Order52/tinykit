@@ -41,12 +41,24 @@ final class Shell {
         }
     }
 
+    /**
+     * Shizuku's calls throw ("Not an attached client", "binder haven't been received") while its
+     * server restarts or hasn't attached TinyKit yet. That is just "not ready", never a crash.
+     */
     static boolean running() {
-        return Shizuku.pingBinder() && !Shizuku.isPreV11();
+        try {
+            return Shizuku.pingBinder() && !Shizuku.isPreV11();
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     static boolean ready() {
-        return running() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
+        try {
+            return running() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     /**

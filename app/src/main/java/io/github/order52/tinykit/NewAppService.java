@@ -107,7 +107,7 @@ public final class NewAppService extends Service {
 
     private Notification notification() {
         NotificationManager nm = getSystemService(NotificationManager.class);
-        NotificationChannel channel = new NotificationChannel(CHANNEL, "New app blocking",
+        NotificationChannel channel = new NotificationChannel(CHANNEL, Tr.t("New app blocking"),
                 NotificationManager.IMPORTANCE_MIN);
         channel.setShowBadge(false);
         nm.createNotificationChannel(channel);
@@ -116,8 +116,8 @@ public final class NewAppService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_lock)
-                .setContentTitle("Blocking the internet of new apps")
-                .setContentText("You can turn this off in TinyKit: Block internet per app.")
+                .setContentTitle(Tr.t("Blocking the internet of new apps"))
+                .setContentText(Tr.t("You can turn this off in TinyKit: Block internet per app."))
                 .setContentIntent(tap).setOngoing(true).build();
     }
 

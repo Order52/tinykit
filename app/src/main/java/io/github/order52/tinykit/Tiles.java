@@ -45,31 +45,44 @@ public abstract class Tiles extends TileService {
         Tile tile = getQsTile();
         boolean active = tile != null && tile.getState() == Tile.STATE_ACTIVE;
         WORKER.execute(() -> {
-            tap(active);
+            try {
+                tap(active);
+            } catch (RuntimeException e) {
+                android.util.Log.w("TinyKit", "tile tap failed: " + e);
+                toast(Tr.t("Couldn't do that. Check that Shizuku is running and allowed."));
+            }
             refresh();
         });
     }
 
     void refresh() {
         WORKER.execute(() -> {
-            Object[] state = state();
+            Object[] state;
+            try {
+                state = state();
+            } catch (RuntimeException e) {
+                // A tile that can't read its state shows as off instead of taking the app down.
+                android.util.Log.w("TinyKit", "tile state failed: " + e);
+                state = state(false, "Unavailable");
+            }
+            final Object[] shown = state;
             main.post(() -> {
                 Tile tile = getQsTile();
                 if (tile == null) return;
-                tile.setState((Boolean) state[0] ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
-                if (Build.VERSION.SDK_INT >= 29) tile.setSubtitle((String) state[1]);
+                tile.setState((Boolean) shown[0] ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+                if (Build.VERSION.SDK_INT >= 29) tile.setSubtitle(Tr.t((String) shown[1]));
                 tile.updateTile();
             });
         });
     }
 
     void toast(String message) {
-        main.post(() -> Toast.makeText(this, message, Toast.LENGTH_LONG).show());
+        main.post(() -> Toast.makeText(this, Tr.t(message), Toast.LENGTH_LONG).show());
     }
 
     boolean shizuku() {
         if (Shell.await()) return true;
-        toast("Start Shizuku first.");
+        toast(Tr.t("Start Shizuku first."));
         return false;
     }
 
@@ -99,7 +112,7 @@ public abstract class Tiles extends TileService {
         void tap(boolean active) {
             if (!Tweak.canWrite(this) || tweak() == Tweak.MIC_CAM_OFF) Shell.await();
             String error = tweak().set(this, !active);
-            if (error != null) toast(error);
+            if (error != null) toast(Tr.t(error));
         }
     }
 
@@ -173,7 +186,7 @@ public abstract class Tiles extends TileService {
             if (r.ok()) {
                 prefs().edit().putBoolean(pref(), !active).apply();
             } else {
-                toast("Couldn't change this. " + r.out);
+                toast(Tr.t("Couldn't change this. " + r.out));
             }
         }
     }
@@ -193,7 +206,7 @@ public abstract class Tiles extends TileService {
         void tap(boolean active) {
             SharedPreferences p = prefs();
             if (!FirewallPolicy.supported() || !FirewallPolicy.configured(p)) {
-                toast(FirewallPolicy.supported() ? "Choose apps to block in TinyKit first." : "Needs Android 14 or newer.");
+                toast(Tr.t(FirewallPolicy.supported() ? "Choose apps to block in TinyKit first." : "Needs Android 14 or newer."));
                 return;
             }
             if (!shizuku()) return;
@@ -202,7 +215,7 @@ public abstract class Tiles extends TileService {
             String error = FirewallPolicy.apply(this, p, true);
             if (error != null) {
                 p.edit().putBoolean(FirewallPolicy.PAUSED, !active).apply();
-                toast("Couldn't change this. " + error);
+                toast(Tr.t("Couldn't change this. " + error));
             }
         }
     }
@@ -250,7 +263,7 @@ public abstract class Tiles extends TileService {
                 }
             }
             if (!Tweak.canWrite(this)) Shell.await();
-            if (!Tweak.setTimeout(this, next)) toast("Start Shizuku once so TinyKit can change this.");
+            if (!Tweak.setTimeout(this, next)) toast(Tr.t("Start Shizuku once so TinyKit can change this."));
         }
     }
 
@@ -276,7 +289,7 @@ public abstract class Tiles extends TileService {
                 prefs.edit().putInt("caffeine_prev", Tweak.timeout(this)).apply();
                 if (!Tweak.setTimeout(this, STEPS[0])) {
                     prefs.edit().remove("caffeine_prev").apply();
-                    toast("Start Shizuku once so TinyKit can change this.");
+                    toast(Tr.t("Start Shizuku once so TinyKit can change this."));
                 }
                 return;
             }
@@ -313,11 +326,11 @@ public abstract class Tiles extends TileService {
                     + "screencap -p \"$f\" && [ -s \"$f\" ] && echo \"$f\" || { rm -f \"$f\"; exit 3; }");
             if (r.ok()) {
                 MediaScannerConnection.scanFile(this, new String[]{r.out}, new String[]{"image/png"}, null);
-                toast("Screenshot saved to Pictures/Screenshots");
+                toast(Tr.t("Screenshot saved to Pictures/Screenshots"));
             } else if (r.code == 3) {
-                toast("This app blocks screenshots. Android doesn't let any app get past that without root.");
+                toast(Tr.t("This app blocks screenshots. Android doesn't let any app get past that without root."));
             } else {
-                toast("Couldn't take a screenshot. " + r.out);
+                toast(Tr.t("Couldn't take a screenshot. " + r.out));
             }
         }
     }
@@ -341,7 +354,7 @@ public abstract class Tiles extends TileService {
                 if (!path.isEmpty()) {
                     MediaScannerConnection.scanFile(this, new String[]{path}, new String[]{"video/mp4"}, null);
                 }
-                toast("Recording saved to Movies");
+                toast(Tr.t("Recording saved to Movies"));
                 return;
             }
             String dir = "/sdcard/Movies";
@@ -351,11 +364,11 @@ public abstract class Tiles extends TileService {
                     + "; (screenrecord " + Shell.quote(path) + " >/dev/null 2>&1 &); "
                     + "sleep 0.6; pgrep -f '[s]creenrecord' >/dev/null");
             if (r.ok()) {
-                toast("Recording. Tap the tile again to stop.");
+                toast(Tr.t("Recording. Tap the tile again to stop."));
             } else if (r.code == 3) {
-                toast("This phone has no screenrecord command. Use its built-in screen recorder.");
+                toast(Tr.t("This phone has no screenrecord command. Use its built-in screen recorder."));
             } else {
-                toast("Couldn't start recording. " + r.out);
+                toast(Tr.t("Couldn't start recording. " + r.out));
             }
         }
 
@@ -391,7 +404,7 @@ public abstract class Tiles extends TileService {
         void tap(boolean active) {
             if (Ram.needsShizuku() && !shizuku()) return;
             if (!Ram.needsShizuku()) Shell.await();
-            toast(Ram.free(this));
+            toast(Tr.t(Ram.free(this)));
         }
     }
 
@@ -408,7 +421,7 @@ public abstract class Tiles extends TileService {
         void tap(boolean active) {
             if (!shizuku()) return;
             Shell.Result r = Shell.run(MainActivity.sensorsCmd(this, active ? "off" : "on"));
-            if (!r.ok()) toast("Couldn't toggle sensors. " + r.out);
+            if (!r.ok()) toast(Tr.t("Couldn't toggle sensors. " + r.out));
         }
     }
 
@@ -429,9 +442,9 @@ public abstract class Tiles extends TileService {
                     + "| grep -ivE 'systemui|launcher|trebuchet|tinykit' | head -1); "
                     + "[ -n \"$pkg\" ] && am force-stop \"$pkg\" && echo \"$pkg\"");
             if (r.ok() && !r.out.isEmpty()) {
-                toast("Closed " + r.out);
+                toast(Tr.t("Closed " + r.out));
             } else {
-                toast("Couldn't tell which app is in front.");
+                toast(Tr.t("Couldn't tell which app is in front."));
             }
         }
     }

@@ -24,11 +24,21 @@ of the English README. Docs in `docs/` can follow later, one page at a time.
 
 ## 3. The app itself
 
-TinyKit's text is currently written in the Java code and not in Android string files, so the app
-can't be translated by only adding a file. Moving it into `res/values/strings.xml` is a large
-change that has to be done carefully, so it is planned and not started yet. If you want to help
-with it, say so in an issue first so we don't work on it twice. Once it is done, a translation
-will be one `res/values-<locale>/strings.xml` file.
+TinyKit's text lives in the code in English, and a translation is **one plain text file**:
+`app/src/main/assets/i18n/<language>.tsv`, for example `es.tsv`. Each line is
+`English text`, a tab, then `your translation`. The phone's language picks the file, and anything
+not in the file stays in English, so a partial translation is fine.
+
+- Edit the right-hand side only. The left-hand side must stay exactly as it is, including spaces
+  at the start or end: some lines are the fixed part of a longer sentence (for example
+  `Also ` before a list of app names).
+- `\n` is a new line. Lines starting with `#` are comments.
+- To add a language, copy `es.tsv` to `<code>.tsv` (`pt.tsv`, `fr.tsv`, `de.tsv`) and translate
+  the right-hand side. Use the two-letter language code: one file covers every region of it.
+- To test, build the app, set your phone's (or the app's) language, and open each page. A line
+  that stays English is either not in the file or is built from several pieces.
+
+Spanish (`es.tsv`) is written for Latin America and is waiting for a native speaker to check it.
 
 ## How to send it
 

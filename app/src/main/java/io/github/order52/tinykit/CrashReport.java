@@ -126,7 +126,7 @@ final class CrashReport {
         if (nm == null || !nm.areNotificationsEnabled()) return;
         Notification.Builder b;
         if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Crash reports", NotificationManager.IMPORTANCE_DEFAULT));
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL, Tr.t("Crash reports"), NotificationManager.IMPORTANCE_DEFAULT));
             b = new Notification.Builder(c, CHANNEL);
         } else {
             b = new Notification.Builder(c);
@@ -135,8 +135,8 @@ final class CrashReport {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent tap = PendingIntent.getActivity(c, 0, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         nm.notify(NOTIFICATION, b.setSmallIcon(android.R.drawable.stat_notify_error)
-                .setContentTitle("TinyKit stopped")
-                .setContentText("Tap to send the crash details so it can be fixed.")
+                .setContentTitle(Tr.t("TinyKit stopped"))
+                .setContentText(Tr.t("Tap to send the crash details so it can be fixed."))
                 .setContentIntent(tap).setAutoCancel(true).build());
     }
 }

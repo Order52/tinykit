@@ -265,8 +265,9 @@ your device or ROM, and your Shizuku version. Pull requests are welcome too. Ple
 TinyKit small: no background services, no new dependencies, and every change must be
 reversible. See [Contributing](docs/contributing.md).
 
-**Translations:** want TinyKit in your language? You're welcome to help. The store listing and
-the docs can be translated today, with no code. See [Translating TinyKit](docs/translating.md).
+**Translations:** TinyKit is available in English and Spanish (Latin America, still being checked by a
+native speaker). A translation is one plain text file, so adding or fixing a language is easy. See
+[Translating TinyKit](docs/translating.md).
 
 ## License
 

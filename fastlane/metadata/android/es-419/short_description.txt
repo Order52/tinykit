@@ -1,0 +1,1 @@
+Ajustes del sistema con Shizuku. Sin root; segundo plano solo si lo activas.

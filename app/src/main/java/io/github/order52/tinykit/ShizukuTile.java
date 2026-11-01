@@ -69,8 +69,8 @@ public class ShizukuTile extends TileService {
             WORKER.execute(() -> Shell.run("am force-stop " + SHIZUKU_PKG
                     + "; pkill -f shizuku_server || killall shizuku_server"));
         } else {
-            Toast.makeText(this, "Set Shizuku's auth token in TinyKit, or install shizuku-termux, "
-                    + "to start Shizuku from here.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, Tr.t("Set Shizuku's auth token in TinyKit, or install shizuku-termux, "
+                    + "to start Shizuku from here."), Toast.LENGTH_LONG).show();
             openApp();
             return;
         }
@@ -99,7 +99,7 @@ public class ShizukuTile extends TileService {
     }
 
     private static void setSubtitle(Tile tile, String text) {
-        if (Build.VERSION.SDK_INT >= 29) tile.setSubtitle(text);
+        if (Build.VERSION.SDK_INT >= 29) tile.setSubtitle(Tr.t(text));
     }
 
     private boolean termuxReady() {
@@ -161,7 +161,7 @@ public class ShizukuTile extends TileService {
                 message = result == null ? "Termux didn't answer."
                         : (result.getString("stdout", "") + "\n" + result.getString("stderr", "")).trim();
             }
-            Toast.makeText(context, message.isEmpty() ? "Couldn't change Shizuku." : message,
+            Toast.makeText(context, Tr.t(message.isEmpty() ? "Couldn't change Shizuku." : message),
                     Toast.LENGTH_LONG).show();
             requestListeningState(context, new ComponentName(context, ShizukuTile.class));
         }

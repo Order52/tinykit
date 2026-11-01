@@ -40,7 +40,7 @@ public class ScreenshotTile extends TileService {
             // Shizuku's binder arrives a moment after TinyKit's process starts.
             for (int i = 0; i < 20 && !Shell.ready(); i++) SystemClock.sleep(100);
             if (!Shell.ready()) {
-                toast("Start Shizuku first.");
+                toast(Tr.t("Start Shizuku first."));
                 return;
             }
             String name = "Screenshot_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT)
@@ -52,16 +52,16 @@ public class ScreenshotTile extends TileService {
                     + Shell.quote(path) + "; exit 3; }");
             if (r.ok()) {
                 MediaScannerConnection.scanFile(this, new String[]{path}, new String[]{"image/png"}, null);
-                toast("Screenshot saved to Pictures/Screenshots");
+                toast(Tr.t("Screenshot saved to Pictures/Screenshots"));
             } else if (r.code == 3) {
-                toast("This app blocks screenshots. Android doesn't let any app get past that without root.");
+                toast(Tr.t("This app blocks screenshots. Android doesn't let any app get past that without root."));
             } else {
-                toast("Couldn't take a screenshot. " + r.out);
+                toast(Tr.t("Couldn't take a screenshot. " + r.out));
             }
         });
     }
 
     private void toast(String message) {
-        main.post(() -> Toast.makeText(this, message, Toast.LENGTH_LONG).show());
+        main.post(() -> Toast.makeText(this, Tr.t(message), Toast.LENGTH_LONG).show());
     }
 }
