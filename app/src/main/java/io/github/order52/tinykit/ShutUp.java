@@ -15,7 +15,7 @@ import java.util.Set;
  * switched off while the app is on screen, and come back the moment you leave it.
  *
  * Android has no way to hide a setting from one app, so this flips the settings themselves: they are
- * turned off when a chosen app comes to the front and restored when it leaves ({@link ShutUpService}
+ * turned off when a chosen app comes to the front and restored when it leaves ({@link BackgroundService}
  * watches which app is in front). What was on is written down first, so a crash, a restart or turning
  * Shut Up off always puts it back. Apps that checked before TinyKit noticed them (the first moments of
  * a cold start) can still see it, and an app that remembers an earlier check can't be helped.
@@ -40,13 +40,34 @@ final class ShutUp {
         return new HashSet<>(p.getStringSet(PREF_APPS, Collections.emptySet()));
     }
 
-    static boolean needed(SharedPreferences p) {
-        return p.getBoolean(PREF_ON, false) && backgroundOn(p) && !apps(p).isEmpty();
+    /** Turned on with at least one app chosen. It only runs while "Run in the background" is on too. */
+    static boolean wanted(SharedPreferences p) {
+        return p.getBoolean(PREF_ON, false) && !apps(p).isEmpty();
     }
 
-    /** The Info tab's "Run in the background" switch: Shut Up never runs without it. */
-    static boolean backgroundOn(SharedPreferences p) {
-        return p.getBoolean(NewAppService.PREF, false);
+    /**
+     * Turns Shut Up on or off. Turning it on also turns on "Run in the background", which it needs.
+     * Returns null when it worked, else what is missing. Call off the main thread.
+     */
+    static String setEnabled(Context c, SharedPreferences p, boolean on) {
+        if (on) {
+            Tweak.grantSelf(c);
+            if (!ready(c)) {
+                return "Start Shizuku and allow TinyKit once, so Shut Up can change these settings and see "
+                        + "which app is open without it.";
+            }
+        }
+        p.edit().putBoolean(PREF_ON, on).commit();
+        if (on && !BackgroundService.on(p)) {
+            BackgroundService.setEnabled(c, p, true);
+        } else {
+            BackgroundService.sync(c);
+        }
+        if (!on) {
+            restore(c, p);
+            startShizuku(c, p);
+        }
+        return null;
     }
 
     static boolean hidden(SharedPreferences p) {
@@ -63,7 +84,7 @@ final class ShutUp {
         if (!stopsShizuku(c, p) || !Shell.running()) return;
         // Written down first, so a crash still starts it again.
         p.edit().putBoolean(PREF_SHIZUKU_STOPPED, true).commit();
-        ShizukuControl.stop(c, p);
+        ShizukuControl.stop(c, p, null);
         android.util.Log.i("TinyKit", "Shut Up: stopped Shizuku");
     }
 
@@ -75,7 +96,7 @@ final class ShutUp {
         if (!p.getBoolean(PREF_SHIZUKU_STOPPED, false)) return;
         p.edit().putBoolean(PREF_SHIZUKU_STOPPED, false).commit();
         if (Shell.running()) return; // something else already started it
-        boolean ok = ShizukuControl.start(c, p);
+        boolean ok = ShizukuControl.start(c, p, null);
         android.util.Log.i("TinyKit", "Shut Up: started Shizuku ok=" + ok);
     }
 
@@ -83,8 +104,8 @@ final class ShutUp {
     static String choose(Context c, SharedPreferences p, String pkg, boolean on) {
         Set<String> s = apps(p);
         if (on) s.add(pkg); else s.remove(pkg);
-        p.edit().putStringSet(PREF_APPS, s).apply();
-        ShutUpService.sync(c);
+        p.edit().putStringSet(PREF_APPS, s).commit();
+        BackgroundService.sync(c);
         return null;
     }
 

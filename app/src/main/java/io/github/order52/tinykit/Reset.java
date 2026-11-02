@@ -100,15 +100,14 @@ final class Reset {
         return out.toString().trim();
     }
 
-    /** All internet blocking: lists, allow list mode, the install watcher and every rule in Android. */
+    /** All internet blocking: lists, allow list mode and every rule in Android. */
     static String internet(Context c, SharedPreferences p) {
         boolean used = !FirewallPolicy.saved(p, FirewallPolicy.BLOCKED).isEmpty()
-                || !FirewallPolicy.saved(p, FirewallPolicy.ALLOWED).isEmpty() || FirewallPolicy.allowMode(p)
-                || p.getBoolean(NewAppService.PREF, false);
+                || !FirewallPolicy.saved(p, FirewallPolicy.ALLOWED).isEmpty() || FirewallPolicy.allowMode(p);
         p.edit().putStringSet(FirewallPolicy.BLOCKED, new HashSet<>()).putStringSet(FirewallPolicy.ALLOWED, new HashSet<>())
-                .putBoolean(FirewallPolicy.MODE, false).putBoolean(NewAppService.PREF, false)
+                .putBoolean(FirewallPolicy.MODE, false).putBoolean(FirewallPolicy.PAUSED, false)
                 .putBoolean(Restore.PREF_FIREWALL_PENDING, false).apply();
-        NewAppService.sync(c);
+        BackgroundService.sync(c);
         if (!FirewallPolicy.supported()) return "Internet block: nothing to reset on this Android.";
         if (!Shell.ready()) {
             return used ? "Internet block: the lists were cleared, but Shizuku isn't running so Android's rules stay "
@@ -179,7 +178,7 @@ final class Reset {
                 + (failed > 0 ? ", " + failed + " couldn't be brought back." : ".");
     }
 
-    /** Force dark, HW overlays, all-sensors-off and the Quick toggles TinyKit has on. */
+    /** Force dark, HW overlays, all-sensors-off, Shut Up, Run in the background and the Quick toggles TinyKit has on. */
     static String switches(Context c, SharedPreferences p) {
         List<String> done = new ArrayList<>();
         List<String> failed = new ArrayList<>();
@@ -197,7 +196,17 @@ final class Reset {
             String cam = CameraFix.sensors(c);
             if (cam != null) (cam.startsWith("Couldn't") ? failed : done).add("camera and microphone block");
         }
-        p.edit().putBoolean(Restore.PREF_FORCE_DARK, false).putBoolean(Restore.PREF_NO_OVERLAYS, false).apply();
+        // Remembered only until they are really off, so a later reset (or a restart) can still undo them.
+        if (shizuku && !failed.contains("Force dark")) p.edit().putBoolean(Restore.PREF_FORCE_DARK, false).apply();
+        if (shizuku && !failed.contains("HW overlays")) p.edit().putBoolean(Restore.PREF_NO_OVERLAYS, false).apply();
+        // Shut Up puts back what it hid as it turns off; then nothing is left to run in the background.
+        if (p.getBoolean(ShutUp.PREF_ON, false)) {
+            (ShutUp.setEnabled(c, p, false) == null ? done : failed).add("Shut Up");
+        }
+        if (BackgroundService.on(p)) {
+            BackgroundService.setEnabled(c, p, false);
+            done.add("Run in the background");
+        }
         // Only the Quick toggles that TinyKit itself offers and that are on right now. The developer
         // options, USB debugging and screen timeout are never touched.
         Tweak[] toggles = {Tweak.AD_DNS, Tweak.NO_SCAN, Tweak.FREE_HOTSPOT, Tweak.NO_MOBILE_ON_WIFI,

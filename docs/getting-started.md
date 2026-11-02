@@ -122,12 +122,13 @@ debugging), then go back: TinyKit notices Shizuku is running and connects by its
 
 ### Stop
 
-- **Standard Shizuku app:** **Stop** ends Shizuku's server straight away. It has no Watchdog,
-  so it stays stopped.
-- **Forks with the auth token saved:** **Stop** uses Shizuku's own stop intent, which the
-  Watchdog respects.
-- **Forks without a token:** **Stop** asks first, then ends the server. If the Watchdog is on,
-  it starts Shizuku again, so save the token if you use the Watchdog.
+- **Forks with the auth token saved:** **Stop** uses Shizuku's own stop intent.
+- **Otherwise:** **Stop** closes the Shizuku app first, so a Watchdog can't start Shizuku again,
+  then asks Shizuku's server to end, and makes it end if it hasn't within 3 seconds.
+- **Shizuku running but TinyKit not allowed:** with Termux and shizuku-termux, **Stop** runs
+  `shizuku stop` there.
+
+The Shizuku tab, the Shizuku tile and Shut Up all stop Shizuku this same way.
 
 ## What works without Shizuku
 
@@ -159,7 +160,7 @@ that work without it look normal.
 
 | Tab | What's there |
 | --- | --- |
-| **Shizuku** | Shizuku status, Start and Stop, the auth token, the Shizuku and Screenshot tiles, and the **search bar** |
+| **Shizuku** | Shizuku status, Start and Stop, the auth token, the Shizuku tile, and the **search bar** |
 | **Privacy** | Privacy toggles, all sensors off, analytics and telemetry, saved Wi-Fi networks |
 | **Apps** | Fake permissions, default apps, hide, unused, storage, recent access, mixed audio, running and background apps, APK backup |
 | **System** | Force dark, disable HW overlays, animation speed, quick panel editor, TinyKit tiles, run a command, file recovery, settings backup, advanced reboot, cleanup, network tweaks |

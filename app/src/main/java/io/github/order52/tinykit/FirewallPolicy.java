@@ -137,14 +137,22 @@ final class FirewallPolicy {
         if (uid == null) return "Couldn't find " + pkg + ".";
         if (uid < FIRST_APP_UID) return "This is part of Android itself, so it can't be blocked on its own.";
         boolean allow = allowMode(p);
-        // Checked means blocked in the normal mode and allowed in allow mode.
-        String error = error(Shell.run(command(c, ((checked != allow) ? "block " : "allow ") + uid)));
-        if (error != null) return error;
+        // Checked means blocked in the normal mode and allowed in allow mode. While paused only the
+        // list changes; resuming applies it.
+        if (!paused(p)) {
+            String error = error(Shell.run(command(c, ((checked != allow) ? "block " : "allow ") + uid)));
+            if (error != null) return error;
+        }
         String key = allow ? ALLOWED : BLOCKED;
         Set<String> set = saved(p, key);
         if (checked) set.add(pkg); else set.remove(pkg);
         p.edit().putStringSet(key, set).apply();
         return null;
+    }
+
+    /** Blocks one app, whichever mode is on (in allow mode, by taking it off the allow list). */
+    static String block(Context c, SharedPreferences p, String pkg) {
+        return choose(c, p, pkg, !allowMode(p));
     }
 
     /** Apps that share {@code pkg}'s user id: Android's rule covers all of them at once. */

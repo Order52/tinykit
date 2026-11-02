@@ -29,9 +29,8 @@ public final class TinyKitApp extends Application {
         // The removed notification history kept its saved notifications here.
         new java.io.File(getFilesDir(), "notifications.tsv").delete();
         Shizuku.addBinderReceivedListenerSticky(() -> Restore.start(this));
-        // Keep the install watcher running while the internet block needs it (also covers a process
-        // Android killed and later restarted for any other reason).
-        NewAppService.sync(this);
-        ShutUpService.sync(this);
+        // Keep "Run in the background" running while it is on and a tool needs it (also covers a
+        // process Android killed and later restarted for any other reason).
+        BackgroundService.sync(this);
     }
 }

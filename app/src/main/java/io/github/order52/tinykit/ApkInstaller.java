@@ -130,6 +130,8 @@ final class ApkInstaller {
 
             String message = parts.size() == 1 ? "Installed." : "Installed (" + parts.size() + " parts).";
             for (Part obb : obbs) {
+                // Only plain paths inside Android/obb: a crafted archive can't write anywhere else.
+                if (obb.name.contains("..") || obb.name.contains("\\") || !obb.name.startsWith("Android/obb/")) continue;
                 progress.update("Copying game data…");
                 String path = "/sdcard/" + obb.name;
                 String dir = path.substring(0, path.lastIndexOf('/'));

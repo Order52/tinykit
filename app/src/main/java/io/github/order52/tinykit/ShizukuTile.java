@@ -5,7 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -22,16 +22,11 @@ import rikka.shizuku.Shizuku;
 /**
  * Quick Settings tile that turns Shizuku on and off with one tap.
  *
- * It uses Shizuku's auth token when one is saved in TinyKit, otherwise Termux with
- * shizuku-termux. Android binds the tile only while the quick panel is open or when Shizuku's
+ * Starting and stopping go through {@link ShizukuControl}, same as the Shizuku tab. Android binds the tile only while the quick panel is open or when Shizuku's
  * state changes, so it costs nothing the rest of the time.
  */
 public class ShizukuTile extends TileService {
 
-    static final String SHIZUKU_PKG = "moe.shizuku.privileged.api";
-    private static final String TERMUX = "com.termux";
-    private static final String SHIZUKU = "/data/data/com.termux/files/usr/bin/shizuku";
-    private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor();
     private static boolean listening;
 
@@ -57,17 +52,19 @@ public class ShizukuTile extends TileService {
     @Override
     public void onClick() {
         boolean on = pending != null ? pending : Shell.running();
-        String token = getSharedPreferences("tinykit", MODE_PRIVATE).getString("auth", "");
-        if (!token.isEmpty()) {
-            sendBroadcast(new Intent(SHIZUKU_PKG + (on ? ".STOP" : ".START"))
-                    .setPackage(SHIZUKU_PKG).putExtra("auth", token));
-        } else if (termuxReady()) {
-            startService(termux(on ? "stop" : "start"));
-        } else if (on && Shell.ready()) {
-            // No token and no Termux: end the server directly. Stopping the app first keeps
-            // Shizuku's Watchdog from starting it straight back up.
-            WORKER.execute(() -> Shell.run("am force-stop " + SHIZUKU_PKG
-                    + "; pkill -f '[s]hizuku_server' || killall shizuku_server"));
+        SharedPreferences p = getSharedPreferences("tinykit", MODE_PRIVATE);
+        Context app = getApplicationContext();
+        if (on && ShizukuControl.canStop(this, p)) {
+            WORKER.execute(() -> {
+                String error = ShizukuControl.stop(app, p, termuxResult());
+                if (error != null) main.post(() -> {
+                    pending = null;
+                    update();
+                    Toast.makeText(app, Tr.t(error), Toast.LENGTH_LONG).show();
+                });
+            });
+        } else if (!on && ShizukuControl.canRestart(this, p)) {
+            ShizukuControl.start(this, p, termuxResult());
         } else {
             Toast.makeText(this, Tr.t("Set Shizuku's auth token in TinyKit, or install shizuku-termux, "
                     + "to start Shizuku from here."), Toast.LENGTH_LONG).show();
@@ -102,27 +99,11 @@ public class ShizukuTile extends TileService {
         if (Build.VERSION.SDK_INT >= 29) tile.setSubtitle(Tr.t(text));
     }
 
-    private boolean termuxReady() {
-        try {
-            getPackageManager().getPackageInfo(TERMUX, 0);
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
-        return checkSelfPermission(PERMISSION_RUN_COMMAND) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private Intent termux(String command) {
+    /** Where Termux sends its reply, so a failed start or stop is shown instead of hanging on "Starting…". */
+    private PendingIntent termuxResult() {
         int flags = PendingIntent.FLAG_ONE_SHOT;
         if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
-        PendingIntent result = PendingIntent.getBroadcast(this, 0,
-                new Intent(this, Result.class), flags);
-        return new Intent("com.termux.RUN_COMMAND")
-                .setClassName(TERMUX, "com.termux.app.RunCommandService")
-                .putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash")
-                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c",
-                        "[ -x " + SHIZUKU + " ] || exit 127; exec " + SHIZUKU + " " + command + " </dev/null"})
-                .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
-                .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", result);
+        return PendingIntent.getBroadcast(this, 0, new Intent(this, Result.class), flags);
     }
 
     @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated") // PendingIntent form used on 34+

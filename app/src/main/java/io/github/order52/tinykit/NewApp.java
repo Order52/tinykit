@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
 import android.os.SystemClock;
 
 /**
- * What to do when Android announces an app was installed or updated. {@link NewAppService} calls
+ * What to do when Android announces an app was installed or updated. {@link BackgroundService} calls
  * {@link #handle} for every install, off the main thread:
  *
  * - A new app: keeps the internet firewall true. In allow list mode it starts blocked, and a

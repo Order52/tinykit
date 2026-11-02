@@ -87,7 +87,11 @@ public abstract class Tiles extends TileService {
     }
 
     SharedPreferences prefs() {
-        return getSharedPreferences("tinykit", MODE_PRIVATE);
+        return prefs(this);
+    }
+
+    static SharedPreferences prefs(android.content.Context c) {
+        return c.getSharedPreferences("tinykit", android.content.Context.MODE_PRIVATE);
     }
 
     static Object[] state(boolean active, String subtitle) {
@@ -302,9 +306,12 @@ public abstract class Tiles extends TileService {
                 }
             }
             if (next == 0) {
-                // Past the last step: back to the phone's original timeout.
-                Tweak.setTimeout(this, prefs.getInt("caffeine_prev", 30_000));
-                prefs.edit().remove("caffeine_prev").apply();
+                // Past the last step: back to the phone's original timeout. Kept until that worked.
+                if (Tweak.setTimeout(this, prefs.getInt("caffeine_prev", 30_000))) {
+                    prefs.edit().remove("caffeine_prev").apply();
+                } else {
+                    toast(Tr.t("Start Shizuku once so TinyKit can change this."));
+                }
             } else {
                 Tweak.setTimeout(this, next);
             }
@@ -335,40 +342,62 @@ public abstract class Tiles extends TileService {
         }
     }
 
-    /** Records the screen to Movies; tap to start, tap again to stop and save. */
+    /**
+     * Records the screen to Movies; tap to start, tap again to stop and save. Android's screenrecord
+     * stops by itself after 3 minutes. The recording is followed by its process id, so another app's
+     * recorder (or TinyKit's own shell) is never mistaken for it.
+     */
     public static final class ScreenRecord extends Tiles {
         @Override
         Object[] state() {
-            boolean on = Shell.ready() && !Shell.run("pgrep -f '[s]creenrecord'").out.trim().isEmpty();
+            boolean on = Shell.ready() && recording(this);
+            if (!on) saveFinished(this);
             return state(on, on ? "Recording…" : null);
+        }
+
+        private static boolean recording(android.content.Context c) {
+            int pid = prefs(c).getInt("screenrecord_pid", 0);
+            return pid > 0 && Shell.run("grep -q screenrecord /proc/" + pid + "/cmdline 2>/dev/null").ok();
+        }
+
+        /** Adds a finished recording (stopped by a tap or by the time limit) to the gallery, once. */
+        private static void saveFinished(android.content.Context c) {
+            SharedPreferences p = prefs(c);
+            String path = p.getString("screenrecord_file", "");
+            if (path.isEmpty() || recording(c)) return;
+            p.edit().remove("screenrecord_file").remove("screenrecord_pid").apply();
+            MediaScannerConnection.scanFile(c, new String[]{path}, new String[]{"video/mp4"}, null);
         }
 
         @Override
         void tap(boolean active) {
             if (!shizuku()) return;
-            if (active) {
+            int pid = prefs().getInt("screenrecord_pid", 0);
+            if (active && pid > 0) {
                 // SIGINT lets screenrecord finish writing a playable file.
-                Shell.run("pkill -INT -f '[s]creenrecord'");
-                SystemClock.sleep(1200);
-                String path = prefs().getString("screenrecord_file", "");
-                if (!path.isEmpty()) {
-                    MediaScannerConnection.scanFile(this, new String[]{path}, new String[]{"video/mp4"}, null);
-                }
+                Shell.run("kill -INT " + pid + "; for i in 1 2 3 4 5 6 7 8 9 10; do "
+                        + "grep -q screenrecord /proc/" + pid + "/cmdline 2>/dev/null || break; sleep 0.3; done");
+                saveFinished(this);
                 toast(Tr.t("Recording saved to Movies"));
                 return;
             }
             String dir = "/sdcard/Movies";
             String path = dir + "/Screen_" + stamp() + "_TinyKit.mp4";
-            prefs().edit().putString("screenrecord_file", path).apply();
             Shell.Result r = Shell.run("command -v screenrecord >/dev/null 2>&1 || exit 3; mkdir -p " + dir
-                    + "; (screenrecord " + Shell.quote(path) + " >/dev/null 2>&1 &); "
-                    + "sleep 0.6; pgrep -f '[s]creenrecord' >/dev/null");
-            if (r.ok()) {
-                toast(Tr.t("Recording. Tap the tile again to stop."));
+                    + "; screenrecord " + Shell.quote(path) + " </dev/null >/dev/null 2>&1 & p=$!; "
+                    + "sleep 0.8; grep -q screenrecord /proc/$p/cmdline 2>/dev/null && echo $p || exit 4");
+            int started = 0;
+            try {
+                started = Integer.parseInt(r.out.trim());
+            } catch (NumberFormatException ignored) {
+            }
+            if (r.ok() && started > 0) {
+                prefs().edit().putString("screenrecord_file", path).putInt("screenrecord_pid", started).apply();
+                toast(Tr.t("Recording, for up to 3 minutes. Tap the tile again to stop."));
             } else if (r.code == 3) {
                 toast(Tr.t("This phone has no screenrecord command. Use its built-in screen recorder."));
             } else {
-                toast(Tr.t("Couldn't start recording. " + r.out));
+                toast(Tr.t("Couldn't start recording. This screen may be protected, or another recording is running."));
             }
         }
 

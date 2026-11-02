@@ -35,9 +35,10 @@ Start and Stop work with the standard Shizuku app and with forks such as thedjch
   Termux's error if something went wrong. Without Termux or shizuku-termux, it opens Shizuku
   so you tap its own **Start** button, and TinyKit connects by itself once Shizuku is running.
   That's the only way to start the standard Shizuku app without root or a computer.
-- **Stop** uses the token (`…STOP` broadcast) on forks that have it. With the standard app it
-  ends `shizuku_server` straight away. On forks without a saved token it asks first, because
-  their Watchdog may start Shizuku again.
+- **Stop** uses the token (`…STOP` broadcast) on forks that have it. Otherwise it force-stops
+  the Shizuku app (so a Watchdog can't restart the server), sends `shizuku_server` SIGTERM, and
+  SIGKILL if it's still there after 3 seconds. If TinyKit isn't allowed in Shizuku it falls back
+  to `shizuku stop` in Termux. The tab, the tile and Shut Up share this one stop.
 
 See [Getting started → Starting Shizuku from TinyKit](getting-started.md#starting-shizuku-from-tinykit).
 
@@ -53,8 +54,10 @@ recommended downloads: thedjchi's Shizuku, Termux from F-Droid and the original 
 
 ### Search
 
-The search bar above the tab searches every tool (47 of them) by title and description. Every word you type
-has to match. Results open the tool directly, or switch to the tab where an inline switch lives.
+The search bar above the tab searches every row of every tab by title and description, in English and in
+the phone's language. Every word you type has to match, and title matches come first. A result that opens a
+page opens it; a switch or a one-tap action is shown in its tab, scrolled into view and lit up, so nothing
+runs by surprise.
 
 <br clear="right">
 
@@ -72,6 +75,9 @@ has to match. Results open the tool directly, or switch to the tab where an inli
 | **Ad-blocking DNS** | Sets Private DNS to AdGuard, which blocks ads and trackers in every app and browser. Turning it off restores your previous Private DNS setting. | `settings put global private_dns_mode hostname` and `settings put global private_dns_specifier dns.adguard-dns.com` | ♻️ |
 | **Stop background scanning** | Wi-Fi and Bluetooth stop scanning for nearby devices while they're turned off. This saves battery and limits location tracking. | `settings put global wifi_scan_always_enabled 0` and `settings put global ble_scan_always_enabled 0` | ♻️ |
 | **All sensors off** | Blocks every sensor for all apps (motion, microphone and camera), like the hidden developer *Sensors off* tile that some manufacturers remove. | `ISensorPrivacyManager.setSensorPrivacy(true)` via `app_process` | ⟲ |
+
+**Hide developer options** sits with **Shut Up** under *Developer options* in the tab: it hides them
+from every app at once, Shut Up only from the apps you choose.
 
 **All sensors off** has no `settings` key, so TinyKit runs a small helper class from its own APK
 (`Sensors`, started with `app_process` as the `shell` user) that calls the system's sensor
@@ -118,7 +124,7 @@ is closed or Shizuku is stopped, and it costs no memory or CPU. The rule uses on
 **Allow list mode** flips it round: every app is blocked except the ones you allow, including
 system apps such as Google Play services (allow it if you want push notifications). TinyKit itself
 always stays online. Apps you install later are blocked the moment they're installed, without
-opening TinyKit, **if you turn on Run in the background** (Info tab, or *Block new apps at once* on this
+opening TinyKit, **if you turn on Run in the background** (Info tab, or the same switch on this
 page). Android only tells a running process about an install, so that switch keeps a quiet notification
 and a small service running; it is off by default, and with it off, new apps are blocked the next time you
 open TinyKit. A reinstalled app that was blocked gets its block back too. If Shizuku is off
@@ -143,10 +149,11 @@ screen TinyKit turns **Developer options**, **USB debugging** and **Wireless deb
 turns back on whatever was on the moment you leave the app (or turn the screen off).
 
 - Android can't hide a setting from one app only, so while a chosen app is open every app sees them off.
-- It needs its own tick **and** the **Run in the background** switch (Info tab). Both on: a small
-  foreground service with a quiet notification checks which app is open a couple of times a second,
-  only while the screen is on. Either one off: nothing runs and everything is put back. Ticking Shut Up
-  while Run in the background is off offers to turn both on.
+- One tap: turning Shut Up on also turns on **Run in the background** (Info tab), which it needs. A
+  small foreground service with a quiet notification then checks which app is open a couple of times a
+  second, only while the screen is on. With the screen off it puts everything back and sleeps until
+  the screen comes on, with no timer and no wake-ups. If you later turn Run in the background off, Shut Up pauses and
+  everything is put back; its page says so, and one tap there turns it back on.
 - What was on is written down before anything changes, so a crash, a restart or turning Shut Up
   off always puts it back. TinyKit restores through its own `WRITE_SECURE_SETTINGS`, so this works even
   if Shizuku stopped. It needs Shizuku once, to grant that and usage access.
@@ -158,6 +165,24 @@ turns back on whatever was on the moment you leave the app (or turn the screen o
   end a Shizuku started through adb, so TinyKit starts it again after that too.
 - An app that checks in its first moments, before TinyKit notices it, or that remembers an earlier
   check, can still see them. Turning USB debugging off ends an ADB session for a moment.
+
+### Trackers in apps
+
+Finds the ad and analytics libraries inside your apps (Google Analytics, Google Ads, AppLovin,
+Facebook, AppsFlyer, Adjust and about 50 more), most first. TinyKit reads each app's declared
+parts (activities, services, receivers, providers) and matches their class names against a list
+of known libraries, so it shows what an app *carries*, not proof that it uses it. Tap an app to
+see the libraries, and on Android 14+ to cut it off the internet with **Block internet**.
+
+> [!NOTE]
+> TinyKit can't switch these parts off one by one. Android refuses it from the shell
+> (`Shell cannot change component state`), so blocking the app's internet is what works.
+
+### Recent access
+
+Which apps recently used the **camera, microphone, location, contacts or clipboard**, and when,
+newest first. TinyKit parses `dumpsys appops`, so it's best-effort and varies a little between
+phones.
 
 ### Clipboard guard
 
@@ -236,12 +261,6 @@ can uninstall it.
 
 App, data and cache size for every installed app (`StorageStatsManager`), largest first, with a
 total. Tap an app to open its settings.
-
-### Recent access
-
-Which apps recently used the **camera, microphone, location, contacts or clipboard**, and when,
-newest first. TinyKit parses `dumpsys appops`, so it's best-effort and varies a little between
-phones.
 
 ### Mixed audio
 
@@ -338,18 +357,6 @@ cmd locale set-app-locales <pkg> --user 0 --locales fr-FR   # no --locales = sys
 
 Android has no command for a dark mode per app, so there isn't one. **Force dark on all apps**
 covers every app at once.
-
-### Trackers in apps
-
-Finds the ad and analytics libraries inside your apps (Google Analytics, Google Ads, AppLovin,
-Facebook, AppsFlyer, Adjust and about 50 more), most first. TinyKit reads each app's declared
-parts (activities, services, receivers, providers) and matches their class names against a list
-of known libraries, so it shows what an app *carries*, not proof that it uses it. Tap an app to
-see the libraries, and on Android 14+ to cut it off the internet with **Block internet**.
-
-> [!NOTE]
-> TinyKit can't switch these parts off one by one. Android refuses it from the shell
-> (`Shell cannot change component state`), so blocking the app's internet is what works.
 
 ### Notification channels
 
@@ -587,6 +594,15 @@ with `ifconfig.me` as a fallback, and only while you have the page open.
 | **Vibration log** | `dumpsys vibrator_manager` | Recent vibrations: which app, what kind and when |
 | **App log** | `logcat --pid` | Up to 500 lines of one app's recent log output. Huawei hides most app logs. |
 | **Crash log** | `logcat -b crash` | Every crash since boot, with stack traces. **Clear** empties the log. |
+
+### Run in the background
+
+The first row of the **TinyKit** section, the one switch for everything TinyKit may keep running. Off
+(the default): TinyKit never runs by itself. On: one small foreground service with a quiet notification
+runs, but only while a tool needs it: **Shut Up**, or watching installs while an internet block or a
+permission choice is set up (so a new app is blocked at once, and Fake comes back after an app update). The
+line under the switch says what it is running for right now. The same switch is on the **Block internet
+per app** page, and turning **Shut Up** on turns it on too.
 
 ### Report a problem and crash reports
 

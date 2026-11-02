@@ -109,6 +109,102 @@ final class Shell {
         }
     }
 
+    /**
+     * For commands typed by the user: keeps at most {@code maxBytes} of output and ends the command
+     * after {@code timeoutMs}, so something like {@code logcat} can't run forever. {@code started}
+     * gets the process, so the caller can stop it sooner. Call off the main thread.
+     */
+    static Result runLimited(String command, long timeoutMs, int maxBytes, java.util.function.Consumer<Process> started) {
+        if (!ready()) return new Result(-1, "Shizuku is not available.");
+        Process process;
+        try {
+            if (newProcess == null) {
+                newProcess = Shizuku.class.getDeclaredMethod(
+                        "newProcess", String[].class, String[].class, String.class);
+                newProcess.setAccessible(true);
+            }
+            process = (Process) newProcess.invoke(null, new String[]{"sh", "-c", "exec 2>&1\n" + command}, null, null);
+            process.getOutputStream().close();
+        } catch (Exception e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            return new Result(-1, String.valueOf(cause.getMessage()));
+        }
+        if (started != null) started.accept(process);
+        boolean[] timedOut = {false};
+        Thread timer = new Thread(() -> {
+            try {
+                Thread.sleep(timeoutMs);
+                timedOut[0] = true;
+                process.destroy();
+            } catch (InterruptedException done) {
+                // Finished in time.
+            }
+        });
+        timer.start();
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        boolean cut = false;
+        try (InputStream in = process.getInputStream()) {
+            byte[] chunk = new byte[8192];
+            int n;
+            while ((n = in.read(chunk)) != -1) {
+                int keep = Math.min(n, maxBytes - buffer.size());
+                buffer.write(chunk, 0, keep);
+                if (buffer.size() >= maxBytes) {
+                    cut = true;
+                    process.destroy();
+                    break;
+                }
+            }
+        } catch (IOException stopped) {
+            // Destroyed while reading.
+        }
+        int code;
+        try {
+            code = process.waitFor();
+        } catch (InterruptedException e) {
+            code = -1;
+        }
+        timer.interrupt();
+        String out;
+        try {
+            out = buffer.toString("UTF-8").trim();
+        } catch (java.io.UnsupportedEncodingException e) {
+            out = buffer.toString().trim();
+        }
+        if (cut) out += "\n\n[output cut at " + (maxBytes / 1024) + " KB]";
+        else if (timedOut[0]) out += "\n\n[stopped after " + (timeoutMs / 1000) + " seconds]";
+        return new Result(code, out);
+    }
+
+    /** The raw output of {@code command}, or null if it failed or is bigger than {@code maxBytes}. Off the main thread. */
+    static byte[] bytes(String command, int maxBytes) {
+        if (!ready()) return null;
+        try {
+            if (newProcess == null) {
+                newProcess = Shizuku.class.getDeclaredMethod(
+                        "newProcess", String[].class, String[].class, String.class);
+                newProcess.setAccessible(true);
+            }
+            Process process = (Process) newProcess.invoke(null, new String[]{"sh", "-c", command}, null, null);
+            process.getOutputStream().close();
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            try (InputStream in = process.getInputStream()) {
+                byte[] chunk = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(chunk)) != -1) {
+                    if (buffer.size() + n > maxBytes) {
+                        process.destroy();
+                        return null;
+                    }
+                    buffer.write(chunk, 0, n);
+                }
+            }
+            return process.waitFor() == 0 ? buffer.toByteArray() : null;
+        } catch (Exception | OutOfMemoryError e) {
+            return null;
+        }
+    }
+
     /** Single-quotes a value for sh. */
     static String quote(String value) {
         return "'" + value.replace("'", "'\\''") + "'";

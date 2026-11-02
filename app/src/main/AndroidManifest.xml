@@ -52,7 +52,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
+            android:windowSoftInputMode="stateAlwaysHidden|adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|locale|layoutDirection">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -162,26 +163,15 @@
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
 
-        <!-- Hears about installs so a new app is blocked at once while the internet block needs it
-             (allow list mode, or a block list). Android only tells a running process about installs. -->
+        <!-- "Run in the background": off unless the user turns it on, and then running only while a
+             tool needs it (new apps for the internet block or Fake permissions, and Shut Up). -->
         <service
-            android:name=".NewAppService"
+            android:name=".BackgroundService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Listens for newly installed apps to block their internet access" />
-        </service>
-
-        <!-- Shut Up: while one of the apps you chose is open, Developer options and the debugging
-             switches look off to it. Off unless you turn Shut Up on; it puts everything back when it stops. -->
-        <service
-            android:name=".ShutUpService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Watches which app is open to hide developer options from the apps the user chose" />
+                android:value="Listens for newly installed apps to block their internet access, and watches which app is open to hide developer options from the apps the user chose" />
         </service>
 
         <!-- Starts that service again after a restart or an update of TinyKit. -->

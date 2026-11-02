@@ -10,10 +10,11 @@ what it actually does, and what it never does.
   (see [Crash reports](#crash-reports)).
 - **Nothing leaves your phone** except two requests you trigger yourself (see
   [Network](#network)).
-- **Nothing runs in the background by default.** The optional switch *Block new apps at once*
-  keeps a quiet notification and a small service so a new app is blocked the moment it is
-  installed; it is off until you turn it on and shows in the settings whether it is running. Besides
-  that, TinyKit only runs a short check when Shizuku starts.
+- **Nothing runs in the background by default.** The optional switch *Run in the background*
+  (Info tab) allows one quiet notification and a small service, and only while a tool needs it: a new
+  app blocked the moment it is installed, or Shut Up. It is off until you turn it on (turning on Shut Up
+  turns it on too) and shows what it is running for. Besides that, TinyKit only runs a short check
+  when Shizuku starts.
 - **Everything it changes is a standard Android setting**, which you can inspect and undo.
 - **Open source** under the MIT licence: every command is in the code, and this documentation
   lists them.
@@ -89,7 +90,7 @@ That's what it does. Turning it off restores your previous Private DNS setting.
 
 ## Things TinyKit will never do
 
-- Run in the background or start at boot, other than the two optional services you switch on yourself (*Block new apps at once* and *Shut Up*) and the Shizuku-start check above.
+- Run in the background or start at boot, other than the one optional service you switch on yourself (*Run in the background*, for blocking new apps and Shut Up) and the Shizuku-start check above.
 - Send any data anywhere other than the two requests above.
 - Touch your Huawei ID or Google account. The telemetry tools explicitly skip `hwid` packages.
 - Change anything you didn't tap. Opening a page only reads.

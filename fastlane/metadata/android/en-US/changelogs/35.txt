@@ -1,0 +1,5 @@
+A polish release.
+• Run in the background: one switch, one service, one notification, only while Shut Up or new-app blocking needs it, asleep while the screen is off. Turning Shut Up on turns it on too.
+• Tidier tabs; search finds every row and jumps to it.
+• Stop closes Shizuku fully, even with a Watchdog.
+• Fixes: Screen record tile, Debloater warning for your own apps, Trackers page in allow list mode, Run a command can be stopped, settings restore, and more.

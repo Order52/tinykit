@@ -117,6 +117,8 @@ import rikka.shizuku.Shizuku;
  */
 public class MainActivity extends Activity {
 
+    /** Opens TinyKit on this tab (the background notification opens the Info tab). */
+    static final String EXTRA_TAB = "tab";
     private static final int REQUEST_SHIZUKU = 1;
     private static final String SHIZUKU_PKG = "moe.shizuku.privileged.api";
     // thedjchi's fork adds a Watchdog that restarts Shizuku when Android kills it.
@@ -125,7 +127,6 @@ public class MainActivity extends Activity {
     private static final String TERMUX_DOWNLOAD = "https://f-droid.org/packages/com.termux/";
     private static final String REPO = "https://github.com/Order52/tinykit";
     private static final String TERMUX = "com.termux";
-    private static final String TERMUX_BIN = "/data/data/com.termux/files/usr/bin/";
     private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
     private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
     private static final int REQUEST_RUN_COMMAND = 2;
@@ -231,8 +232,13 @@ public class MainActivity extends Activity {
                 }
             });
     private final List<Toggle> toggles = new ArrayList<>();
-    private final List<View> shizukuRows = new ArrayList<>();
-    private final List<View> shizukuLabels = new ArrayList<>();
+    private final List<Runnable> liveSwitches = new ArrayList<>();
+    // Every row of the five tabs, for the search on the home tab. Filled while the tabs are built.
+    private final List<Feature> searchIndex = new ArrayList<>();
+    private int indexingTab = -1;
+    // Rows that need Shizuku, dimmed while it isn't usable. Weak, so rows of closed pages can go.
+    private final Set<View> shizukuRows = Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private final Set<View> shizukuLabels = Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private Switch updateSwitch;
     private final List<View> pages = new ArrayList<>();
     private final List<CharSequence> titles = new ArrayList<>();
@@ -240,24 +246,31 @@ public class MainActivity extends Activity {
     // Mixed audio state per package: {muted 0/1, plays-with-others 0/1}.
     private final Map<String, int[]> audioState = new HashMap<>();
     private Map<String, String> settings = new HashMap<>();
-    private List<App> apps;
+    private volatile List<App> apps;
+    private final Object appsLock = new Object();
     private SharedPreferences prefs;
     private FrameLayout frame;
     private final TextView[] tabs = new TextView[TAB_NAMES.length];
     private View[] tabRoots;
+    private View tabBar;
+    private EditText searchBox;
     private TextView shizukuText;
     private TextView tokenText;
     private Button shizukuButton;
     private Button startButton;
     private Button stopButton;
-    private boolean starting;
+    private boolean starting, stopping;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnRequestPermissionResultListener permissionResult =
             (code, result) -> main.post(this::refreshShizuku);
-    private final Runnable startTimeout = () -> startFinished(
-            "Shizuku didn't start. Open Termux or the Shizuku app to see why.");
+    private final Runnable startTimeout = () -> startFinished(ShizukuControl.intents(this, prefs)
+            ? "Shizuku didn't start. Check the auth token matches the one in Shizuku's settings."
+            : "Shizuku didn't start. Open Termux or the Shizuku app to see why.");
+    private final Runnable stopTimeout = () -> stopFinished(ShizukuControl.intents(this, prefs)
+            ? "Shizuku didn't stop. Check the auth token matches the one in Shizuku's settings."
+            : "Shizuku didn't stop. Try again, or stop it in the Shizuku app.");
     private final BroadcastReceiver termuxResult = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -269,8 +282,9 @@ public class MainActivity extends Activity {
                 return;
             }
             String message = termuxMessage(result);
-            // Shizuku's binder can arrive a moment after the command returns.
-            main.postDelayed(() -> startFinished(message), 1500);
+            boolean failed = result == null || result.getInt("exitCode", -1) != 0;
+            // A failure is shown at once; after a success Shizuku's binder can take a moment to arrive.
+            main.postDelayed(() -> startFinished(message), failed ? 0 : 3000);
         }
     };
 
@@ -283,12 +297,22 @@ public class MainActivity extends Activity {
         // picker and log opens instantly. Runs off the worker queue to not delay the first tap.
         thumbs.execute(this::installedApps);
         LinearLayout root = vertical();
+        // Takes the first focus, so the search box doesn't open the keyboard on start.
+        root.setFocusableInTouchMode(true);
+        root.requestFocus();
         frame = new FrameLayout(this);
         root.addView(frame, new LinearLayout.LayoutParams(-1, 0, 1f));
-        root.addView(buildTabBar());
+        tabBar = buildTabBar();
+        root.addView(tabBar);
         setContentView(root);
-        tabRoots = new View[]{buildShizuku(), buildPrivacy(), buildApps(), buildSystem(), buildInfo()};
-        selectTab(Math.min(prefs.getInt("tab", 0), TAB_NAMES.length - 1));
+        tabRoots = new View[TAB_NAMES.length];
+        for (indexingTab = 0; indexingTab < TAB_NAMES.length; indexingTab++) {
+            tabRoots[indexingTab] = indexingTab == 0 ? buildShizuku() : indexingTab == 1 ? buildPrivacy()
+                    : indexingTab == 2 ? buildApps() : indexingTab == 3 ? buildSystem() : buildInfo();
+        }
+        indexingTab = -1;
+        int tab = getIntent().getIntExtra(EXTRA_TAB, prefs.getInt("tab", 0));
+        selectTab(Math.max(0, Math.min(tab, TAB_NAMES.length - 1)));
         Shizuku.addBinderReceivedListenerSticky(binderReceived);
         Shizuku.addBinderDeadListener(binderDead);
         Shizuku.addRequestPermissionResultListener(permissionResult);
@@ -458,6 +482,22 @@ public class MainActivity extends Activity {
         refreshShizuku();
     }
 
+    /** Opened again from the background notification: go to the tab it asks for. */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent.hasExtra(EXTRA_TAB)) {
+            selectTab(Math.max(0, Math.min(intent.getIntExtra(EXTRA_TAB, 0), TAB_NAMES.length - 1)));
+        }
+    }
+
+    /** Choices made on screen (a blocked app, a Fake permission) can start or stop the background service. */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        BackgroundService.sync(this);
+    }
+
     /**
      * Frees the icon and thumbnail bitmap caches as soon as the app leaves the screen, so a
      * backgrounded TinyKit keeps almost no memory (and it never runs anything in the background).
@@ -478,6 +518,7 @@ public class MainActivity extends Activity {
         Shizuku.removeBinderDeadListener(binderDead);
         Shizuku.removeRequestPermissionResultListener(permissionResult);
         main.removeCallbacks(startTimeout);
+        main.removeCallbacks(stopTimeout);
         unregisterReceiver(termuxResult);
         worker.shutdown();
         thumbs.shutdownNow();
@@ -507,6 +548,10 @@ public class MainActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
+        if (pages.size() == 1 && searchBox != null && searchBox.length() > 0 && pages.get(0) == tabRoots[0]) {
+            searchBox.setText(""); // Back leaves the search first, then the app
+            return;
+        }
         if (pages.size() > 1) {
             pages.remove(pages.size() - 1);
             titles.remove(titles.size() - 1);
@@ -520,17 +565,42 @@ public class MainActivity extends Activity {
     private View buildTabBar() {
         LinearLayout bar = new LinearLayout(this);
         bar.setBackgroundColor(0xFF0D0D0D);
+        bar.setPadding(dp(4), dp(6), dp(4), dp(6));
         for (int i = 0; i < TAB_NAMES.length; i++) {
             TextView tab = text(TAB_NAMES[i], 13, false);
             tab.setGravity(Gravity.CENTER);
-            tab.setPadding(0, dp(16), 0, dp(16));
+            tab.setSingleLine(true);
+            tab.setPadding(dp(2), dp(10), dp(2), dp(10));
             tab.setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
             int index = i;
             tab.setOnClickListener(v -> selectTab(index));
             tabs[i] = tab;
             bar.addView(tab, new LinearLayout.LayoutParams(0, -2, 1f));
         }
+        // Large text or a narrow screen: every label shrinks to the same size so the longest fits.
+        bar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (r - l != or - ol) bar.post(this::fitTabs);
+        });
         return bar;
+    }
+
+    private void fitTabs() {
+        float px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 13, getResources().getDisplayMetrics());
+        float min = px * 0.6f;
+        android.text.TextPaint paint = new android.text.TextPaint(tabs[0].getPaint());
+        paint.setTypeface(Typeface.DEFAULT_BOLD); // the selected tab is bold, and widest
+        while (px > min && !tabsFit(paint, px)) px -= 0.5f;
+        for (TextView tab : tabs) tab.setTextSize(TypedValue.COMPLEX_UNIT_PX, px);
+    }
+
+    private boolean tabsFit(android.text.TextPaint paint, float px) {
+        paint.setTextSize(px);
+        for (TextView tab : tabs) {
+            int room = tab.getWidth() - tab.getPaddingLeft() - tab.getPaddingRight() - dp(4);
+            if (room <= 0) return true; // not laid out yet
+            if (paint.measureText(tab.getText().toString()) > room) return false;
+        }
+        return true;
     }
 
     private void selectTab(int index) {
@@ -540,6 +610,14 @@ public class MainActivity extends Activity {
             tabs[i].setTextColor(selected ? attrColor(android.R.attr.colorAccent) : 0xFFFFFFFF);
             tabs[i].setAlpha(selected ? 1f : 0.6f);
             tabs[i].setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            if (selected) {
+                GradientDrawable pill = new GradientDrawable();
+                pill.setCornerRadius(dp(20));
+                pill.setColor(0x268C9EFF);
+                tabs[i].setBackground(new android.graphics.drawable.InsetDrawable(pill, dp(2), 0, dp(2), 0));
+            } else {
+                tabs[i].setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
+            }
         }
         pages.clear();
         titles.clear();
@@ -562,6 +640,14 @@ public class MainActivity extends Activity {
         boolean installed = Shell.installed(getPackageManager());
         boolean running = Shell.running();
         boolean ready = Shell.ready();
+        if (starting && running) {
+            starting = false;
+            main.removeCallbacks(startTimeout);
+        }
+        if (stopping && !running) {
+            stopping = false;
+            main.removeCallbacks(stopTimeout);
+        }
         if (!installed) {
             shizukuText.setText(Tr.t("Shizuku is not installed"));
             shizukuButton.setText(Tr.t("Get Shizuku"));
@@ -577,17 +663,18 @@ public class MainActivity extends Activity {
                 }
             });
         } else {
-            shizukuText.setText(Tr.t(running ? "Shizuku is running  ✓" : "Shizuku is not running"));
+            shizukuText.setText(Tr.t(running ? "Shizuku is running" : "Shizuku is not running"));
             shizukuButton.setText(Tr.t("Open Shizuku"));
             shizukuButton.setOnClickListener(v -> openApp(SHIZUKU_PKG));
         }
-        if (starting && running) {
-            starting = false;
-            main.removeCallbacks(startTimeout);
+        if (installed && (starting || stopping)) {
+            shizukuText.setText(Tr.t(stopping ? "Stopping Shizuku…" : "Starting Shizuku…"));
         }
-        startButton.setEnabled(installed && !starting && !running);
+        statusDot(stopping || starting ? 0xFFFFB74D : ready ? 0xFF66BB6A : running ? 0xFFFFB74D : 0xFFEF5350);
+        startButton.setEnabled(installed && !starting && !stopping && !running);
         startButton.setText(Tr.t(starting ? "Starting…" : "Start"));
-        stopButton.setEnabled(running);
+        stopButton.setEnabled(running && !stopping);
+        stopButton.setText(Tr.t(stopping ? "Stopping…" : "Stop"));
         tokenText.setText(Tr.t(token().isEmpty()
                 ? "Not set. Tap to paste it from Shizuku's settings."
                 : "Set. Start and Stop go straight to Shizuku."));
@@ -595,6 +682,7 @@ public class MainActivity extends Activity {
         for (View label : shizukuLabels) label.setVisibility(ready ? View.GONE : View.VISIBLE);
         if (ready) {
             loadSettings();
+            for (Runnable r : liveSwitches) r.run();
             // Grant TinyKit the permissions its toggles and tiles need, so they keep working
             // when Shizuku is later turned off. Done once, off the main thread.
             worker.execute(() -> Tweak.grantSelf(this));
@@ -608,6 +696,15 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** The coloured dot in front of the Shizuku status: green ready, amber waiting, red off. */
+    private void statusDot(int color) {
+        GradientDrawable dot = new GradientDrawable();
+        dot.setShape(GradientDrawable.OVAL);
+        dot.setColor(color);
+        dot.setSize(dp(12), dp(12));
+        shizukuText.setCompoundDrawablesRelativeWithIntrinsicBounds(dot, null, null, null);
+    }
+
     /**
      * Starts Shizuku without a computer: through its start intent when an auth token is saved and
      * the installed Shizuku has one, otherwise by asking Termux to run the shizuku-termux command
@@ -616,58 +713,31 @@ public class MainActivity extends Activity {
      */
     private void startShizuku() {
         if (starting) return;
-        if (!token().isEmpty() && hasStartIntent()) {
-            sendBroadcast(new Intent(SHIZUKU_PKG + ".START").setPackage(SHIZUKU_PKG)
-                    .putExtra("auth", token()));
-            starting = true;
-            refreshShizuku();
-            main.postDelayed(startTimeout, 60_000L);
-            return;
-        }
-        try {
-            getPackageManager().getPackageInfo(TERMUX, 0);
-        } catch (PackageManager.NameNotFoundException e) {
-            openShizukuToStart();
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= 23
-                && checkSelfPermission(PERMISSION_RUN_COMMAND) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{PERMISSION_RUN_COMMAND}, REQUEST_RUN_COMMAND);
-            return;
+        if (!ShizukuControl.intents(this, prefs)) {
+            try {
+                getPackageManager().getPackageInfo(TERMUX, 0);
+            } catch (PackageManager.NameNotFoundException e) {
+                openShizukuToStart();
+                return;
+            }
+            if (Build.VERSION.SDK_INT >= 23
+                    && checkSelfPermission(PERMISSION_RUN_COMMAND) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{PERMISSION_RUN_COMMAND}, REQUEST_RUN_COMMAND);
+                return;
+            }
         }
         int flags = PendingIntent.FLAG_ONE_SHOT;
         if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
         PendingIntent result = PendingIntent.getBroadcast(this, 0,
                 new Intent(ACTION_TERMUX_RESULT).setPackage(getPackageName()), flags);
-        Intent intent = new Intent("com.termux.RUN_COMMAND")
-                .setClassName(TERMUX, "com.termux.app.RunCommandService")
-                .putExtra("com.termux.RUN_COMMAND_PATH", TERMUX_BIN + "bash")
-                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c",
-                        "[ -x " + TERMUX_BIN + "shizuku ] || exit 127; exec " + TERMUX_BIN
-                                + "shizuku start </dev/null"})
-                .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
-                .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", result);
-        try {
-            // Termux's own docs ask for this on Android 8+: a plain start is refused whenever
-            // TinyKit isn't counted as in front, e.g. right after the permission dialog closes.
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
-            else startService(intent);
-        } catch (RuntimeException e) {
+        if (!ShizukuControl.start(this, prefs, result)) {
             toast(Tr.t("Could not reach Termux. Open Termux once, then try again."));
             return;
         }
         starting = true;
         refreshShizuku();
-        main.postDelayed(startTimeout, 60_000L);
-    }
-
-    /**
-     * Whether the installed Shizuku has start and stop intents (thedjchi's fork and others based on
-     * it). The standard app from shizuku.rikka.app has none and ignores them.
-     */
-    private boolean hasStartIntent() {
-        return !getPackageManager().queryBroadcastReceivers(
-                new Intent(SHIZUKU_PKG + ".START").setPackage(SHIZUKU_PKG), 0).isEmpty();
+        // Shizuku's own start intent takes a couple of seconds; Termux may first need to pair.
+        main.postDelayed(startTimeout, ShizukuControl.intents(this, prefs) ? 15_000L : 60_000L);
     }
 
     /**
@@ -684,36 +754,37 @@ public class MainActivity extends Activity {
         startActivity(launch);
     }
 
-    /**
-     * With the auth token this uses Shizuku's own stop intent, which its Watchdog respects.
-     * Without it the server process is ended, and the Watchdog may start it again.
-     */
+    /** Stops Shizuku the best way it can (see {@link ShizukuControl#stop}); the binder listener redraws the card. */
     private void stopShizuku() {
-        if (!token().isEmpty() && hasStartIntent()) {
-            sendBroadcast(new Intent(SHIZUKU_PKG + ".STOP").setPackage(SHIZUKU_PKG)
-                    .putExtra("auth", token()));
-            toast(Tr.t("Stopping Shizuku…"));
-            main.postDelayed(this::refreshShizuku, 1500);
-            return;
-        }
-        if (!Shell.ready()) {
-            toast(Tr.t("Allow TinyKit in Shizuku first, or set the auth token below."));
-            return;
-        }
-        if (!hasStartIntent()) {
-            // The standard Shizuku app has no Watchdog, so ending the server stops it for good.
-            worker.execute(() -> Shell.run("pkill -f '[s]hizuku_server' || killall shizuku_server"));
-            toast(Tr.t("Stopping Shizuku…"));
-            main.postDelayed(this::refreshShizuku, 1500);
-            return;
-        }
+        if (stopping) return;
+        stopping = true;
+        refreshShizuku();
+        // Gives up if Shizuku is still there: a wrong auth token is ignored without a word.
+        main.postDelayed(stopTimeout, 6000);
+        // Its own thread: the worker may be busy, and Stop should never wait behind other work.
+        new Thread(() -> {
+            String error = ShizukuControl.stop(getApplicationContext(), prefs, null);
+            if (error != null) main.post(() -> stopFinished(error));
+        }).start();
+    }
+
+    private void stopFinished(String message) {
+        main.removeCallbacks(stopTimeout);
+        stopping = false;
+        refreshShizuku();
+        if (Shell.running() && message != null) shizukuProblem("Shizuku didn't stop", message);
+    }
+
+    /** A start or stop that failed: the whole message (a toast cuts it at two lines), and where to fix it. */
+    private void shizukuProblem(String title, String message) {
+        if (!alive()) return;
+        boolean termux = !ShizukuControl.intents(this, prefs) && ShizukuControl.termux(this);
         new AlertDialog.Builder(this)
-                .setTitle(Tr.t("Stop Shizuku?"))
-                .setMessage(Tr.t("Without the auth token TinyKit ends Shizuku's process. If Shizuku's "
-                        + "Watchdog is on, it will start Shizuku again. Set the auth token to stop it properly."))
-                .setPositiveButton(Tr.t("Stop anyway"), (d, w) -> worker.execute(() ->
-                        Shell.run("pkill -f '[s]hizuku_server' || killall shizuku_server")))
-                .setNegativeButton(Tr.t("Cancel"), null)
+                .setTitle(Tr.t(title))
+                .setMessage(Tr.t(message))
+                .setPositiveButton(android.R.string.ok, null)
+                .setNeutralButton(Tr.t(termux ? "Open Termux" : "Open Shizuku"),
+                        (d, w) -> openApp(termux ? TERMUX : SHIZUKU_PKG))
                 .show();
     }
 
@@ -750,7 +821,7 @@ public class MainActivity extends Activity {
         main.removeCallbacks(startTimeout);
         starting = false;
         refreshShizuku();
-        if (!Shell.running() && !TextUtils.isEmpty(message)) toast(Tr.t(message));
+        if (!Shell.running() && !TextUtils.isEmpty(message)) shizukuProblem("Shizuku didn't start", message);
     }
 
     private static String termuxMessage(Bundle result) {
@@ -804,8 +875,15 @@ public class MainActivity extends Activity {
     private View buildShizuku() {
         LinearLayout list = vertical();
         LinearLayout status = vertical();
-        status.setPadding(dp(16), dp(20), dp(16), dp(8));
-        shizukuText = text("", 20, true);
+        status.setPadding(dp(16), dp(16), dp(16), dp(12));
+        GradientDrawable card = new GradientDrawable();
+        card.setCornerRadius(dp(16));
+        card.setColor(0xFF121212);
+        status.setBackground(card);
+        shizukuText = text("", 18, true);
+        shizukuText.setGravity(Gravity.CENTER_VERTICAL);
+        shizukuText.setCompoundDrawablePadding(dp(10));
+        shizukuText.setPadding(dp(4), 0, 0, 0);
         status.addView(shizukuText);
         LinearLayout buttons = new LinearLayout(this);
         buttons.setPadding(0, dp(12), 0, 0);
@@ -818,13 +896,15 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams full = new LinearLayout.LayoutParams(-1, -2);
         full.setMargins(dp(4), 0, dp(4), 0);
         status.addView(shizukuButton, full);
-        list.addView(status);
+        LinearLayout.LayoutParams cardMargin = new LinearLayout.LayoutParams(-1, -2);
+        cardMargin.setMargins(dp(12), dp(8), dp(12), dp(4));
+        list.addView(status, cardMargin);
 
         row(list, "Auth token", "", arrow(), this::editToken, false);
         tokenText = (TextView) list.getChildAt(list.getChildCount() - 1).getTag();
         TextView help = text("Start uses the auth token when it's set, otherwise Termux with "
-                + "shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Set the token "
-                + "if you use a Shizuku fork with Watchdog, so Stop really stops it.", 13, false);
+                + "shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Stop closes "
+                + "Shizuku fully, so a Watchdog can't start it straight back up.", 13, false);
         help.setAlpha(0.6f);
         help.setPadding(dp(16), dp(8), dp(16), 0);
         list.addView(help);
@@ -834,145 +914,139 @@ public class MainActivity extends Activity {
                 arrow(), () -> addTile(ShizukuTile.class, "Shizuku", R.drawable.ic_tile_shizuku,
                         "One tap turns Shizuku on or off. It uses the auth token when it's set, "
                                 + "otherwise Termux with shizuku-termux."), false);
-        row(list, "Screenshot tile", "Take a screenshot from the quick panel, saved to Pictures/Screenshots.",
-                arrow(), () -> addTile(ScreenshotTile.class, "Screenshot", R.drawable.ic_tile_screenshot,
-                        "Needs Shizuku running. Apps that block screenshots stay blocked: Android doesn't let "
-                                + "any app get past that without root."), false);
         row(list, "Install Shizuku & Termux", "Recommended versions that keep running in the background.",
                 arrow(), this::showInstall, false);
         return withSearch(scroll(list));
     }
 
     /**
-     * Wraps the home screen with a search bar over every TinyKit tool and setting. Typing swaps the
-     * home content for a results list; clearing it brings the home screen back.
+     * Wraps the home screen with a search bar over every row of every tab. Typing swaps the home
+     * content for a results list; clearing it brings the home screen back. A result that opens a page
+     * opens it; a switch or an action is shown in its tab, so nothing runs by surprise.
      */
     private View withSearch(View home) {
         LinearLayout outer = vertical();
         EditText search = new EditText(this);
+        searchBox = search;
         search.setHint(Tr.t("Search all settings & tools"));
         search.setSingleLine(true);
-        search.setPadding(dp(16), dp(10), dp(16), dp(10));
-        outer.addView(search);
+        search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        search.setPadding(dp(16), dp(12), dp(16), dp(12));
+        GradientDrawable box = new GradientDrawable();
+        box.setCornerRadius(dp(24));
+        box.setColor(0xFF1A1A1A);
+        search.setBackground(box);
+        LinearLayout.LayoutParams boxMargin = new LinearLayout.LayoutParams(-1, -2);
+        boxMargin.setMargins(dp(12), dp(8), dp(12), dp(4));
+        outer.addView(search, boxMargin);
         FrameLayout holder = new FrameLayout(this);
         holder.addView(home);
         ListView results = new ListView(this);
-        results.setFastScrollEnabled(true);
         results.setVisibility(View.GONE);
+        TextView none = note("Nothing found.");
+        none.setVisibility(View.GONE);
         holder.addView(results);
+        holder.addView(none);
         outer.addView(holder, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        List<Feature> all = features();
         Adapter<Feature> adapter = new Adapter<>(false, (f, row) -> {
             row.first.setText(Tr.t(f.title));
             row.second.setText(Tr.t(f.summary));
+            row.third.setText(Tr.t(TAB_NAMES[f.tab]));
+            row.third.setTextColor(attrColor(android.R.attr.colorAccent));
+            row.third.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         });
         results.setAdapter(adapter);
-        results.setOnItemClickListener((parent, view, position, id) -> adapter.getItem(position).open.run());
+        results.setOnItemClickListener((parent, view, position, id) -> {
+            Feature f = adapter.getItem(position);
+            search.setText("");
+            hideKeyboard(search);
+            reveal(f);
+        });
         search.addTextChangedListener(watcher(() -> {
             String q = search.getText().toString().toLowerCase(Locale.ROOT).trim();
+            // The results get the whole screen above the keyboard while you type.
+            if (tabBar != null) tabBar.setVisibility(q.isEmpty() ? View.VISIBLE : View.GONE);
             if (q.isEmpty()) {
                 home.setVisibility(View.VISIBLE);
                 results.setVisibility(View.GONE);
+                none.setVisibility(View.GONE);
                 return;
             }
             String[] terms = q.split("\\s+");
-            List<Feature> shown = new ArrayList<>();
-            for (Feature f : all) {
-                String hay = (f.title + " " + f.summary).toLowerCase(Locale.ROOT);
+            for (int i = 0; i < terms.length; i++) terms[i] = squash(terms[i]);
+            List<Feature> titleHits = new ArrayList<>();
+            List<Feature> otherHits = new ArrayList<>();
+            for (Feature f : searchIndex) {
+                String title = squash(f.title + " " + Tr.t(f.title));
+                String hay = title + squash(f.summary + " " + Tr.t(f.summary));
                 boolean match = true;
+                boolean inTitle = true;
                 for (String term : terms) {
                     if (!hay.contains(term)) {
                         match = false;
                         break;
                     }
+                    if (!title.contains(term)) inTitle = false;
                 }
-                if (match) shown.add(f);
+                if (match) (inTitle ? titleHits : otherHits).add(f);
             }
-            adapter.set(shown);
+            titleHits.addAll(otherHits);
+            adapter.set(titleHits);
             home.setVisibility(View.GONE);
-            results.setVisibility(View.VISIBLE);
+            results.setVisibility(titleHits.isEmpty() ? View.GONE : View.VISIBLE);
+            none.setVisibility(titleHits.isEmpty() ? View.VISIBLE : View.GONE);
         }));
         return outer;
     }
 
+    /** Lower case without spaces, punctuation or accents, so "wifi" finds "Wi-Fi" and "aplicacion" "aplicación". */
+    private static String squash(String text) {
+        return java.text.Normalizer.normalize(text.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("[^\\p{L}\\p{N}]+|\\p{M}+", "");
+    }
+
+    /** One searchable row: where it lives and the row itself. */
     private static final class Feature {
         final String title;
         final String summary;
-        final Runnable open;
+        final int tab;
+        final View row;
+        final boolean opens;
 
-        Feature(String title, String summary, Runnable open) {
+        Feature(String title, String summary, int tab, View row, boolean opens) {
             this.title = title;
             this.summary = summary;
-            this.open = open;
+            this.tab = tab;
+            this.row = row;
+            this.opens = opens;
         }
     }
 
-    /** Everything searchable: pages open directly, inline toggles jump to their tab. */
-    private List<Feature> features() {
-        List<Feature> f = new ArrayList<>();
-        f.add(new Feature("Auth token", "Shizuku start and stop token", this::editToken));
-        f.add(new Feature("TinyKit tiles", "Add Quick Settings tiles", this::openTiles));
-        f.add(new Feature("Install Shizuku & Termux", "Get the recommended versions", this::showInstall));
-        f.add(new Feature("Hide developer options", "Apps see developer options as off", () -> selectTab(1)));
-        f.add(new Feature("Ad-blocking DNS", "Block ads with Private DNS", () -> selectTab(1)));
-        f.add(new Feature("Stop background scanning", "Wi-Fi and Bluetooth stop scanning", () -> selectTab(1)));
-        f.add(new Feature("Analytics & telemetry", "Huawei and Google tracking off", this::openAnalytics));
-        f.add(new Feature("Saved Wi-Fi networks", "Passwords and QR codes", this::openWifi));
-        f.add(new Feature("All sensors off", "Block motion, mic and camera sensors", () -> selectTab(1)));
-        f.add(new Feature("App permissions", "Set Real, Fake or Off per app", () -> openAppList(
-                "App permissions", "Pick an app to change its permissions and app-ops.", this::openAppPage)));
-        f.add(new Feature("Default apps", "Launcher, browser, phone and more", this::openDefaults));
-        f.add(new Feature("Hide apps", "Hide apps from the launcher", this::openHide));
-        f.add(new Feature("Unused apps", "Apps you haven't opened in a long time", this::openUnused));
-        f.add(new Feature("Storage by app", "Which apps take the most space", this::openStorage));
-        f.add(new Feature("Recent access", "Camera, mic, location, contacts, clipboard", this::openRecentAccess));
-        f.add(new Feature("Mixed audio", "Play apps together or mute an app", this::openMixedAudio));
-        f.add(new Feature("Running apps", "Memory use; stop any app", this::openRunning));
-        f.add(new Feature("Stop background activity", "Per-app background block", this::openBackground));
-        f.add(new Feature("Keep apps alive", "Exempt apps from battery limits", this::openKeepAlive));
-        f.add(new Feature("Back up app as APK", "Save any app's APK", this::openBackup));
-        f.add(new Feature("Install APK files", "Install .apk, .apks, .xapk and split apps", this::pickApks));
-        f.add(new Feature("Debloater", "Remove apps your phone came with, and bring them back", this::openDebloat));
-        f.add(new Feature("Special access", "Install unknown apps, draw over apps, all files and more",
-                this::openSpecialAccess));
-        f.add(new Feature("App language", "Give an app its own language", this::openAppLanguage));
-        f.add(new Feature("Installed with TinyKit", "Apps the installer put on, with a remove button",
-                this::openInstallHistory));
-        f.add(new Feature("Screen time", "How long each app was on screen", this::openScreenTime));
-        f.add(new Feature("Clipboard guard", "Stop apps from reading your clipboard", this::openClipboardGuard));
-        f.add(new Feature("Block internet per app", "Cut an app off Wi-Fi and mobile data", this::openFirewall));
-        f.add(new Feature("Shut Up", "Hide developer options and USB debugging from chosen apps", this::openShutUp));
-        f.add(new Feature("Force dark on all apps", "Dark-theme apps that have no dark mode", () -> selectTab(3)));
-        f.add(new Feature("Disable HW overlays", "Draw with the GPU only, like the developer option", () -> selectTab(3)));
-        f.add(new Feature("Animation speed", "Off, faster or slower system animations", () -> selectTab(3)));
-        f.add(new Feature("Edit quick panel", "Reorder, add and remove tiles", this::openQuickPanel));
-        f.add(new Feature("Run a command", "Run a shell command via Shizuku", this::openRunCommand));
-        f.add(new Feature("Recover deleted files", "Files in recycle bins and trash", this::openRecover));
-        f.add(new Feature("Settings backup & restore", "Save and restore all settings", this::openBackupRestore));
-        f.add(new Feature("Reset everything TinyKit changed", "Undo all of TinyKit's changes", this::confirmResetEverything));
-        f.add(new Feature("Reset permission changes", "Undo Real, Fake and Off, repair problems", this::confirmResetPermissions));
-        f.add(new Feature("Advanced reboot", "Reboot, recovery, bootloader, soft reboot", this::openReboot));
-        f.add(new Feature("Speed up phone", "Delete caches and free memory, one tap", () -> selectTab(3)));
-        f.add(new Feature("Speed-up widget", "One-tap RAM and cache cleaner", this::addBoostWidget));
-        f.add(new Feature("Clear all app caches", "Free cached space", () -> selectTab(3)));
-        f.add(new Feature("Optimize apps", "Recompile apps so they open faster", () -> selectTab(3)));
-        f.add(new Feature("Trim storage", "Storage maintenance and TRIM", () -> selectTab(3)));
-        f.add(new Feature("Free hotspot", "Bypass carrier tether blocks", () -> selectTab(3)));
-        f.add(new Feature("Mobile data off on Wi-Fi", "Save battery on Wi-Fi", () -> selectTab(3)));
-        f.add(new Feature("Phone info", "Battery, memory, storage, system", this::openInfo));
-        f.add(new Feature("Network info", "IP addresses, Wi-Fi, DNS", this::openNetworkInfo));
-        f.add(new Feature("Charging info", "Power, current, voltage, health", this::openChargingInfo));
-        f.add(new Feature("Temperatures", "Every thermal sensor", this::openTemperatures));
-        f.add(new Feature("Device IDs", "Android ID, serial, MAC, build", this::openDeviceIds));
-        f.add(new Feature("Battery usage", "Top battery consumers", this::openBatteryUsage));
-        f.add(new Feature("Wake-ups", "What keeps the phone awake", this::openWakeups));
-        f.add(new Feature("Vibration log", "Recent vibrations", this::openVibration));
-        f.add(new Feature("App log", "An app's recent log output", this::openAppLog));
-        f.add(new Feature("Crash log", "Why an app crashed", this::openCrashes));
-        f.add(new Feature("Check for updates", "Get the latest version", () -> selectTab(4)));
-        f.add(new Feature("About", "About TinyKit", this::showAbout));
-        return f;
+    /** Goes to a search result: opens its page, or scrolls its tab to it and lights it up. */
+    private void reveal(Feature f) {
+        selectTab(f.tab);
+        if (f.opens) {
+            f.row.performClick();
+            return;
+        }
+        View scroll = tabRoots[f.tab];
+        if (f.tab == 0 && scroll instanceof ViewGroup) scroll = ((ViewGroup) scroll).getChildAt(1);
+        while (scroll instanceof ViewGroup && !(scroll instanceof ScrollView)) scroll = ((ViewGroup) scroll).getChildAt(0);
+        ScrollView sv = scroll instanceof ScrollView ? (ScrollView) scroll : null;
+        f.row.post(() -> {
+            if (sv != null) sv.smoothScrollTo(0, Math.max(0, f.row.getTop() - dp(64)));
+            Drawable old = f.row.getBackground();
+            f.row.setBackgroundColor(0x408C9EFF);
+            main.postDelayed(() -> f.row.setBackground(old), 1400);
+        });
+    }
+
+    private void hideKeyboard(View view) {
+        android.view.inputmethod.InputMethodManager imm =
+                (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null) imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
 
     /** Android 13+ can add a tile with one tap; older versions need the panel's edit screen. */
@@ -1016,10 +1090,6 @@ public class MainActivity extends Activity {
     private View buildPrivacy() {
         LinearLayout list = vertical();
         section(list, "Quick toggles");
-        toggle(list, "Hide developer options",
-                "Apps see Developer options as off. adb and Shizuku keep working.",
-                s -> "0".equals(s.get("development_settings_enabled")),
-                on -> "settings put global development_settings_enabled " + (on ? 0 : 1));
         toggle(list, "Ad-blocking DNS",
                 "Blocks ads and trackers in every app and browser (AdGuard Private DNS).",
                 s -> "hostname".equals(s.get("private_dns_mode"))
@@ -1037,25 +1107,31 @@ public class MainActivity extends Activity {
                 () -> "true".equals(Shell.run(sensorsCmd(this, "state")).out.trim()),
                 block -> error(Shell.run(sensorsCmd(this, block ? "on" : "off"))));
 
-        section(list, "Tracking");
-        link(list, "Analytics & telemetry",
-                "Turn off Huawei and Google analytics, ad tracking and HiCloud.", this::openAnalytics);
+        section(list, "Developer options");
+        toggle(list, "Hide developer options",
+                "Every app sees Developer options as off. adb and Shizuku keep working.",
+                s -> "0".equals(s.get("development_settings_enabled")),
+                on -> "settings put global development_settings_enabled " + (on ? 0 : 1));
+        // Needs Shizuku only once, to grant itself access, so the row stays usable without it.
+        row(list, "Shut Up",
+                "Only the apps you choose see developer options, USB debugging and Wireless debugging as off.",
+                arrow(), this::openShutUp, false);
 
-        section(list, "Networks");
+        section(list, "Network");
         link(list, "Block internet per app",
                 Build.VERSION.SDK_INT >= 34
-                        ? "Cut chosen apps off Wi-Fi and mobile data. Nothing runs in the background unless you turn that on."
+                        ? "Cut chosen apps off Wi-Fi and mobile data."
                         : "Needs Android 14 or newer.", this::openFirewall);
         link(list, "Saved Wi-Fi networks",
                 "See saved passwords and share any network with a QR code.", this::openWifi);
 
-        section(list, "Developer options");
-        // Needs Shizuku only once, to grant itself access, so the row stays usable without it.
-        row(list, "Shut Up",
-                "Make chosen apps see developer options, USB debugging and Wireless debugging as off.",
-                arrow(), this::openShutUp, false);
-
-        section(list, "Clipboard");
+        section(list, "Tracking");
+        link(list, "Analytics & telemetry",
+                "Turn off Huawei and Google analytics, ad tracking and HiCloud.", this::openAnalytics);
+        link(list, "Trackers in apps", "See which ad and analytics libraries each app carries.",
+                this::openTrackers);
+        link(list, "Recent access",
+                "Who used the camera, mic, location, contacts or clipboard lately.", this::openRecentAccess);
         link(list, "Clipboard guard",
                 "Pick apps that can't read what you copy, like passwords and codes.", this::openClipboardGuard);
 
@@ -1069,6 +1145,8 @@ public class MainActivity extends Activity {
                 "Set any app's permissions to Real, Fake (looks granted, gets nothing) or Off.",
                 () -> openAppList("App permissions", "Pick an app to change its permissions and app-ops.",
                         this::openAppPage));
+        link(list, "Special access", "Install unknown apps, draw over apps, all files access and more, "
+                + "per app.", this::openSpecialAccess);
         action(list, "Repair permissions",
                 "If the camera or microphone stopped working (\"Can't connect to the camera\", mic only works in "
                         + "calls) or an app you never changed broke, this fixes it.", () -> {
@@ -1082,14 +1160,15 @@ public class MainActivity extends Activity {
         link(list, "Reset permission changes",
                 "Undo every Real, Fake and Off choice TinyKit made and fix any problems it caused.",
                 this::confirmResetPermissions);
-        link(list, "Default apps", "Set the default launcher, browser, phone and more.", this::openDefaults);
 
         section(list, "Manage");
+        link(list, "Default apps", "Set the default launcher, browser, phone and more.", this::openDefaults);
         link(list, "Hide apps", "Hide apps from the launcher by disabling them.", this::openHide);
         link(list, "Unused apps", "Apps you haven't opened in a long time.", this::openUnused);
         link(list, "Storage by app", "Which apps take the most space.", this::openStorage);
-        link(list, "Recent access",
-                "Who used the camera, mic, location, contacts or clipboard lately.", this::openRecentAccess);
+        link(list, "App language", "Give any app its own language (Android 13+).", this::openAppLanguage);
+        link(list, "Notification channels", "Silence one kind of notification from an app, not all of them "
+                + "(Android 8+).", this::openChannelsApp);
         link(list, "Mixed audio",
                 "Let apps play audio together, or mute an app.", this::openMixedAudio);
 
@@ -1100,7 +1179,8 @@ public class MainActivity extends Activity {
         link(list, "Keep apps alive",
                 "Pick apps Android must never kill or delay, like Termux or messengers.",
                 this::openKeepAlive);
-        link(list, "Back up app as APK", "Save any app's APK to Download/TinyKit.", this::openBackup);
+
+        section(list, "Install & remove");
         link(list, "Install APK files",
                 "Install .apk, .apks, .xapk and .apkm files, including apps split into several parts.",
                 this::pickApks);
@@ -1109,17 +1189,9 @@ public class MainActivity extends Activity {
                 () -> chooseInstallOptions((TextView) installOptions[0].getTag()), false);
         row(list, "Installed with TinyKit", "Apps the installer put on, newest first, with a remove button.",
                 arrow(), this::openInstallHistory, false);
-
-        section(list, "Remove & control");
+        link(list, "Back up app as APK", "Save any app's APK to Download/TinyKit.", this::openBackup);
         link(list, "Debloater", "Remove apps your phone came with, with a safety rating for each. "
                 + "Bring any of them back later.", this::openDebloat);
-        link(list, "Special access", "Install unknown apps, draw over apps, all files access and more, "
-                + "per app.", this::openSpecialAccess);
-        link(list, "App language", "Give any app its own language (Android 13+).", this::openAppLanguage);
-        link(list, "Trackers in apps", "See which ad and analytics libraries each app carries.",
-                this::openTrackers);
-        link(list, "Notification channels", "Silence one kind of notification from an app, not all of them "
-                + "(Android 8+).", this::openChannelsApp);
 
         return scroll(list);
     }
@@ -1145,19 +1217,6 @@ public class MainActivity extends Activity {
         link(list, "Edit quick panel", "Reorder, add and remove tiles with one tap each.", this::openQuickPanel);
         row(list, "TinyKit tiles", "Add any of TinyKit's own Quick Settings tiles.", arrow(),
                 this::openTiles, false);
-
-        section(list, "Tools");
-        link(list, "Run a command", "Run a shell command as the shell user through Shizuku.",
-                this::openRunCommand);
-        link(list, "Recover deleted files", "Find files in every recycle bin, with thumbnails, and restore them.",
-                this::openRecover);
-        link(list, "Settings backup & restore", "Save all system settings to a file and put them back.",
-                this::openBackupRestore);
-        link(list, "Reset everything TinyKit changed",
-                "Undo TinyKit's changes and go back to Android's defaults. Saves a backup first.",
-                this::confirmResetEverything);
-        link(list, "Advanced reboot", "Reboot, recovery, bootloader or a soft (userspace) reboot.",
-                this::openReboot);
 
         section(list, "Clean & speed");
         action(list, "Speed up phone", "Deletes every app's cache, closes cached apps, frees and compacts memory "
@@ -1188,6 +1247,21 @@ public class MainActivity extends Activity {
                 s -> "0".equals(s.get("mobile_data_always_on")),
                 on -> "settings put global mobile_data_always_on " + (on ? 0 : 1));
 
+        section(list, "Tools");
+        link(list, "Run a command", "Run a shell command as the shell user through Shizuku.",
+                this::openRunCommand);
+        link(list, "Recover deleted files", "Find files in every recycle bin, with thumbnails, and restore them.",
+                this::openRecover);
+        link(list, "Settings backup & restore", "Save all system settings to a file and put them back.",
+                this::openBackupRestore);
+        link(list, "Advanced reboot", "Reboot, recovery, bootloader or a soft (userspace) reboot.",
+                this::openReboot);
+
+        section(list, "Undo");
+        link(list, "Reset everything TinyKit changed",
+                "Undo TinyKit's changes and go back to Android's defaults. Saves a backup first.",
+                this::confirmResetEverything);
+
         return scroll(list);
     }
 
@@ -1211,6 +1285,38 @@ public class MainActivity extends Activity {
         link(list, "Vibration log", "Recent vibrations and what asked for them.", this::openVibration);
         link(list, "App log", "See an app's log output (Huawei hides most of it).", this::openAppLog);
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
+
+        section(list, "TinyKit");
+        // The one switch for everything TinyKit may keep running. Off: it never runs by itself.
+        Switch backgroundSwitch = new Switch(this);
+        backgroundSwitch.setClickable(false);
+        backgroundSwitch.setFocusable(false);
+        TextView backgroundStatus = text("", 13, false);
+        backgroundStatus.setPadding(dp(16), dp(0), dp(16), dp(8));
+        Runnable showBackground = () -> {
+            boolean on = BackgroundService.on(prefs);
+            backgroundSwitch.setChecked(on);
+            List<String> jobs = new ArrayList<>();
+            if (BackgroundService.shutUpRunning()) jobs.add(Tr.t("Shut Up"));
+            if (BackgroundService.installsRunning()) jobs.add(Tr.t("new apps"));
+            backgroundStatus.setText(!jobs.isEmpty() ? Tr.t("Running now for: ") + TextUtils.join(", ", jobs) + "."
+                    : Tr.t(!on ? "Off. TinyKit never runs by itself."
+                    : BackgroundService.needed(this, prefs) ? "Starting…"
+                    : "On. Nothing needs it right now, so nothing is running."));
+        };
+        showBackground.run();
+        row(list, "Run in the background", "Lets TinyKit keep a small service running, with a quiet "
+                + "notification, for the tools that need it: Shut Up, and blocking a new app's internet the moment "
+                + "it is installed. It only runs while one of them is in use, and uses almost no battery or memory. "
+                + "Off: TinyKit never runs by itself.", backgroundSwitch, () -> {
+                    boolean on = !BackgroundService.on(prefs);
+                    backgroundSwitch.setChecked(on);
+                    worker.execute(() -> {
+                        BackgroundService.setEnabled(this, prefs, on);
+                        afterServiceChange(showBackground);
+                    });
+                }, false);
+        list.addView(backgroundStatus);
         View[] update = new View[1];
         update[0] = row(list, "Check for updates", "You have version " + versionName(getPackageName()) + ".",
                 null, () -> checkForUpdate(update[0]), false);
@@ -1222,6 +1328,10 @@ public class MainActivity extends Activity {
                 + "show a popup if there is one.", updateSwitch, () -> {
                     setUpdateOnStart(!updateSwitch.isChecked());
                 }, false);
+        row(list, "What's new", "The changes in version " + versionName(getPackageName()) + ".", arrow(), () -> {
+            String notes = releaseNotes(versionCode() - 1);
+            showNotes(notes.isEmpty() ? "No release notes for this version." : notes, null);
+        }, false);
         row(list, "Report a problem", "Something not working? Opens a ready-made GitHub issue that you read and "
                 + "post yourself.", arrow(), this::reportProblem, false);
         Switch crashSwitch = new Switch(this);
@@ -1235,41 +1345,22 @@ public class MainActivity extends Activity {
                     prefs.edit().putBoolean(CrashReport.PREF, on).apply();
                     if (!on) CrashReport.clear(this);
                 }, false);
-        // The one switch for everything TinyKit may keep running. Off: it never runs by itself.
-        Switch backgroundSwitch = new Switch(this);
-        backgroundSwitch.setChecked(prefs.getBoolean(NewAppService.PREF, false));
-        backgroundSwitch.setClickable(false);
-        backgroundSwitch.setFocusable(false);
-        TextView backgroundStatus = text("", 13, false);
-        backgroundStatus.setPadding(dp(16), dp(0), dp(16), dp(8));
-        Runnable showBackground = () -> {
-            boolean on = prefs.getBoolean(NewAppService.PREF, false);
-            backgroundSwitch.setChecked(on);
-            backgroundStatus.setText(Tr.t(NewAppService.isRunning() || ShutUpService.isRunning() ? "Running in the background now."
-                    : on ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
-                    : "Off. TinyKit never runs by itself."));
-        };
-        showBackground.run();
-        row(list, "Run in the background", "Off: TinyKit never runs by itself, apart from a short check when "
-                + "Shizuku starts. On: a quiet notification and a small service keep TinyKit ready, so a new app "
-                + "is blocked the moment it is installed (Block internet per app), and, once you tick it, Shut Up keeps "
-                + "hiding developer options from the apps you chose. TinyKit is also asked not to "
-                + "be put to sleep. It uses almost no battery or memory.", backgroundSwitch, () -> {
-                    boolean on = !prefs.getBoolean(NewAppService.PREF, false);
-                    backgroundSwitch.setChecked(on);
-                    worker.execute(() -> {
-                        NewAppService.setEnabled(this, prefs, on);
-                        android.os.SystemClock.sleep(800);
-                        main.post(showBackground);
-                    });
-                }, false);
-        list.addView(backgroundStatus);
-        row(list, "What's new", "The changes in version " + versionName(getPackageName()) + ".", arrow(), () -> {
-            String notes = releaseNotes(versionCode() - 1);
-            showNotes(notes.isEmpty() ? "No release notes for this version." : notes, null);
-        }, false);
         row(list, "About", "Made by Ali Alakbar", arrow(), this::showAbout, false);
-        return scroll(list);
+        View page = scroll(list);
+        // The service can start or stop from other pages, so the status is read again each time.
+        page.setTag(showBackground);
+        return page;
+    }
+
+    /**
+     * Call on the worker after changing a background choice: waits a moment for the service to start
+     * or stop, then runs {@code then} on the main thread.
+     */
+    private void afterServiceChange(Runnable then) {
+        boolean want = BackgroundService.needed(this, prefs);
+        for (int i = 0; i < 30 && BackgroundService.isRunning() != want; i++) SystemClock.sleep(100);
+        SystemClock.sleep(200); // the service sorts out its jobs just after it starts
+        main.post(then);
     }
 
     /** Turning on remembers the previous Private DNS setting so turning off restores it. */
@@ -1376,57 +1467,42 @@ public class MainActivity extends Activity {
         View[] choose = new View[1];
         Runnable refresh = () -> {
             boolean on = prefs.getBoolean(ShutUp.PREF_ON, false);
-            boolean background = ShutUp.backgroundOn(prefs);
+            boolean background = BackgroundService.on(prefs);
             onSwitch.setChecked(on);
             int n = ShutUp.apps(prefs).size();
             ((TextView) choose[0].getTag()).setText(Tr.t(n == 0 ? "No app chosen yet."
                     : n + (n == 1 ? " app chosen." : " apps chosen.")));
-            status.setText(Tr.t(ShutUpService.isRunning()
+            boolean paused = on && !background;
+            status.setTextColor(paused ? attrColor(android.R.attr.colorAccent) : 0xB3FFFFFF);
+            status.setText(Tr.t(BackgroundService.shutUpRunning()
                     ? (ShutUp.hidden(prefs) ? "Running. Hidden right now, because a chosen app is open."
                     : "Running. Nothing is hidden until you open a chosen app.")
-                    : on && !background ? "Ticked, but waiting: Run in the background (Info tab) is off."
-                    : on ? (n == 0 ? "On, waiting for you to choose an app."
-                    : "Turned on, but not running yet. Open TinyKit again, or turn it off and on.")
+                    : paused ? "Paused, because Run in the background is off. Tap here to turn it back on."
+                    : on ? (n == 0 ? "On. Choose at least one app above."
+                    : !ShutUp.ready(this) ? "Waiting: start Shizuku once so TinyKit can give itself the access Shut Up needs."
+                    : "Starting…")
                     : "Off. TinyKit changes nothing and runs nothing."));
         };
+        status.setOnClickListener(v -> {
+            if (!prefs.getBoolean(ShutUp.PREF_ON, false) || BackgroundService.on(prefs)) return;
+            worker.execute(() -> {
+                BackgroundService.setEnabled(this, prefs, true);
+                afterServiceChange(refresh);
+            });
+        });
         choose[0] = row(list, "Choose apps", "", arrow(), () -> openPicker("Shut Up apps",
                 "Checked apps see Developer options, USB debugging and Wireless debugging as off while they "
                         + "are open.", true,
-                () -> {
-                    Set<String> checked = ShutUp.apps(prefs);
-                    checked.retainAll(FirewallPolicy.uids(this).keySet());
-                    return checked;
-                },
+                () -> ShutUp.apps(prefs),
                 (pkg, on) -> ShutUp.choose(this, prefs, pkg, on)), false);
-        row(list, "Shut Up", "Off: nothing runs. On: a quiet notification and a small service watch which app "
-                + "is open (a couple of times a second, only while the screen is on). It uses very little "
-                + "battery. TinyKit is also asked not to be put to sleep. It runs only while Run in the "
-                + "background (Info tab) is on too.", onSwitch, () -> {
+        row(list, "Shut Up", "Watches which app is open (a couple of times a second, only while the screen is "
+                + "on) with a quiet notification. It uses very little battery. Turning it on also turns on Run "
+                + "in the background (Info tab), which it needs.", onSwitch, () -> {
                     boolean on = !prefs.getBoolean(ShutUp.PREF_ON, false);
-                    if (on && !ShutUp.backgroundOn(prefs)) {
-                        // Shut Up can't run without the master switch: offer to turn it on, in one step.
-                        new AlertDialog.Builder(this)
-                                .setTitle(Tr.t("Turn on Run in the background?"))
-                                .setMessage(Tr.t("Shut Up only runs while Run in the background (Info tab) is on. "
-                                        + "Turn it on too? It is the one switch for everything TinyKit may keep "
-                                        + "running, and you can turn it off there at any time."))
-                                .setPositiveButton(Tr.t("Turn on both"), (d, w) -> worker.execute(() -> {
-                                    NewAppService.setEnabled(this, prefs, true);
-                                    String error = ShutUpService.setEnabled(this, prefs, true);
-                                    android.os.SystemClock.sleep(800);
-                                    main.post(() -> {
-                                        refresh.run();
-                                        if (error != null) toast(Tr.t(error));
-                                    });
-                                }))
-                                .setNegativeButton(Tr.t("Cancel"), null)
-                                .show();
-                        return;
-                    }
+                    onSwitch.setChecked(on);
                     worker.execute(() -> {
-                        String error = ShutUpService.setEnabled(this, prefs, on);
-                        android.os.SystemClock.sleep(800);
-                        main.post(() -> {
+                        String error = ShutUp.setEnabled(this, prefs, on);
+                        afterServiceChange(() -> {
                             refresh.run();
                             if (error != null) toast(Tr.t(error));
                         });
@@ -1482,7 +1558,7 @@ public class MainActivity extends Activity {
         status.setPadding(dp(16), dp(12), dp(16), dp(4));
         list.addView(status);
         list.addView(note("Blocked apps can't use Wi-Fi or mobile data. Android itself enforces it, so "
-                + "TinyKit runs nothing in the background unless you turn on \"Block new apps at once\" below, "
+                + "TinyKit runs nothing in the background unless you turn on \"Run in the background\" below, "
                 + "and the block comes back by itself after a restart as soon as Shizuku is running again."));
         Switch modeSwitch = new Switch(this);
         modeSwitch.setClickable(false);
@@ -1499,13 +1575,14 @@ public class MainActivity extends Activity {
         Runnable refresh = () -> {
             boolean allow = FirewallPolicy.allowMode(prefs);
             modeSwitch.setChecked(allow);
-            boolean watch = prefs.getBoolean(NewAppService.PREF, false);
+            boolean watch = BackgroundService.on(prefs);
             watchSwitch.setChecked(watch);
             pauseSwitch.setChecked(FirewallPolicy.paused(prefs));
-            watchStatus.setText(Tr.t(NewAppService.isRunning()
-                    ? "Running in the background now. New apps are blocked the moment they are installed."
-                    : watch ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
-                    : "Not running. Apps you install are blocked the next time you open TinyKit."));
+            watchStatus.setText(Tr.t(BackgroundService.installsRunning()
+                    ? "Running. New apps are blocked the moment they are installed."
+                    : watch ? (FirewallPolicy.configured(prefs) ? "Starting…"
+                    : "On. Nothing to watch until you block an app or turn on allow list mode.")
+                    : "Off. Apps you install are blocked the next time you open TinyKit."));
             ((TextView) choose[0].getTag()).setText(Tr.t(allow
                     ? "Pick the apps that may use the internet. Everything else is blocked."
                     : "Pick the apps to cut off."));
@@ -1519,7 +1596,7 @@ public class MainActivity extends Activity {
         };
         choose[0] = row(list, "Choose apps", "", arrow(), this::openFirewallApps, true);
         row(list, "Allow list mode", "Block every app except the ones you allow. Apps you install later are "
-                + "blocked when you next open TinyKit, or at once with \"Block new apps at once\" below. Allow Google Play "
+                + "blocked when you next open TinyKit, or at once with \"Run in the background\" below. Allow Google Play "
                 + "services if you want push notifications.", modeSwitch, () -> {
                     boolean on = !FirewallPolicy.allowMode(prefs);
                     if (!on) {
@@ -1547,17 +1624,14 @@ public class MainActivity extends Activity {
                         });
                     });
                 }, true);
-        row(list, "Block new apps at once", "Keeps TinyKit running in the background, with a small "
-                + "notification, so an app is blocked the moment you install it. Off by default. It uses "
-                + "almost no battery or memory, and TinyKit is asked not to be put to sleep or closed to "
-                + "save battery.", watchSwitch, () -> {
-                    boolean on = !prefs.getBoolean(NewAppService.PREF, false);
+        row(list, "Run in the background", "Blocks a new app the moment you install it, with a quiet "
+                + "notification. This is the same switch as in the Info tab, shared with Shut Up. It uses almost "
+                + "no battery or memory.", watchSwitch, () -> {
+                    boolean on = !BackgroundService.on(prefs);
                     watchSwitch.setChecked(on);
                     worker.execute(() -> {
-                        NewAppService.setEnabled(this, prefs, on);
-                        // The service starts a moment after the request.
-                        android.os.SystemClock.sleep(800);
-                        main.post(refresh);
+                        BackgroundService.setEnabled(this, prefs, on);
+                        afterServiceChange(refresh);
                     });
                 }, true);
         list.addView(watchStatus);
@@ -1752,7 +1826,7 @@ public class MainActivity extends Activity {
                 if (p.checked) picked++;
                 if (!removedView[0] && !p.system && !mine.isChecked() && !p.checked) continue;
                 if (levelFilter[0] >= 0 && p.level != levelFilter[0]) continue;
-                if (p.label.toLowerCase(Locale.ROOT).contains(q) || p.pkg.contains(q)) shown.add(p);
+                if (p.label.toLowerCase(Locale.ROOT).contains(q) || p.pkg.toLowerCase(Locale.ROOT).contains(q)) shown.add(p);
             }
             Collections.sort(shown, (x, y) -> x.checked != y.checked ? (x.checked ? -1 : 1)
                     : x.label.compareToIgnoreCase(y.label));
@@ -1820,6 +1894,8 @@ public class MainActivity extends Activity {
                 worst = Math.max(worst, p.level);
             }
             boolean restore = removedView[0];
+            List<String> yours = new ArrayList<>();
+            for (Pkg p : picked) if (!p.system) yours.add(p.label);
             StringBuilder names = new StringBuilder();
             for (int i = 0; i < picked.size() && i < 12; i++) names.append("• ").append(picked.get(i).label).append('\n');
             if (picked.size() > 12) names.append("and ").append(picked.size() - 12).append(" more\n");
@@ -1829,6 +1905,10 @@ public class MainActivity extends Activity {
                             ? "\nThey come back as they were."
                             : (picked.size() == 1 ? "\nIt disappears" : "\nThey disappear")
                                     + " for you only and can be restored from Removed."
+                                    + (yours.isEmpty() ? "" : "\n\nYou installed " + TextUtils.join(", ", yours)
+                                    + " yourself: " + (yours.size() == 1 ? "it is" : "they are")
+                                    + " uninstalled completely, with " + (yours.size() == 1 ? "its" : "their")
+                                    + " data, and can't be restored here.")
                                     + (worst >= Bloat.EXPERT ? "\n\nSome of these are marked Expert: other "
                                     + "apps or features may depend on them." : ""))))
                     .setPositiveButton(Tr.t(restore ? "Restore" : "Remove"), (d, w) -> runDebloat(picked, restore, load))
@@ -1879,7 +1959,8 @@ public class MainActivity extends Activity {
             reloadApps();
             int count = ok;
             main.post(() -> {
-                progress.dismiss();
+                if (!alive()) return;
+                dismiss(progress);
                 done.run();
                 String summary = (restore ? "Restored " : "Removed ") + count + (count == 1 ? " app." : " apps.");
                 if (failed.isEmpty() && count > 0) {
@@ -2206,8 +2287,10 @@ public class MainActivity extends Activity {
                     .setNegativeButton(Tr.t("Close"), null);
             if (FirewallPolicy.supported() && Shell.ready()) {
                 d.setPositiveButton(Tr.t("Block internet"), (x, w) -> worker.execute(() -> {
-                    String error = FirewallPolicy.choose(this, prefs, t[0], true);
-                    main.post(() -> toast(Tr.t(error != null ? error : t[1] + " is blocked from the internet.")));
+                    String error = FirewallPolicy.block(this, prefs, t[0]);
+                    main.post(() -> toast(Tr.t(error != null ? error : FirewallPolicy.paused(prefs)
+                            ? t[1] + " will be blocked from the internet when you resume blocking."
+                            : t[1] + " is blocked from the internet.")));
                 }));
             }
             d.show();
@@ -2264,8 +2347,10 @@ public class MainActivity extends Activity {
         try {
             uid = getPackageManager().getApplicationInfo(pkg, 0).uid;
         } catch (PackageManager.NameNotFoundException e) {
+            loading.setText(Tr.t("This app isn't installed any more."));
             return;
         }
+        boolean[] busy = {false};
         Runnable load = () -> worker.execute(() -> {
             Shell.Result r = Shell.run(channelsCmd(this, "list " + Shell.quote(pkg) + " " + uid));
             List<String[]> rows = new ArrayList<>();
@@ -2281,9 +2366,13 @@ public class MainActivity extends Activity {
                         : "Couldn't read them: " + r.out));
                 loading.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
                 adapter.set(rows);
+                busy[0] = false;
             });
         });
         listView.setOnItemClickListener((parent, view, position, id) -> {
+            // One change at a time: the row shows the old state until the list is read again.
+            if (busy[0]) return;
+            busy[0] = true;
             String[] ch = adapter.getItem(position);
             boolean blocked = ch[2].equals("0");
             String key = "chan_" + pkg + "|" + ch[0];
@@ -2452,7 +2541,8 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             String result = ApkInstaller.install(this, uris, text -> main.post(() -> message.setText(Tr.t(text))));
             main.post(() -> {
-                progress.dismiss();
+                if (!alive()) return;
+                dismiss(progress);
                 new AlertDialog.Builder(this).setTitle(Tr.t("Install")).setMessage(Tr.t(result))
                         .setPositiveButton(Tr.t("OK"), null).show();
             });
@@ -2541,7 +2631,7 @@ public class MainActivity extends Activity {
                 if (netBox != null && netBox.isChecked() && netReady[0] && !a.checked
                         && !withInternet.contains(a.pkg)) continue;
                 if ((system.isChecked() || !a.system || a.checked)
-                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) {
+                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.toLowerCase(Locale.ROOT).contains(q))) {
                     shown.add(a);
                 }
             }
@@ -2657,17 +2747,27 @@ public class MainActivity extends Activity {
     }
 
     /** Reloads the cached app list, e.g. after installing an app. Call off the main thread. */
-    private synchronized void reloadApps() {
-        apps = null;
-        installedApps();
+    private void reloadApps() {
+        // Built aside and swapped in, so lists opening meanwhile use the old one instead of waiting.
+        List<App> fresh = loadApps();
+        apps = fresh;
     }
 
-    private synchronized boolean appsLoaded() {
+    private boolean appsLoaded() {
         return apps != null;
     }
 
-    private synchronized List<App> installedApps() {
-        if (apps != null) return apps;
+    /** The cached app list; loads it first if needed, so off the main thread unless {@link #appsLoaded}. */
+    private List<App> installedApps() {
+        List<App> list = apps;
+        if (list != null) return list;
+        synchronized (appsLock) {
+            if (apps == null) apps = loadApps();
+            return apps;
+        }
+    }
+
+    private List<App> loadApps() {
         PackageManager pm = getPackageManager();
         List<App> list = new ArrayList<>();
         for (ApplicationInfo info : pm.getInstalledApplications(0)) {
@@ -2679,7 +2779,6 @@ public class MainActivity extends Activity {
                     && (info.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
             list.add(a);
         }
-        apps = list;
         return list;
     }
 
@@ -3160,7 +3259,12 @@ public class MainActivity extends Activity {
         scroll.addView(output);
         page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
         push("Run a command", page);
+        java.lang.Process[] runningCmd = {null};
         run.setOnClickListener(v -> {
+            if (runningCmd[0] != null) {
+                runningCmd[0].destroy();
+                return;
+            }
             String cmd = input.getText().toString().trim();
             if (cmd.isEmpty()) return;
             if (!Shell.ready()) {
@@ -3168,11 +3272,16 @@ public class MainActivity extends Activity {
                 return;
             }
             output.setText(Tr.t("Running…"));
-            worker.execute(() -> {
-                Shell.Result r = Shell.run(cmd);
-                main.post(() -> output.setText(Tr.t((r.out.isEmpty() ? "(no output)" : r.out)
-                        + "\n\n[exit " + r.code + "]")));
-            });
+            run.setText(Tr.t("Stop"));
+            // Its own thread, so a long command never holds up the rest of TinyKit.
+            new Thread(() -> {
+                Shell.Result r = Shell.runLimited(cmd, 60_000L, 256 * 1024, p -> runningCmd[0] = p);
+                main.post(() -> {
+                    runningCmd[0] = null;
+                    run.setText(Tr.t("Run"));
+                    output.setText((r.out.isEmpty() ? Tr.t("(no output)") : r.out) + "\n\n[exit " + r.code + "]");
+                });
+            }, "command").start();
         });
     }
 
@@ -3180,7 +3289,7 @@ public class MainActivity extends Activity {
 
     private static final String RECOVER_DIR = "/sdcard/Download/TinyKit/Recovered";
     private static final String BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    private static final long THUMB_MAX = 10L * 1024 * 1024;
+    private static final long THUMB_MAX = 8L * 1024 * 1024;
     private static final Set<String> IMAGE_EXT = new HashSet<>(Arrays.asList(
             "jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "dng"));
 
@@ -3392,14 +3501,13 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Reads a file's bytes as the shell user through Shizuku (base64, so it survives the pipe) and
-     * decodes a small thumbnail. This works for files in trash that the app can't open directly.
+     * Reads a file's bytes as the shell user through Shizuku and decodes a small thumbnail. This works
+     * for files in trash that the app can't open directly.
      */
     private Bitmap makeThumb(String path) {
-        Shell.Result r = Shell.run("base64 " + Shell.quote(path) + " 2>/dev/null");
-        if (!r.ok() || r.out.isEmpty()) return null;
         try {
-            byte[] bytes = android.util.Base64.decode(r.out.replaceAll("\\s", ""), android.util.Base64.NO_WRAP);
+            byte[] bytes = Shell.bytes("cat " + Shell.quote(path) + " 2>/dev/null", (int) THUMB_MAX);
+            if (bytes == null || bytes.length == 0) return null;
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
@@ -3452,11 +3560,17 @@ public class MainActivity extends Activity {
     private void restoreFile(Deleted item) {
         toast(Tr.t("Restoring " + item.name + "…"));
         worker.execute(() -> {
-            String dest = RECOVER_DIR + "/" + fileName(item.name);
-            Shell.Result r = Shell.run("mkdir -p " + RECOVER_DIR + "; cp " + Shell.quote(item.path)
-                    + " " + Shell.quote(dest) + " && echo ok");
+            // Never over an earlier recovered file: name-1.jpg, name-2.jpg and so on.
+            String name = fileName(item.name);
+            int dot = name.lastIndexOf('.');
+            String base = RECOVER_DIR + "/" + (dot > 0 ? name.substring(0, dot) : name);
+            String ext = dot > 0 ? name.substring(dot) : "";
+            Shell.Result r = Shell.run("mkdir -p " + RECOVER_DIR + "; b=" + Shell.quote(base) + "; e=" + Shell.quote(ext)
+                    + "; f=\"$b$e\"; i=1; while [ -e \"$f\" ]; do f=\"$b-$i$e\"; i=$((i+1)); done; "
+                    + "cp " + Shell.quote(item.path) + " \"$f\" && echo \"$f\"");
+            String dest = r.out.trim();
             main.post(() -> {
-                if (r.ok()) {
+                if (r.ok() && dest.startsWith(RECOVER_DIR)) {
                     MediaScannerConnection.scanFile(this, new String[]{dest}, null, null);
                     toast(Tr.t("Restored to Download/TinyKit/Recovered"));
                 } else {
@@ -3568,10 +3682,10 @@ public class MainActivity extends Activity {
             return;
         }
         String[] names = {
-                "Internet block (allow list mode, blocked and allowed apps, the new-app watcher)",
+                "Internet block (allow list mode, blocked and allowed apps, pause)",
                 "Permission choices (Fake, Real, Off) and any damage they caused",
-                "Hidden apps and removed system apps (brought back)",
-                "Force dark, HW overlays, sensors off, and the Quick toggles that are on",
+                "Hidden apps and removed system apps (brought back, including apps you switched off in Settings)",
+                "Force dark, HW overlays, sensors off, Shut Up, Run in the background, and the Quick toggles that are on",
                 "Background limits, clipboard guard and kept-alive apps (these are Android's own settings, "
                         + "so this also clears limits you set in Settings)"};
         boolean[] on = {true, true, true, true, false};
@@ -3642,7 +3756,8 @@ public class MainActivity extends Activity {
             }
             String result = String.join("\n\n", lines);
             main.post(() -> {
-                progress.dismiss();
+                if (!alive()) return;
+                dismiss(progress);
                 new AlertDialog.Builder(this).setTitle(Tr.t("Reset")).setMessage(Tr.t(result))
                         .setPositiveButton(Tr.t("OK"), null).show();
             });
@@ -3729,11 +3844,15 @@ public class MainActivity extends Activity {
                 for (int i = 0; i < names.length; i++) names[i] = files.get(i).substring(files.get(i).lastIndexOf('/') + 1);
                 new AlertDialog.Builder(this)
                         .setTitle(Tr.t("Restore which setup?"))
-                        .setItems(Tr.all(names), (d, which) -> worker.execute(() -> {
-                            String result = restoreSetup(files.get(which));
-                            main.post(() -> new AlertDialog.Builder(this).setTitle(Tr.t("Restore"))
-                                    .setMessage(Tr.t(result)).setPositiveButton(Tr.t("OK"), null).show());
-                        }))
+                        .setItems(Tr.all(names), (d, which) -> new AlertDialog.Builder(this)
+                                .setTitle(Tr.t("Restore this setup?"))
+                                .setMessage(Tr.t("Puts back the internet block, permission choices, background limits, hidden and removed "
+                                        + "apps saved in " + names[which] + ". Apps that aren't installed any more "
+                                        + "are skipped."))
+                                .setPositiveButton(Tr.t("Restore"), (x, y) -> withProgress("Restore",
+                                        () -> restoreSetup(files.get(which))))
+                                .setNegativeButton(Tr.t("Cancel"), null)
+                                .show())
                         .setNegativeButton(Tr.t("Cancel"), null)
                         .show();
             });
@@ -3830,11 +3949,19 @@ public class MainActivity extends Activity {
                 .setTitle(Tr.t("Restore settings?"))
                 .setMessage(Tr.t("This writes the saved settings back. Read-only keys are skipped. "
                         + "Some changes may need a restart."))
-                .setPositiveButton(Tr.t("Restore"), (d, w) -> worker.execute(() -> {
-                    Shell.Result r = Shell.run("while read t rest; do key=${rest%%=*}; val=${rest#*=}; "
-                            + "[ -n \"$key\" ] && settings put $t \"$key\" \"$val\" 2>/dev/null; done < "
-                            + Shell.quote(file) + "; echo done");
-                    main.post(() -> toast(Tr.t(r.ok() ? "Settings restored." : "Failed: " + r.out)));
+                .setPositiveButton(Tr.t("Restore"), (d, w) -> withProgress("Restore", () -> {
+                    // Keys that had no value were saved as "null" and are left alone.
+                    Shell.Result r = Shell.run("ok=0; bad=0; while IFS= read -r line; do t=${line%% *}; "
+                            + "rest=${line#* }; key=${rest%%=*}; val=${rest#*=}; "
+                            + "case $t in global|secure|system) ;; *) continue;; esac; "
+                            + "[ -z \"$key\" ] || [ \"$val\" = null ] && continue; "
+                            + "if settings put $t \"$key\" \"$val\" >/dev/null 2>&1; then ok=$((ok+1)); "
+                            + "else bad=$((bad+1)); fi; done < " + Shell.quote(file) + "; echo \"$ok $bad\"");
+                    String[] n = r.out.trim().split(" ");
+                    if (!r.ok() || n.length != 2) return "Failed: " + r.out;
+                    return "Restored " + n[0] + " settings." + ("0".equals(n[1]) ? ""
+                            : " " + n[1] + " couldn't be written (read-only on this phone) and were skipped.")
+                            + " Some changes need a restart.";
                 }))
                 .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
@@ -4355,7 +4482,7 @@ public class MainActivity extends Activity {
             List<App> shown = new ArrayList<>();
             for (App a : all) {
                 if ((system.isChecked() || !a.system)
-                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) {
+                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.toLowerCase(Locale.ROOT).contains(q))) {
                     shown.add(a);
                 }
             }
@@ -4639,7 +4766,10 @@ public class MainActivity extends Activity {
         LinearLayout list = vertical();
         list.addView(note("Tap a default to change it. Some phones only allow certain apps for a role."));
         section(list, "Roles");
-        for (String[] role : ROLES) {
+        // Roles (and the role command) are Android 10+.
+        if (Build.VERSION.SDK_INT < 29) list.addView(note("Choosing default apps here needs Android 10 or newer. "
+                + "Use Settings > Apps > Default apps instead."));
+        for (String[] role : Build.VERSION.SDK_INT >= 29 ? ROLES : new String[0][]) {
             View[] holder = new View[1];
             holder[0] = row(list, role[1], "…", arrow(),
                     () -> openAppList("Set " + role[1],
@@ -4778,6 +4908,11 @@ public class MainActivity extends Activity {
             if (!Tweak.usageAllowed(this)) Tweak.grantSelf(this);
             Map<String, Long> used = lastUsed();
             List<String[]> found = new ArrayList<>();
+            if (!Tweak.usageAllowed(this) || used.isEmpty()) {
+                // Without usage access every app would look "Never opened".
+                main.post(() -> loading.setText(Tr.t("Couldn't read usage. Start Shizuku so TinyKit can turn it on.")));
+                return;
+            }
             long now = System.currentTimeMillis();
             for (App a : launchableApps()) {
                 long last = used.containsKey(a.pkg) ? used.get(a.pkg) : 0L;
@@ -5011,17 +5146,16 @@ public class MainActivity extends Activity {
             for (App a : all) {
                 boolean set = audioState.containsKey(a.pkg);
                 if ((system.isChecked() || !a.system || set)
-                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) {
+                        && (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.toLowerCase(Locale.ROOT).contains(q))) {
                     shown.add(a);
                 }
             }
-            Collections.sort(shown, (x, y) -> x.label.compareToIgnoreCase(y.label));
+            Collections.sort(shown, (x, y) -> sort[0] == 1
+                    ? x.pkg.compareToIgnoreCase(y.pkg) : x.label.compareToIgnoreCase(y.label));
             adapter.set(shown);
         };
         page.addView(sortBar(new String[]{"Name", "Package"}, i -> {
             sort[0] = i;
-            Collections.sort(all, (x, y) -> i == 1
-                    ? x.pkg.compareToIgnoreCase(y.pkg) : x.label.compareToIgnoreCase(y.label));
             filter.run();
         }), 3);
         search.addTextChangedListener(watcher(filter));
@@ -5121,8 +5255,13 @@ public class MainActivity extends Activity {
         section(list, "Huawei");
         privacySwitch(list, "User Experience Programme",
                 "Stops Huawei usage analytics and app analytics.",
-                () -> "0".equals(sget("secure", "user_experience_involved"))
-                        && "0".equals(sget("secure", "hw_app_analytics_state")),
+                () -> {
+                    String involved = sget("secure", "user_experience_involved");
+                    String analytics = sget("secure", "hw_app_analytics_state");
+                    // Neither key exists away from Huawei phones.
+                    if (!Shell.ready() || ("null".equals(involved) && "null".equals(analytics))) return null;
+                    return "0".equals(involved) && "0".equals(analytics);
+                },
                 block -> error(Shell.run("settings put secure user_experience_involved " + (block ? 0 : 1)
                         + "; settings put secure hw_app_analytics_state " + (block ? 0 : 1))));
         privacySwitch(list, "Diagnostics & telemetry",
@@ -5159,19 +5298,24 @@ public class MainActivity extends Activity {
             });
         }, true);
         TextView sub = (TextView) row.getTag();
-        worker.execute(() -> {
+        Runnable read = () -> worker.execute(() -> {
+            if (!Shell.ready()) return; // read again once Shizuku is usable
             Boolean state = checker.check();
             main.post(() -> {
                 if (state == null) {
                     row.setEnabled(false);
-                    row.setAlpha(0.4f);
                     view.setEnabled(false);
+                    shizukuRows.remove(row);
+                    row.setAlpha(0.4f);
                     sub.setText(Tr.t(summary + "  ·  Not on this phone"));
                 } else {
                     view.setChecked(state);
                 }
             });
         });
+        // Tab switches are read again whenever the settings are (Shizuku connecting, a tab opening).
+        if (indexingTab >= 0) liveSwitches.add(read);
+        read.run();
     }
 
     private Checker pkgChecker(String[] patterns) {
@@ -5446,7 +5590,8 @@ public class MainActivity extends Activity {
                 qsCache.putAll(described);
                 if (tiles.isEmpty()) {
                     list.removeAllViews();
-                    list.addView(note("This phone doesn't let apps change the quick panel."));
+                    list.addView(note(Shell.ready() ? "This phone doesn't let apps change the quick panel."
+                            : "Start Shizuku and allow TinyKit first."));
                     return;
                 }
                 String value = TextUtils.join(",", tiles);
@@ -5459,7 +5604,10 @@ public class MainActivity extends Activity {
 
     /** The current tiles; on phones that never edited the panel, SystemUI's defaults. */
     private List<String> readTiles() {
-        String value = Shell.run("settings get secure " + QS_TILES).out.trim();
+        Shell.Result r = Shell.run("settings get secure " + QS_TILES);
+        // Without a real answer there is nothing to show, and nothing to save as the original layout.
+        if (!r.ok()) return new ArrayList<>();
+        String value = r.out.trim();
         if (value.isEmpty() || value.equals("null") || value.equals("default") || value.contains(" ")) {
             value = systemString("quick_settings_tiles_default");
         }
@@ -5680,6 +5828,8 @@ public class MainActivity extends Activity {
     /** A grid slot that takes a dragged tile: it grows while one hovers over it. */
     private View.OnDragListener dropTarget(int index, OnDrop onDrop) {
         return (v, e) -> {
+            // Only TinyKit's own tiles: a drag from another app (split screen) carries no tile.
+            if (!(e.getLocalState() instanceof String)) return false;
             switch (e.getAction()) {
                 case DragEvent.ACTION_DRAG_ENTERED:
                     v.animate().scaleX(1.12f).scaleY(1.12f).setDuration(80).start();
@@ -5854,7 +6004,7 @@ public class MainActivity extends Activity {
     }
 
     private void moveTile(LinearLayout list, List<String> tiles, int from, int to) {
-        if (from == to) return;
+        if (from == to || from < 0 || from >= tiles.size() || to < 0 || to >= tiles.size()) return;
         List<String> next = new ArrayList<>(tiles);
         next.add(to, next.remove(from));
         saveTiles(list, tiles, next);
@@ -6138,6 +6288,10 @@ public class MainActivity extends Activity {
         row.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
         if (end != null) row.addView(end);
         row.setTag(sub);
+        if (indexingTab >= 0) {
+            boolean opens = end instanceof TextView && !(end instanceof Switch);
+            searchIndex.add(new Feature(title, summary, indexingTab, row, opens));
+        }
         row.setOnClickListener(v -> {
             if (needsShizuku && !Shell.ready()) {
                 toast(Tr.t("Start Shizuku and allow TinyKit first."));
@@ -6358,6 +6512,36 @@ public class MainActivity extends Activity {
 
     private static String fileName(String value) {
         return value.replaceAll("[\\\\/:*?\"<>|'\\s]+", "_");
+    }
+
+    /** Runs a longer job on the worker behind a "Working…" dialog, then shows its result. */
+    private void withProgress(String title, Job job) {
+        TextView message = text("Working…", 15, false);
+        message.setPadding(dp(24), dp(16), dp(24), dp(8));
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle(Tr.t(title))
+                .setView(message).setCancelable(false).show();
+        worker.execute(() -> {
+            String result = job.run();
+            main.post(() -> {
+                if (!alive()) return;
+                dismiss(progress);
+                new AlertDialog.Builder(this).setTitle(Tr.t(title)).setMessage(Tr.t(result))
+                        .setPositiveButton(Tr.t("OK"), null).show();
+            });
+        });
+    }
+
+    /** False once the screen is closing, so late results from a worker don't touch it. */
+    private boolean alive() {
+        return !isFinishing() && !isDestroyed();
+    }
+
+    private static void dismiss(android.app.Dialog dialog) {
+        try {
+            dialog.dismiss();
+        } catch (RuntimeException gone) {
+            // Its window went away with a recreated screen.
+        }
     }
 
     private void toast(String message) {

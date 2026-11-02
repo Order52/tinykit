@@ -22,9 +22,9 @@ every reboot.
   tap Start again.
 
 **Stop works, then Shizuku comes straight back.**
-That's the Watchdog in thedjchi's fork. Save the auth token in TinyKit, so Stop uses Shizuku's
-own stop intent, which the Watchdog respects. The standard Shizuku app has no Watchdog, so Stop
-ends it for good.
+That's the Watchdog in thedjchi's fork, with TinyKit older than 1.15.0. Update TinyKit: Stop
+now closes the Shizuku app before ending its server, so the Watchdog can't bring it back. Saving
+the auth token makes Stop use Shizuku's own stop intent instead.
 
 **A tile says *"Start Shizuku once so TinyKit can change this."***
 TinyKit grants itself `WRITE_SECURE_SETTINGS` the first time Shizuku is ready. Start Shizuku

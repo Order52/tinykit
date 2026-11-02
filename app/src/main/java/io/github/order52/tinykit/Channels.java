@@ -30,7 +30,8 @@ public final class Channels {
             if (args[0].equals("list")) {
                 for (Object o : channels) {
                     NotificationChannel c = (NotificationChannel) o;
-                    System.out.println(c.getId() + "\t" + c.getName() + "\t" + c.getImportance());
+                    System.out.println(c.getId() + "\t" + String.valueOf(c.getName()).replaceAll("[\\t\\r\\n]+", " ")
+                            + "\t" + c.getImportance());
                 }
                 return;
             }

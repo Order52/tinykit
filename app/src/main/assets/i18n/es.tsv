@@ -72,7 +72,6 @@ A newer version is already installed. Android won't install an older one over it
 A system app not in TinyKit's list	Una app del sistema que no está en la lista de TinyKit
 AC charger	Cargador de CA
 About	Acerca de
-About TinyKit	Acerca de TinyKit
 Accept	Aceptar
 Access:	Acceso:
 Ad and analytics libraries found inside your apps, most first. This is what each app declares, not proof it uses them. Tap an app to see them	Bibliotecas de anuncios y análisis encontradas dentro de tus apps, las más frecuentes primero. Es lo que declara cada app, no prueba de que las use. Toca una app para verlas
@@ -80,7 +79,6 @@ Ad-block DNS	DNS bloqueador de anuncios
 Ad-blocking DNS	DNS bloqueador de anuncios
 Add	Agregar
 Add  ·  	Agregar  ·  
-Add Quick Settings tiles	Agregar mosaicos de Ajustes rápidos
 Add a home screen widget that does the same speed-up in one tap, without opening TinyKit.	Agrega un widget a la pantalla de inicio que hace el mismo impulso con un toque, sin abrir TinyKit.
 Add any of TinyKit's own Quick Settings tiles.	Agrega cualquiera de los mosaicos de Ajustes rápidos de TinyKit.
 Add the 	Agregar el 
@@ -95,7 +93,7 @@ All files access	Acceso a todos los archivos
 All sensors off	Todos los sensores apagados
 Allow	Permitir
 Allow "Run commands in Termux environment" for TinyKit to start Shizuku.	Permite "Ejecutar comandos en el entorno de Termux" para que TinyKit inicie Shizuku.
-Allow TinyKit in Shizuku first, or set the auth token below.	Permite primero a TinyKit en Shizuku, o define el token de autenticación abajo.
+Allow TinyKit in Shizuku first, or set the auth token.	Permite primero a TinyKit en Shizuku, o define el token de autenticación.
 Allow downgrade	Permitir versión anterior
 Allow downgrade (install an older version over a newer one)	Permitir versión anterior (instalar una versión más antigua sobre una más nueva)
 Allow list mode	Modo de lista permitida
@@ -104,13 +102,11 @@ Allowed apps	Apps permitidas
 Also 	También 
 Also show apps I installed	Mostrar también las apps que instalé
 An app you installed	Una app que instalaste
-An app's recent log output	El registro reciente de una app
 Analytics & telemetry	Análisis y telemetría
 Android	Android
 Android 14+	Android 14 o posterior
 Android ID	ID de Android
 Android ID, serial, MAC and build fingerprint.	ID de Android, número de serie, MAC y huella de la compilación.
-Android ID, serial, MAC, build	ID de Android, serie, MAC, compilación
 Android had reset 	Android había restablecido 
 Android needs this app. Removing it can stop the phone from starting.	Android necesita esta app. Quitarla puede impedir que el teléfono arranque.
 Android refused	Android lo rechazó
@@ -122,8 +118,6 @@ App permissions	Permisos de apps
 Approximate location	Ubicación aproximada
 Apps	Apps
 Apps installed with TinyKit's installer, newest first. Tap one to open or remove it. This list is read from Android's own records, so TinyKit stores nothing.	Apps instaladas con el instalador de TinyKit, las más nuevas primero. Toca una para abrirla o quitarla. Esta lista se lee de los propios registros de Android, así que TinyKit no guarda nada.
-Apps see Developer options as off. adb and Shizuku keep working.	Las apps ven las Opciones de desarrollador como desactivadas. adb y Shizuku siguen funcionando.
-Apps see developer options as off	Las apps ven las opciones de desarrollador como desactivadas
 Apps that can change brightness, ringtones and other settings.	Apps que pueden cambiar el brillo, los tonos y otros ajustes.
 Apps that can install other apps. Allow only your browser, file manager or app store.	Apps que pueden instalar otras apps. Permite solo tu navegador, administrador de archivos o tienda de apps.
 Apps that can open 	Apps que pueden abrir 
@@ -131,7 +125,6 @@ Apps that can read and change every file on your phone.	Apps que pueden leer y c
 Apps that can see which apps you use and for how long.	Apps que pueden ver qué apps usas y por cuánto tiempo.
 Apps that can show things on top of other apps. Scammers abuse this, so keep it short.	Apps que pueden mostrar cosas sobre otras apps. Los estafadores abusan de esto, así que déjalo por poco tiempo.
 Apps the installer put on, newest first, with a remove button.	Apps que puso el instalador, las más nuevas primero, con un botón para quitarlas.
-Apps the installer put on, with a remove button	Apps que puso el instalador, con un botón para quitarlas
 Apps use 	Las apps usan 
 Apps you haven't opened in a long time	Apps que no abres desde hace mucho tiempo
 Apps you haven't opened in a long time.	Apps que no abres desde hace mucho tiempo.
@@ -156,23 +149,18 @@ Battery & logs	Batería y registros
 Battery Saver	Ahorro de batería
 Battery usage	Uso de batería
 Battery, memory, storage and system details.	Batería, memoria, almacenamiento y detalles del sistema.
-Battery, memory, storage, system	Batería, memoria, almacenamiento, sistema
 Block ads with Private DNS	Bloquear anuncios con DNS privado
 Block ads with Private DNS.	Bloquea anuncios con DNS privado.
-Block every app except the ones you allow. Apps you install later are blocked when you next open TinyKit, or at once with "Block new apps at once" below. Allow Google Play services if you want push notifications.	Bloquea todas las apps excepto las que permitas. Las apps que instales después se bloquean la próxima vez que abras TinyKit, o al instante con "Bloquear apps nuevas al instante" más abajo. Permite los servicios de Google Play si quieres recibir notificaciones push.
 Block every sensor (motion, mic, camera).	Bloquea todos los sensores (movimiento, micrófono, cámara).
 Block everything except allowed apps?	¿Bloquear todo excepto las apps permitidas?
 Block internet	Bloquear internet
 Block internet per app	Bloquear internet por app
-Block motion, mic and camera sensors	Bloquear los sensores de movimiento, micrófono y cámara
 Block new apps at once	Bloquear apps nuevas al instante
 Block the mic and camera for every app.	Bloquea el micrófono y la cámara para todas las apps.
 Blocked	Bloqueado
 Blocked apps	Apps bloqueadas
-Blocked apps can't use Wi-Fi or mobile data. Android itself enforces it, so TinyKit runs nothing in the background unless you turn on "Block new apps at once" below, and the block comes back by itself after a restart as soon as Shizuku is running again.	Las apps bloqueadas no pueden usar Wi-Fi ni datos móviles. Lo aplica el propio Android, así que TinyKit no ejecuta nada en segundo plano a menos que actives "Bloquear apps nuevas al instante" más abajo, y el bloqueo vuelve solo después de reiniciar en cuanto Shizuku se ejecuta de nuevo.
 Blocking	Bloqueando
 Blocking an app's internet needs Android 14 or newer.	Bloquear el internet de una app requiere Android 14 o posterior.
-Blocking the internet of new apps	Bloqueo de internet para apps nuevas
 Blocks ads and trackers in every app and browser (AdGuard Private DNS).	Bloquea anuncios y rastreadores en todas las apps y navegadores (DNS privado de AdGuard).
 Blocks every sensor for all apps — motion, microphone and camera — like the hidden developer "Sensors off" tile. Resets on reboot.	Bloquea todos los sensores para todas las apps (movimiento, micrófono y cámara), como el mosaico oculto "Sensores apagados" de desarrollador. Se restablece al reiniciar.
 Bluetooth	Bluetooth
@@ -182,13 +170,11 @@ Brand / model	Marca / modelo
 Browser	Navegador
 Build	Compilación
 Built in	Integrado
-Bypass carrier tether blocks	Evitar los bloqueos de anclaje a red del operador
 Caffeine	Cafeína
 Calendar	Calendario
 Call log	Registro de llamadas
 Camera	Cámara
 Camera access	Acceso a la cámara
-Camera, mic, location, contacts, clipboard	Cámara, micrófono, ubicación, contactos, portapapeles
 Can't connect to the camera	No se puede conectar a la cámara
 Cancel	Cancelar
 Capacity	Capacidad
@@ -261,8 +247,6 @@ Crash log	Registro de fallos
 Crash reports	Informes de fallos
 Crash: 	Fallo: 
 Current	Actual
-Cut an app off Wi-Fi and mobile data	Corta el acceso de una app al Wi-Fi y a los datos móviles
-Cut chosen apps off Wi-Fi and mobile data. Nothing runs in the background unless you turn that on.	Corta el acceso de las apps elegidas al Wi-Fi y a los datos móviles. No se ejecuta nada en segundo plano a menos que lo actives.
 Cycle 30 s to never.	Cambia entre 30 s y nunca.
 Dark theme	Tema oscuro
 Dark-theme apps that have no dark mode	Tema oscuro para apps que no tienen modo oscuro
@@ -274,7 +258,6 @@ Dead	Muerta
 Debloater	Eliminar apps preinstaladas
 Default	Predeterminado
 Default apps	Apps predeterminadas
-Delete caches and free memory, one tap	Borra cachés y libera memoria, con un toque
 Deletes every app's cache, closes cached apps, frees and compacts memory and trims storage. Apps you're using stay open.	Borra la caché de todas las apps, cierra las apps en caché, libera y compacta la memoria y optimiza el almacenamiento. Las apps que estás usando siguen abiertas.
 Developer options	Opciones de desarrollador
 Device	Dispositivo
@@ -297,7 +280,6 @@ Done: 	Listo:
 Downlink	Descarga
 Download	Descargas
 Draw over other apps	Mostrar sobre otras apps
-Draw with the GPU only, like the developer option	Dibuja solo con la GPU, como la opción de desarrollador
 Draws everything with the GPU instead of the display's overlay layers (the same as the developer option). Android forgets it at a restart; TinyKit puts it back once Shizuku is running.	Dibuja todo con la GPU en lugar de las capas de superposición de la pantalla (igual que la opción de desarrollador). Android lo olvida al reiniciar; TinyKit lo vuelve a poner cuando Shizuku se está ejecutando.
 Edit quick panel	Editar panel rápido
 Estimated drain since the last full charge, biggest first.	Consumo estimado desde la última carga completa, el mayor primero.
@@ -308,7 +290,6 @@ Every thermal sensor	Todos los sensores térmicos
 Every thermal sensor the phone reports.	Todos los sensores térmicos que informa el teléfono.
 Every tile is already in your panel.	Todos los mosaicos ya están en tu panel.
 Excel sheet	Hoja de Excel
-Exempt apps from battery limits	Eximir apps de los límites de batería
 Expert	Experto
 Extra dim	Atenuación extra
 Eye comfort	Confort visual
@@ -322,7 +303,6 @@ Fake and Off permissions become not allowed, so Android asks the app again. Real
 File recycle bin	Papelera de archivos
 File types	Tipos de archivo
 Files found in every recycle bin and trash, with thumbnails. Tap one to restore it to Download/TinyKit/Recovered. Largest first.	Archivos encontrados en todas las papeleras, con miniaturas. Toca uno para restaurarlo en Download/TinyKit/Recovered. Los más grandes primero.
-Files in recycle bins and trash	Archivos en papeleras
 Find files in every recycle bin, with thumbnails, and restore them.	Encuentra archivos en todas las papeleras, con miniaturas, y restáuralos.
 Fingerprint	Huella digital
 Finishing…	Terminando…
@@ -330,10 +310,8 @@ Flashlight	Linterna
 Font size	Tamaño de fuente
 Force dark	Forzar modo oscuro
 Force dark on all apps	Forzar modo oscuro en todas las apps
-Force dark, HW overlays, sensors off, and the Quick toggles that are on	Modo oscuro forzado, superposiciones de HW, sensores apagados y los interruptores rápidos que estén activados
 Foreground service	Servicio en primer plano
 Free RAM	RAM libre
-Free cached space	Liberar espacio de caché
 Free every app's cached space.	Libera el espacio de caché de todas las apps.
 Free hotspot	Punto de acceso gratis
 Freed 	Se liberaron 
@@ -343,10 +321,7 @@ Full	Completa
 Gallery recycle bin	Papelera de la galería
 Gateway	Puerta de enlace
 Get Shizuku	Obtener Shizuku
-Get the latest version	Obtener la última versión
-Get the recommended versions	Obtener las versiones recomendadas
 GitHub	GitHub
-Give an app its own language	Dar a una app su propio idioma
 Give any app its own language (Android 13+).	Da a cualquier app su propio idioma (Android 13 o posterior).
 Good	Buena
 Google	Google
@@ -361,7 +336,6 @@ Hearing devices	Dispositivos auditivos
 Held 	Retenido 
 HiCloud	HiCloud
 Hidden app-ops	App-ops ocultas
-Hidden apps and removed system apps (brought back)	Apps ocultas y apps del sistema eliminadas (recuperadas)
 Hide apps	Ocultar apps
 Hide apps from the launcher	Oculta apps del launcher
 Hide apps from the launcher by disabling them.	Oculta apps del launcher desactivándolas.
@@ -376,7 +350,6 @@ How long each app was on screen today, yesterday or in the last 7 days.	Cuánto 
 How long each app was on your screen, and how often you opened it. Read from Android's usage history, so TinyKit measures nothing itself.	Cuánto tiempo estuvo cada app en tu pantalla y cuántas veces la abriste. Se lee del historial de uso de Android, así que TinyKit no mide nada por sí mismo.
 Huawei	Huawei
 Huawei Share	Huawei Share
-Huawei and Google tracking off	Rastreo de Huawei y Google desactivado
 IP addresses, Wi-Fi, DNS	Direcciones IP, Wi-Fi, DNS
 IP addresses, Wi-Fi, DNS and connection type.	Direcciones IP, Wi-Fi, DNS y tipo de conexión.
 Identifiers	Identificadores
@@ -393,7 +366,6 @@ Install failed: 	Falló la instalación:
 Install options	Opciones de instalación
 Install unknown apps	Instalar apps desconocidas
 Install unknown apps, draw over apps, all files access and more, per app.	Instalar apps desconocidas, mostrar sobre otras apps, acceso a todos los archivos y más, por app.
-Install unknown apps, draw over apps, all files and more	Instalar apps desconocidas, mostrar sobre otras apps, todos los archivos y más
 Installed 	Instalada 
 Installed (	Instalada (
 Installed apps	Apps instaladas
@@ -404,7 +376,6 @@ Installing…	Instalando…
 Interface	Interfaz
 Internet	Internet
 Internet block	Bloqueo de internet
-Internet block (allow list mode, blocked and allowed apps, the new-app watcher)	Bloqueo de internet (modo de lista permitida, apps bloqueadas y permitidas, el vigilante de apps nuevas)
 Internet block: 	Bloqueo de internet: 
 Internet block: every app can use the internet again.	Bloqueo de internet: todas las apps pueden usar internet de nuevo.
 Internet block: nothing to reset on this Android.	Bloqueo de internet: no hay nada que restablecer en este Android.
@@ -415,14 +386,12 @@ Keep alive	Mantener activa
 Keep apps alive	Mantener apps activas
 Keep device awake	Mantener el dispositivo despierto
 Keep the screen on for a while.	Mantiene la pantalla encendida por un tiempo.
-Keeps TinyKit running in the background, with a small notification, so an app is blocked the moment you install it. Off by default. It uses almost no battery or memory, and TinyKit is asked not to be put to sleep or closed to save battery.	Mantiene TinyKit en ejecución en segundo plano, con una pequeña notificación, para que una app se bloquee en el momento en que la instalas. Desactivado de forma predeterminada. Usa casi nada de batería o memoria, y se le pide a Android que no suspenda ni cierre TinyKit para ahorrar batería.
 Kernel	Kernel
 Last 7 days	Últimos 7 días
 Last opened 	Última vez abierta 
 Later	Más tarde
 Later  ›	Más tarde  ›
 Launcher	Launcher
-Launcher, browser, phone and more	Launcher, navegador, teléfono y más
 Least used	Menos usadas
 Let apps play audio together, or mute an app.	Permite que las apps reproduzcan audio a la vez, o silencia una app.
 Let apps play audio together, or mute an app. These are app-op changes; nothing runs in the background.	Permite que las apps reproduzcan audio a la vez, o silencia una app. Son cambios de app-ops; no se ejecuta nada en segundo plano.
@@ -446,7 +415,6 @@ Measuring…	Midiendo…
 Memory	Memoria
 Memory & storage	Memoria y almacenamiento
 Memory use of everything running. Stop any app.	Uso de memoria de todo lo que se ejecuta. Detén cualquier app.
-Memory use; stop any app	Uso de memoria; detén cualquier app
 Memory: 	Memoria: 
 Mic & camera off	Micrófono y cámara apagados
 Mic and camera off	Micrófono y cámara apagados
@@ -464,13 +432,11 @@ Muted	Silenciada
 Muted  ·  plays with others	Silenciada  ·  suena con otras
 Name	Nombre
 Needs Android 14 or newer.	Requiere Android 14 o posterior.
-Needs Shizuku running. Apps that block screenshots stay blocked: Android doesn't let any app get past that without root.	Requiere que Shizuku esté en ejecución. Las apps que bloquean las capturas de pantalla siguen bloqueadas: Android no permite que ninguna app lo evite sin root.
 Network & battery	Red y batería
 Network info	Información de red
 Networks	Redes
 Never	Nunca
 Never opened	Nunca abierta
-New app blocking	Bloqueo de apps nuevas
 Night Light	Luz nocturna
 No app is blocked.	Ninguna app está bloqueada.
 No app use recorded in this time.	No hay uso de apps registrado en este periodo.
@@ -497,7 +463,6 @@ Not enough free storage.	No hay suficiente almacenamiento libre.
 Not now	Ahora no
 Not plugged in	No está conectado
 Not reported by this phone	Este teléfono no lo informa
-Not running. Apps you install are blocked the next time you open TinyKit.	No está en ejecución. Las apps que instales se bloquean la próxima vez que abras TinyKit.
 Not set up	Sin configurar
 Not set. Tap to paste it from Shizuku's settings.	Sin definir. Toca para pegarlo desde los ajustes de Shizuku.
 Not supported on this Android version	No es compatible con esta versión de Android
@@ -514,14 +479,11 @@ Notification channels need Android 8 or newer.	Los canales de notificaciones req
 Notifications	Notificaciones
 Now	Ahora
 Off	Apagado
-Off, faster or slower system animations	Animaciones del sistema desactivadas, más rápidas o más lentas
 Off. TinyKit never runs by itself.	Desactivado. TinyKit nunca se ejecuta por sí solo.
-Off: TinyKit never runs by itself, apart from a short check when Shizuku starts. On: a quiet notification and a small service keep TinyKit ready, so a new app is blocked the moment it is installed (Block internet per app), and, once you tick it, Shut Up keeps hiding developer options from the apps you chose. TinyKit is also asked not to be put to sleep. It uses almost no battery or memory.	Desactivado: TinyKit nunca se ejecuta por sí solo, aparte de una breve comprobación cuando Shizuku se inicia. Activado: una notificación discreta y un pequeño servicio mantienen TinyKit listo, para que una app nueva se bloquee en el momento en que se instala (Bloquear internet por app), y, una vez que lo marques, Silenciar sigue ocultando las opciones de desarrollador a las apps que elegiste. También se le pide a Android que no suspenda TinyKit. Usa casi nada de batería o memoria.
 Offer to report crashes	Ofrecer reportar fallos
 Offline	Sin conexión
 One tap turns Shizuku on or off. It uses the auth token when it's set, otherwise Termux with shizuku-termux.	Un toque activa o desactiva Shizuku. Usa el token de autenticación si está definido; si no, Termux con shizuku-termux.
 One-handed mode	Modo de una mano
-One-tap RAM and cache cleaner	Limpiador de RAM y caché con un toque
 Only apps with internet permission	Solo apps con permiso de internet
 Open	Abrir
 Open Shizuku	Abrir Shizuku
@@ -541,12 +503,10 @@ Part of Android, not in TinyKit's list	Parte de Android, no está en la lista de
 Parts of the app are missing. Pick every file of the app together.	Faltan partes de la app. Elige juntos todos los archivos de la app.
 Password copied	Contraseña copiada
 Password: 	Contraseña: 
-Passwords and QR codes	Contraseñas y códigos QR
 Pause and resume blocking apps' internet.	Pausa y reanuda el bloqueo de internet de las apps.
 Pause blocking	Pausar bloqueo
 Paused	En pausa
 Paused. No app is blocked until you resume.	En pausa. Ninguna app está bloqueada hasta que reanudes.
-Per-app background block	Bloqueo en segundo plano por app
 Permission choices (Fake, Real, Off) and any damage they caused	Opciones de permisos (Falso, Real, Apagado) y cualquier daño que causaron
 Permissions	Permisos
 Permissions: 	Permisos: 
@@ -568,14 +528,12 @@ Pick the app to use as the default 	Elige la app que será la predeterminada par
 Pick the apps that may use the internet. Everything else is blocked.	Elige las apps que pueden usar internet. Todo lo demás se bloquea.
 Pick the apps to cut off.	Elige las apps a las que quieres cortar el acceso.
 Plain text	Texto sin formato
-Play apps together or mute an app	Reproducir apps juntas o silenciar una app
 Play normally (take focus)	Reproducir normalmente (tomar el foco)
 Plays with others	Suena con otras
 Power	Energía
 Power saving	Ahorro de energía
 Power source	Fuente de energía
 Power, current, voltage and battery health.	Energía, corriente, voltaje y salud de la batería.
-Power, current, voltage, health	Energía, corriente, voltaje, salud
 Precise location	Ubicación precisa
 Preparing the report…	Preparando el informe…
 Privacy	Privacidad
@@ -606,17 +564,14 @@ Reboot	Reiniciar
 Reboot to bootloader	Reiniciar en el bootloader
 Reboot to recovery	Reiniciar en recovery
 Reboot, recovery, bootloader or a soft (userspace) reboot.	Reiniciar, recovery, bootloader o un reinicio suave (de espacio de usuario).
-Reboot, recovery, bootloader, soft reboot	Reiniciar, recovery, bootloader, reinicio suave
 Recent access	Acceso reciente
 Recent vibrations	Vibraciones recientes
 Recent vibrations and what asked for them.	Vibraciones recientes y qué las pidió.
 Recent vibrations, most recent first.	Vibraciones recientes, las más recientes primero.
 Recommended	Recomendado
 Recommended versions that keep running in the background.	Versiones recomendadas que siguen ejecutándose en segundo plano.
-Recompile apps so they open faster	Recompilar apps para que abran más rápido
 Record the screen to Movies.	Graba la pantalla en Movies.
 Recording saved to Movies	Grabación guardada en Movies
-Recording. Tap the tile again to stop.	Grabando. Toca el mosaico otra vez para detener.
 Recording…	Grabando…
 Recover deleted files	Recuperar archivos eliminados
 Recover files	Recuperar archivos
@@ -624,8 +579,6 @@ Recovered fragments	Fragmentos recuperados
 Refresh	Actualizar
 Remove	Quitar
 Remove 	Quitar 
-Remove & control	Quitar y controlar
-Remove apps your phone came with, and bring them back	Quita las apps con las que vino tu teléfono y recupéralas
 Remove apps your phone came with, for you only. Nothing is deleted from the system: bring any app back from Removed, and a factory reset restores all of them. Hold an app to read about it.	Quita las apps con las que vino tu teléfono, solo para ti. No se borra nada del sistema: recupera cualquier app desde Eliminadas, y un restablecimiento de fábrica las restaura todas. Mantén pulsada una app para leer sobre ella.
 Remove apps your phone came with, with a safety rating for each. Bring any of them back later.	Quita las apps con las que vino tu teléfono, con una calificación de seguridad para cada una. Puedes recuperarlas después.
 Removed 	Se quitó 
@@ -662,14 +615,11 @@ Router	Router
 Run	Ejecutar
 Run a command	Ejecutar un comando
 Run a shell command as the shell user through Shizuku.	Ejecuta un comando de shell como el usuario shell mediante Shizuku.
-Run a shell command via Shizuku	Ejecutar un comando de shell mediante Shizuku
 Run in background	Ejecutar en segundo plano
 Run in the background	Ejecutar en segundo plano
 Run the shizuku-termux install command in Termux once.	Ejecuta una vez en Termux el comando de instalación de shizuku-termux.
 Running & background	En ejecución y segundo plano
 Running apps	Apps en ejecución
-Running in the background now.	En ejecución en segundo plano ahora.
-Running in the background now. New apps are blocked the moment they are installed.	En ejecución en segundo plano ahora. Las apps nuevas se bloquean en el momento en que se instalan.
 Running…	Ejecutando…
 Runs as the shell (adb) user through Shizuku. Output and exit code show below.	Se ejecuta como el usuario shell (adb) mediante Shizuku. La salida y el código de salida aparecen abajo.
 Runs storage maintenance and TRIM to keep storage fast.	Ejecuta el mantenimiento del almacenamiento y TRIM para mantenerlo rápido.
@@ -679,10 +629,8 @@ Save	Guardar
 Save a screenshot.	Guarda una captura de pantalla.
 Save all settings to a file.	Guarda todos los ajustes en un archivo.
 Save all system settings to a file and put them back.	Guarda todos los ajustes del sistema en un archivo y vuelve a ponerlos.
-Save and restore all settings	Guardar y restaurar todos los ajustes
 Save any app's APK	Guardar el APK de cualquier app
 Save any app's APK to Download/TinyKit.	Guarda el APK de cualquier app en Download/TinyKit.
-Save battery on Wi-Fi	Ahorrar batería con Wi-Fi
 Save these choices to Download/TinyKit.	Guarda estas opciones en Download/TinyKit.
 Saved 	Se guardó 
 Saved Wi-Fi	Wi-Fi guardado
@@ -698,7 +646,6 @@ Screen time	Tiempo de pantalla
 Screen timeout	Tiempo de espera de pantalla
 Screenshot	Captura de pantalla
 Screenshot saved to Pictures/Screenshots	Captura guardada en Pictures/Screenshots
-Screenshot tile	Mosaico de captura de pantalla
 Search all settings & tools	Buscar en todos los ajustes y herramientas
 Search apps	Buscar apps
 Search networks	Buscar redes
@@ -713,13 +660,11 @@ Sensors	Sensores
 Sensors off	Sensores apagados
 Serial	Número de serie
 Set 	Establecer 
-Set Real, Fake or Off per app	Elige Real, Falso o Apagado por app
 Set Shizuku's auth token in TinyKit, or install shizuku-termux, to start Shizuku from here.	Define el token de autenticación de Shizuku en TinyKit, o instala shizuku-termux, para iniciar Shizuku desde aquí.
 Set any app's permissions to Real, Fake (looks granted, gets nothing) or Off.	Establece los permisos de cualquier app como Real, Falso (parece concedido, pero no recibe nada) o Apagado.
 Set the default launcher, browser, phone and more.	Establece el launcher, el navegador, el teléfono y más predeterminados.
 Set. Start and Stop go straight to Shizuku.	Definido. Iniciar y Detener van directo a Shizuku.
 Settings backup & restore	Respaldo y restauración de ajustes
-Settings restored.	Ajustes restaurados.
 Shizuku	Shizuku
 Shizuku (thedjchi's fork, recommended): its Watchdog restarts Shizuku if Android kills it	Shizuku (fork de thedjchi, recomendado): su Watchdog reinicia Shizuku si Android lo cierra
 Shizuku auth token	Token de autenticación de Shizuku
@@ -727,10 +672,8 @@ Shizuku didn't start. Open Termux or the Shizuku app to see why.	Shizuku no se i
 Shizuku is not available.	Shizuku no está disponible.
 Shizuku is not installed	Shizuku no está instalado
 Shizuku is not running	Shizuku no está en ejecución
-Shizuku is running  ✓	Shizuku está en ejecución  ✓
 Shizuku is running. Allow TinyKit to use it.	Shizuku está en ejecución. Permite que TinyKit lo use.
 Shizuku isn't ready yet. Open Shizuku, make sure it is running, then try again.	Shizuku aún no está listo. Abre Shizuku, asegúrate de que esté en ejecución y vuelve a intentarlo.
-Shizuku start and stop token	Token para iniciar y detener Shizuku
 Shizuku tile	Mosaico de Shizuku
 Shizuku, which TinyKit needs	Shizuku, que TinyKit necesita
 Show	Mostrar
@@ -755,26 +698,21 @@ Start Shizuku and allow TinyKit first.	Primero inicia Shizuku y permite a TinyKi
 Start Shizuku first	Primero inicia Shizuku
 Start Shizuku first.	Primero inicia Shizuku.
 Start Shizuku once so TinyKit can change this.	Inicia Shizuku una vez para que TinyKit pueda cambiar esto.
-Start uses the auth token when it's set, otherwise Termux with shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Set the token if you use a Shizuku fork with Watchdog, so Stop really stops it.	Iniciar usa el token de autenticación si está definido; si no, Termux con shizuku-termux; si no, abre Shizuku para que toques su botón Iniciar. Define el token si usas un fork de Shizuku con Watchdog, para que Detener realmente lo detenga.
+Start uses the auth token when it's set, otherwise Termux with shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Stop closes Shizuku fully, so a Watchdog can't start it straight back up.	Iniciar usa el token de autenticación si está definido; si no, Termux con shizuku-termux; si no, abre Shizuku para que pulses su botón Iniciar. Detener cierra Shizuku por completo, así un Watchdog no puede volver a iniciarlo enseguida.
 Started. Android finishes it in the background.	Iniciado. Android lo termina en segundo plano.
 Started. It keeps running if you close TinyKit.	Iniciado. Sigue en ejecución si cierras TinyKit.
 Starting…	Iniciando…
 Status	Estado
 Stop	Detener
 Stop 	Detener 
-Stop Shizuku?	¿Detener Shizuku?
-Stop anyway	Detener de todos modos
-Stop apps from reading your clipboard	Evitar que las apps lean tu portapapeles
 Stop background activity	Detener la actividad en segundo plano
 Stop background apps.	Detiene las apps en segundo plano.
 Stop background scanning	Detener el escaneo en segundo plano
-Stopping Shizuku…	Deteniendo Shizuku…
 Stopping…	Deteniendo…
 Stops Huawei usage analytics and app analytics.	Detiene el análisis de uso de Huawei y de sus apps.
 Storage	Almacenamiento
 Storage by app	Almacenamiento por app
 Storage by app needs Android 8 or newer.	El almacenamiento por app requiere Android 8 o posterior.
-Storage maintenance and TRIM	Mantenimiento del almacenamiento y TRIM
 Success	Éxito
 Switched the camera app back on: 	Se volvió a activar la app de cámara: 
 Switches: Shizuku isn't running; nothing to check.	Interruptores: Shizuku no está en ejecución; no hay nada que revisar.
@@ -782,7 +720,6 @@ Switches: nothing was on.	Interruptores: no había nada activado.
 Switches: turned off 	Interruptores: se desactivaron 
 System	Sistema
 System default	Predeterminado del sistema
-Take a screenshot from the quick panel, saved to Pictures/Screenshots.	Toma una captura de pantalla desde el panel rápido, guardada en Pictures/Screenshots.
 Tap Real, Fake or Off for each permission. Fake shows the app the permission as granted while it actually gets nothing.	Toca Real, Falso o Apagado para cada permiso. Falso le muestra a la app el permiso como concedido, pero en realidad no recibe nada.
 Tap Start in Shizuku. TinyKit connects by itself once it's running.	Toca Iniciar en Shizuku. TinyKit se conecta solo cuando esté en ejecución.
 Tap a default to change it. Some phones only allow certain apps for a role.	Toca un valor predeterminado para cambiarlo. Algunos teléfonos solo permiten ciertas apps para un rol.
@@ -848,7 +785,6 @@ TinyKit: 	TinyKit:
 Title: choice	Título: opción
 Today	Hoy
 Tools	Herramientas
-Top battery consumers	Apps que más batería consumen
 Total on screen: 	Total en pantalla: 
 Touch and hold an empty spot on your home screen, tap Widgets, then drag TinyKit's "Speed up" widget onto the screen.	Mantén pulsado un espacio vacío de tu pantalla de inicio, toca Widgets y arrastra el widget "Acelerar" de TinyKit a la pantalla.
 Trackers in apps	Rastreadores en apps
@@ -863,14 +799,11 @@ Turn off Huawei and Google analytics, ad tracking and HiCloud.	Desactiva el aná
 Turn off hardware overlays (developer option).	Desactiva las superposiciones de hardware (opción de desarrollador).
 Turn on	Activar
 Turned off the sensor block that was cutting the camera and microphone for every app.	Se desactivó el bloqueo de sensores que cortaba la cámara y el micrófono para todas las apps.
-Turned on, but not running yet. Open TinyKit again, or turn it off and on.	Activado, pero aún no está en ejecución. Abre TinyKit otra vez, o desactívalo y vuelve a activarlo.
 Type	Tipo
 USB debugging	Depuración USB
 Unavailable	No disponible
 Unblock all apps	Desbloquear todas las apps
-Undo Real, Fake and Off, repair problems	Deshacer Real, Falso y Apagado, reparar problemas
 Undo TinyKit's changes and go back to Android's defaults. Saves a backup first.	Deshace los cambios de TinyKit y vuelve a los valores predeterminados de Android. Antes guarda un respaldo.
-Undo all of TinyKit's changes	Deshacer todos los cambios de TinyKit
 Undo every Real, Fake and Off choice TinyKit made and fix any problems it caused.	Deshace todas las opciones Real, Falso y Apagado que hizo TinyKit y arregla los problemas que causó.
 Unknown	Desconocido
 Unknown command	Comando desconocido
@@ -895,7 +828,6 @@ Wallet	Cartera
 Web page (HTML)	Página web (HTML)
 What has held the phone awake since the last charge, longest first.	Lo que ha mantenido despierto el teléfono desde la última carga, lo más largo primero.
 What has kept the phone awake.	Lo que ha mantenido despierto el teléfono.
-What keeps the phone awake	Lo que mantiene despierto el teléfono
 What's new	Novedades
 What's new in 	Novedades de 
 When you open TinyKit, ask GitHub for a new version and show a popup if there is one.	Al abrir TinyKit, pide a GitHub una versión nueva y muestra un aviso si hay una.
@@ -903,13 +835,11 @@ Which apps have drained the most since the last charge.	Qué apps han gastado m�
 Which apps take the most space	Qué apps ocupan más espacio
 Which apps take the most space.	Qué apps ocupan más espacio.
 Who used the camera, mic, location, contacts or clipboard lately.	Quién usó la cámara, el micrófono, la ubicación, los contactos o el portapapeles recientemente.
-Why an app crashed	Por qué falló una app
 Wi-Fi MAC	MAC del Wi-Fi
 Wi-Fi and Bluetooth stop scanning	El Wi-Fi y el Bluetooth dejan de buscar
 Wi-Fi and Bluetooth stop scanning for nearby devices while they're off.	El Wi-Fi y el Bluetooth dejan de buscar dispositivos cercanos mientras están apagados.
 Wi-Fi password	Contraseña del Wi-Fi
 Wireless	Inalámbrico
-Without the auth token TinyKit ends Shizuku's process. If Shizuku's Watchdog is on, it will start Shizuku again. Set the auth token to stop it properly.	Sin el token de autenticación, TinyKit termina el proceso de Shizuku. Si el Watchdog de Shizuku está activado, volverá a iniciar Shizuku. Define el token de autenticación para detenerlo correctamente.
 Word document	Documento de Word
 Work apps	Apps de trabajo
 Working	Trabajando
@@ -918,7 +848,6 @@ Write clipboard	Escribir en el portapapeles
 Write storage	Escribir almacenamiento
 Writing part 	Escribiendo parte 
 Yesterday	Ayer
-You can turn this off in TinyKit: Block internet per app.	Puedes desactivar esto en TinyKit: Bloquear internet por app.
 You have the latest version (	Tienes la última versión (
 You have version 	Tienes la versión 
 Your home screen	Tu pantalla de inicio
@@ -1067,30 +996,60 @@ camera and microphone block	bloqueo de cámara y micrófono
 not allowed	no permitido
 # Shut Up
 Shut Up	Silenciar
-Hide developer options and USB debugging from chosen apps	Oculta las opciones de desarrollador y la depuración USB a las apps que elijas
-Make chosen apps see developer options, USB debugging and Wireless debugging as off.	Haz que las apps elegidas vean las opciones de desarrollador, la depuración USB y la depuración inalámbrica como apagadas.
 Some apps refuse to work, or nag you, when Developer options or USB or Wireless debugging are on. Choose those apps here. While one of them is on screen, TinyKit turns the three settings off, and it turns back on whatever was on the moment you leave the app. Android can't hide a setting from one app only, so every app sees it off during that time. An app that checks in its first moments, before TinyKit notices it, or that remembers an earlier check, can still see it.	Algunas apps no funcionan, o te molestan, cuando las opciones de desarrollador o la depuración USB o inalámbrica están activadas. Elige esas apps aquí. Mientras una de ellas está en pantalla, TinyKit apaga los tres ajustes, y vuelve a activar lo que estaba activado en cuanto sales de la app. Android no puede ocultar un ajuste solo a una app, así que todas las apps lo ven apagado durante ese tiempo. Una app que lo revisa en sus primeros instantes, antes de que TinyKit la detecte, o que recuerda una revisión anterior, todavía puede verlo.
 No app chosen yet.	Aún no has elegido ninguna app.
  app chosen.	 app elegida.
  apps chosen.	 apps elegidas.
 Running. Hidden right now, because a chosen app is open.	En ejecución. Oculto ahora mismo, porque hay una app elegida abierta.
 Running. Nothing is hidden until you open a chosen app.	En ejecución. No se oculta nada hasta que abras una app elegida.
-On, waiting for you to choose an app.	Activado, esperando a que elijas una app.
-Turned on, but not running yet. Open TinyKit again, or turn it off and on.	Activado, pero aún no se ejecuta. Abre TinyKit otra vez, o apágalo y vuelve a activarlo.
 Off. TinyKit changes nothing and runs nothing.	Apagado. TinyKit no cambia nada ni ejecuta nada.
 Shut Up apps	Apps de Silenciar
 Checked apps see Developer options, USB debugging and Wireless debugging as off while they are open.	Las apps marcadas ven las opciones de desarrollador, la depuración USB y la depuración inalámbrica como apagadas mientras están abiertas.
-Off: nothing runs. On: a quiet notification and a small service watch which app is open (a couple of times a second, only while the screen is on). It uses very little battery. TinyKit is also asked not to be put to sleep. It runs only while Run in the background (Info tab) is on too.	Apagado: no se ejecuta nada. Activado: una notificación discreta y un pequeño servicio vigilan qué app está abierta (un par de veces por segundo, solo con la pantalla encendida). Usa muy poca batería. También se le pide a Android que no suspenda TinyKit. Solo se ejecuta mientras Ejecutar en segundo plano (pestaña Información) también esté activado.
-Start Shizuku once and allow TinyKit, so it can change these settings and see which app is open without Shizuku.	Inicia Shizuku una vez y autoriza a TinyKit, para que pueda cambiar estos ajustes y ver qué app está abierta sin Shizuku.
-Shut Up is on	Silenciar está activado
-Hiding developer options and debugging from the apps you chose.	Ocultando las opciones de desarrollador y la depuración a las apps que elegiste.
 Stop Shizuku while they're open	Detener Shizuku mientras están abiertas
 Some apps notice Shizuku running. With this on, TinyKit stops Shizuku while a chosen app is open and starts it again about 15 seconds after you leave. Turning USB or Wireless debugging off can end Shizuku too, so TinyKit also starts it again after that. It only does this when it can start Shizuku by itself.	Algunas apps notan que Shizuku está en ejecución. Con esto activado, TinyKit detiene Shizuku mientras una app elegida está abierta y lo vuelve a iniciar unos 15 segundos después de que salgas. Apagar la depuración USB o inalámbrica también puede cerrar Shizuku, así que TinyKit lo vuelve a iniciar después de eso. Solo lo hace cuando puede iniciar Shizuku por sí mismo.
 TinyKit can start Shizuku again by itself.	TinyKit puede volver a iniciar Shizuku por sí mismo.
 Not available: TinyKit has no way to start Shizuku by itself. Save Shizuku's auth token (Shizuku tab, for a Shizuku fork with start and stop intents), or install Termux with shizuku-termux and allow TinyKit to run commands there.	No disponible: TinyKit no tiene forma de iniciar Shizuku por sí mismo. Guarda el token de autenticación de Shizuku (pestaña Shizuku, para un fork de Shizuku con intents de inicio y parada), o instala Termux con shizuku-termux y permite que TinyKit ejecute comandos ahí.
 TinyKit has no way to start Shizuku by itself yet. See the note below.	TinyKit aún no tiene forma de iniciar Shizuku por sí mismo. Mira la nota de abajo.
-Ticked, but waiting: Run in the background (Info tab) is off.	Marcado, pero en espera: Ejecutar en segundo plano (pestaña Información) está apagado.
-Turn on Run in the background (Info tab) first.	Primero activa Ejecutar en segundo plano (pestaña Información).
-Turn on Run in the background?	¿Activar Ejecutar en segundo plano?
-Shut Up only runs while Run in the background (Info tab) is on. Turn it on too? It is the one switch for everything TinyKit may keep running, and you can turn it off there at any time.	Silenciar solo se ejecuta mientras Ejecutar en segundo plano (pestaña Información) está activado. ¿Activarlo también? Es el único interruptor para todo lo que TinyKit puede mantener en ejecución, y puedes apagarlo ahí en cualquier momento.
-Turn on both	Activar ambos
+# 1.15.0: one background service, reorganised tabs, search over every row
+New apps	Apps nuevas
+TinyKit is running in the background	TinyKit se está ejecutando en segundo plano
+Start Shizuku and allow TinyKit once, so Shut Up can change these settings and see which app is open without it.	Inicia Shizuku y permite TinyKit una vez, para que Silenciar pueda cambiar estos ajustes y ver qué app está abierta sin él.
+Paused, because Run in the background is off. Tap here to turn it back on.	En pausa, porque Ejecutar en segundo plano está desactivado. Toca aquí para volver a activarlo.
+On. Choose at least one app above.	Activado. Elige al menos una app arriba.
+Watches which app is open (a couple of times a second, only while the screen is on) with a quiet notification. It uses very little battery. Turning it on also turns on Run in the background (Info tab), which it needs.	Vigila qué app está abierta (un par de veces por segundo, solo con la pantalla encendida) con una notificación discreta. Usa muy poca batería. Al activarlo también se activa Ejecutar en segundo plano (pestaña Info), que necesita.
+Every app sees Developer options as off. adb and Shizuku keep working.	Todas las apps ven las Opciones de desarrollador desactivadas. adb y Shizuku siguen funcionando.
+Only the apps you choose see developer options, USB debugging and Wireless debugging as off.	Solo las apps que elijas ven desactivadas las opciones de desarrollador, la depuración USB y la depuración inalámbrica.
+Cut chosen apps off Wi-Fi and mobile data.	Corta el Wi-Fi y los datos móviles a las apps que elijas.
+Network	Red
+Install & remove	Instalar y quitar
+Undo	Deshacer
+Running now for: 	Ejecutándose ahora para: 
+new apps	apps nuevas
+On. Nothing needs it right now, so nothing is running.	Activado. Ahora nada lo necesita, así que no se ejecuta nada.
+Lets TinyKit keep a small service running, with a quiet notification, for the tools that need it: Shut Up, and blocking a new app's internet the moment it is installed. It only runs while one of them is in use, and uses almost no battery or memory. Off: TinyKit never runs by itself.	Permite que TinyKit mantenga un pequeño servicio en marcha, con una notificación discreta, para las herramientas que lo necesitan: Silenciar y bloquear internet a una app nueva en cuanto se instala. Solo se ejecuta mientras una de ellas está en uso y casi no gasta batería ni memoria. Desactivado: TinyKit nunca se ejecuta por sí solo.
+Blocked apps can't use Wi-Fi or mobile data. Android itself enforces it, so TinyKit runs nothing in the background unless you turn on "Run in the background" below, and the block comes back by itself after a restart as soon as Shizuku is running again.	Las apps bloqueadas no pueden usar Wi-Fi ni datos móviles. Lo aplica el propio Android, así que TinyKit no ejecuta nada en segundo plano salvo que actives "Ejecutar en segundo plano" abajo, y el bloqueo vuelve solo tras reiniciar en cuanto Shizuku vuelve a funcionar.
+Block every app except the ones you allow. Apps you install later are blocked when you next open TinyKit, or at once with "Run in the background" below. Allow Google Play services if you want push notifications.	Bloquea todas las apps excepto las que permitas. Las apps que instales después se bloquean la próxima vez que abras TinyKit, o al instante con "Ejecutar en segundo plano" abajo. Permite los servicios de Google Play si quieres notificaciones push.
+Blocks a new app the moment you install it, with a quiet notification. This is the same switch as in the Info tab, shared with Shut Up. It uses almost no battery or memory.	Bloquea una app nueva en cuanto la instalas, con una notificación discreta. Es el mismo interruptor que en la pestaña Info, compartido con Silenciar. Casi no gasta batería ni memoria.
+Running. New apps are blocked the moment they are installed.	En marcha. Las apps nuevas se bloquean en cuanto se instalan.
+On. Nothing to watch until you block an app or turn on allow list mode.	Activado. No hay nada que vigilar hasta que bloquees una app o actives el modo lista de permitidas.
+Off. Apps you install are blocked the next time you open TinyKit.	Desactivado. Las apps que instales se bloquean la próxima vez que abras TinyKit.
+Nothing found.	No se encontró nada.
+This app isn't installed any more.	Esta app ya no está instalada.
+Choosing default apps here needs Android 10 or newer. Use Settings > Apps > Default apps instead.	Elegir apps predeterminadas aquí requiere Android 10 o posterior. Usa Ajustes > Aplicaciones > Aplicaciones predeterminadas.
+Restore this setup?	¿Restaurar esta configuración?
+Recording, for up to 3 minutes. Tap the tile again to stop.	Grabando, hasta 3 minutos. Toca el icono otra vez para detener.
+Couldn't start recording. This screen may be protected, or another recording is running.	No se pudo empezar a grabar. Puede que esta pantalla esté protegida o que haya otra grabación en curso.
+Internet block (allow list mode, blocked and allowed apps, pause)	Bloqueo de internet (modo lista de permitidas, apps bloqueadas y permitidas, pausa)
+Hidden apps and removed system apps (brought back, including apps you switched off in Settings)	Apps ocultas y apps del sistema quitadas (se recuperan, incluidas las que desactivaste en Ajustes)
+Force dark, HW overlays, sensors off, Shut Up, Run in the background, and the Quick toggles that are on	Forzar modo oscuro, superposiciones HW, sensores desactivados, Silenciar, Ejecutar en segundo plano y los interruptores rápidos activados
+ will be blocked from the internet when you resume blocking.	 se bloqueará de internet cuando reanudes el bloqueo.
+Shizuku is running	Shizuku está en ejecución
+Waiting: start Shizuku once so TinyKit can give itself the access Shut Up needs.	En espera: inicia Shizuku una vez para que TinyKit se dé el acceso que necesita Silenciar.
+Stopping Shizuku…	Deteniendo Shizuku…
+Starting Shizuku…	Iniciando Shizuku…
+Shizuku didn't start. Check the auth token matches the one in Shizuku's settings.	Shizuku no se inició. Comprueba que el token de autenticación coincide con el de los ajustes de Shizuku.
+Shizuku didn't stop. Check the auth token matches the one in Shizuku's settings.	Shizuku no se detuvo. Comprueba que el token de autenticación coincide con el de los ajustes de Shizuku.
+Shizuku didn't stop. Try again, or stop it in the Shizuku app.	Shizuku no se detuvo. Inténtalo de nuevo o detenlo en la app de Shizuku.
+Open Termux	Abrir Termux
+Shizuku didn't start	Shizuku no se inició
+Shizuku didn't stop	Shizuku no se detuvo

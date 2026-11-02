@@ -46,10 +46,10 @@ show *"Start Shizuku once so TinyKit can change this."*
 
 ## Details
 
-**Shizuku.** With the auth token saved it sends Shizuku's own start or stop intent. Otherwise it
-asks Termux to run `shizuku start` or `shizuku stop`. With neither, it can still stop a running
-Shizuku by force-stopping the Shizuku app first (so the Watchdog doesn't restart it) and then
-ending the server. Its state refreshes on its own when Shizuku starts or stops.
+**Shizuku.** Starts and stops Shizuku the same way as the Shizuku tab. Start: Shizuku's own start
+intent with the auth token, otherwise `shizuku start` in Termux. Stop: the stop intent with the
+token, otherwise it closes the Shizuku app (so a Watchdog doesn't restart it) and ends the server,
+or runs `shizuku stop` in Termux if TinyKit isn't allowed in Shizuku. Its state refreshes on its own when Shizuku starts or stops.
 
 **Screenshot.** Closes the panel, waits a moment, then runs `screencap`. Apps that block
 screenshots (`FLAG_SECURE`, used by banking and DRM apps) stay blocked, and the tile tells you

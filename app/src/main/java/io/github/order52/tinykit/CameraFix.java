@@ -158,7 +158,9 @@ final class CameraFix {
                 String mode = now.get(pkg + "|" + op[0]);
                 if (!"ignore".equals(mode) && !"deny".equals(mode)) continue;
                 boolean granted = pm.checkPermission(op[1], pkg) == PackageManager.PERMISSION_GRANTED;
-                if (!granted && !cameras.contains(pkg)) continue; // normal: the user never allowed it
+                // Normal: the user never allowed it, or took it back. Only the repair the user starts
+                // gives a camera app its permission back; the automatic check never does.
+                if (!granted && (!wide || !cameras.contains(pkg))) continue;
                 if (!granted) fix.append("pm grant ").append(Shell.quote(pkg)).append(' ').append(op[1]).append(" 2>/dev/null; ");
                 fix.append("appops set --uid ").append(Shell.quote(pkg)).append(' ').append(op[0]).append(" allow; ")
                         .append("appops set ").append(Shell.quote(pkg)).append(' ').append(op[0]).append(" default; ");
