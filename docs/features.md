@@ -143,8 +143,10 @@ screen TinyKit turns **Developer options**, **USB debugging** and **Wireless deb
 turns back on whatever was on the moment you leave the app (or turn the screen off).
 
 - Android can't hide a setting from one app only, so while a chosen app is open every app sees them off.
-- It needs its own switch. When on, a small foreground service with a quiet notification checks which
-  app is open a couple of times a second, only while the screen is on. Off, nothing runs.
+- It needs its own tick **and** the **Run in the background** switch (Info tab). Both on: a small
+  foreground service with a quiet notification checks which app is open a couple of times a second,
+  only while the screen is on. Either one off: nothing runs and everything is put back. Ticking Shut Up
+  while Run in the background is off offers to turn both on.
 - What was on is written down before anything changes, so a crash, a restart or turning Shut Up
   off always puts it back. TinyKit restores through its own `WRITE_SECURE_SETTINGS`, so this works even
   if Shizuku stopped. It needs Shizuku once, to grant that and usage access.

@@ -55,6 +55,9 @@ public final class NewAppService extends Service {
             Shell.run("dumpsys deviceidle whitelist +" + c.getPackageName());
         }
         sync(c);
+        // The same switch keeps Shut Up running (it follows the apps chosen there).
+        if (on) Tweak.grantSelf(c);
+        ShutUpService.sync(c);
     }
 
     /** Starts or stops the service to match the saved choice. Safe to call from anywhere, any time. */

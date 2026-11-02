@@ -1245,19 +1245,16 @@ public class MainActivity extends Activity {
         Runnable showBackground = () -> {
             boolean on = prefs.getBoolean(NewAppService.PREF, false);
             backgroundSwitch.setChecked(on);
-            backgroundStatus.setText(Tr.t(NewAppService.isRunning() ? "Running in the background now."
+            backgroundStatus.setText(Tr.t(NewAppService.isRunning() || ShutUpService.isRunning() ? "Running in the background now."
                     : on ? "Turned on, but not running yet. Open TinyKit again, or turn it off and on."
                     : "Off. TinyKit never runs by itself."));
         };
         showBackground.run();
         row(list, "Run in the background", "Off: TinyKit never runs by itself, apart from a short check when "
                 + "Shizuku starts. On: a quiet notification and a small service keep TinyKit ready, so a new app "
-                + "is blocked the moment it is installed (Block internet per app). TinyKit is also asked not to "
+                + "is blocked the moment it is installed (Block internet per app), and, once you tick it, Shut Up keeps "
+                + "hiding developer options from the apps you chose. TinyKit is also asked not to "
                 + "be put to sleep. It uses almost no battery or memory.", backgroundSwitch, () -> {
-                    if (!FirewallPolicy.supported()) {
-                        toast(Tr.t("This is only used by Block internet per app, which needs Android 14 or newer."));
-                        return;
-                    }
                     boolean on = !prefs.getBoolean(NewAppService.PREF, false);
                     backgroundSwitch.setChecked(on);
                     worker.execute(() -> {
@@ -1379,6 +1376,7 @@ public class MainActivity extends Activity {
         View[] choose = new View[1];
         Runnable refresh = () -> {
             boolean on = prefs.getBoolean(ShutUp.PREF_ON, false);
+            boolean background = ShutUp.backgroundOn(prefs);
             onSwitch.setChecked(on);
             int n = ShutUp.apps(prefs).size();
             ((TextView) choose[0].getTag()).setText(Tr.t(n == 0 ? "No app chosen yet."
@@ -1386,6 +1384,7 @@ public class MainActivity extends Activity {
             status.setText(Tr.t(ShutUpService.isRunning()
                     ? (ShutUp.hidden(prefs) ? "Running. Hidden right now, because a chosen app is open."
                     : "Running. Nothing is hidden until you open a chosen app.")
+                    : on && !background ? "Ticked, but waiting: Run in the background (Info tab) is off."
                     : on ? (n == 0 ? "On, waiting for you to choose an app."
                     : "Turned on, but not running yet. Open TinyKit again, or turn it off and on.")
                     : "Off. TinyKit changes nothing and runs nothing."));
@@ -1401,8 +1400,29 @@ public class MainActivity extends Activity {
                 (pkg, on) -> ShutUp.choose(this, prefs, pkg, on)), false);
         row(list, "Shut Up", "Off: nothing runs. On: a quiet notification and a small service watch which app "
                 + "is open (a couple of times a second, only while the screen is on). It uses very little "
-                + "battery. TinyKit is also asked not to be put to sleep.", onSwitch, () -> {
+                + "battery. TinyKit is also asked not to be put to sleep. It runs only while Run in the "
+                + "background (Info tab) is on too.", onSwitch, () -> {
                     boolean on = !prefs.getBoolean(ShutUp.PREF_ON, false);
+                    if (on && !ShutUp.backgroundOn(prefs)) {
+                        // Shut Up can't run without the master switch: offer to turn it on, in one step.
+                        new AlertDialog.Builder(this)
+                                .setTitle(Tr.t("Turn on Run in the background?"))
+                                .setMessage(Tr.t("Shut Up only runs while Run in the background (Info tab) is on. "
+                                        + "Turn it on too? It is the one switch for everything TinyKit may keep "
+                                        + "running, and you can turn it off there at any time."))
+                                .setPositiveButton(Tr.t("Turn on both"), (d, w) -> worker.execute(() -> {
+                                    NewAppService.setEnabled(this, prefs, true);
+                                    String error = ShutUpService.setEnabled(this, prefs, true);
+                                    android.os.SystemClock.sleep(800);
+                                    main.post(() -> {
+                                        refresh.run();
+                                        if (error != null) toast(Tr.t(error));
+                                    });
+                                }))
+                                .setNegativeButton(Tr.t("Cancel"), null)
+                                .show();
+                        return;
+                    }
                     worker.execute(() -> {
                         String error = ShutUpService.setEnabled(this, prefs, on);
                         android.os.SystemClock.sleep(800);

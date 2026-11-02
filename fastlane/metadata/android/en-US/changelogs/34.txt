@@ -1,0 +1,1 @@
+Shut Up now follows the Run in the background switch: it runs only when you tick it and Run in the background is on. Ticking it while that is off offers to turn both on. Turning Run in the background off stops Shut Up and puts everything back.

@@ -64,6 +64,7 @@ public final class ShutUpService extends Service {
      */
     static String setEnabled(Context c, SharedPreferences p, boolean on) {
         if (on) {
+            if (!ShutUp.backgroundOn(p)) return "Turn on Run in the background (Info tab) first.";
             Tweak.grantSelf(c);
             if (!ShutUp.ready(c)) {
                 return "Start Shizuku once and allow TinyKit, so it can change these settings and see "

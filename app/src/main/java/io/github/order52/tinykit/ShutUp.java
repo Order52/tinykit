@@ -41,7 +41,12 @@ final class ShutUp {
     }
 
     static boolean needed(SharedPreferences p) {
-        return p.getBoolean(PREF_ON, false) && !apps(p).isEmpty();
+        return p.getBoolean(PREF_ON, false) && backgroundOn(p) && !apps(p).isEmpty();
+    }
+
+    /** The Info tab's "Run in the background" switch: Shut Up never runs without it. */
+    static boolean backgroundOn(SharedPreferences p) {
+        return p.getBoolean(NewAppService.PREF, false);
     }
 
     static boolean hidden(SharedPreferences p) {
