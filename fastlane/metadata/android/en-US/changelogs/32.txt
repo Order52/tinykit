@@ -1,0 +1,2 @@
+New: Shut Up. Pick apps, and while one is open, Developer options, USB debugging and Wireless debugging look off to it; they come back when you leave. Off by default.
+Fix: the install watcher's notification no longer calls Android 8+ APIs on Android 7.

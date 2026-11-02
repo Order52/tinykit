@@ -136,6 +136,21 @@ no shell command.
 IConnectivityManager.setUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_3, uid, DENY)
 ```
 
+### Shut Up
+
+The per-app version of **Hide developer options**. Pick the apps, and while one of them is on
+screen TinyKit turns **Developer options**, **USB debugging** and **Wireless debugging** off, then
+turns back on whatever was on the moment you leave the app (or turn the screen off).
+
+- Android can't hide a setting from one app only, so while a chosen app is open every app sees them off.
+- It needs its own switch. When on, a small foreground service with a quiet notification checks which
+  app is open a couple of times a second, only while the screen is on. Off, nothing runs.
+- What was on is written down before anything changes, so a crash, a restart or turning Shut Up
+  off always puts it back. TinyKit restores through its own `WRITE_SECURE_SETTINGS`, so this works even
+  if Shizuku stopped. It needs Shizuku once, to grant that and usage access.
+- An app that checks in its first moments, before TinyKit notices it, or that remembers an earlier
+  check, can still see them. Turning USB debugging off ends an ADB session for a moment.
+
 ### Clipboard guard
 
 Checked apps can't read what you copy, even while they're open. Android already stops apps from

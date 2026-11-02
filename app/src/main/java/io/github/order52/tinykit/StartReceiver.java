@@ -9,5 +9,6 @@ public final class StartReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         NewAppService.sync(context);
+        ShutUpService.sync(context);
     }
 }

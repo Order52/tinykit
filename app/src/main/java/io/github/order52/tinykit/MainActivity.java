@@ -942,6 +942,7 @@ public class MainActivity extends Activity {
         f.add(new Feature("Screen time", "How long each app was on screen", this::openScreenTime));
         f.add(new Feature("Clipboard guard", "Stop apps from reading your clipboard", this::openClipboardGuard));
         f.add(new Feature("Block internet per app", "Cut an app off Wi-Fi and mobile data", this::openFirewall));
+        f.add(new Feature("Shut Up", "Hide developer options and USB debugging from chosen apps", this::openShutUp));
         f.add(new Feature("Force dark on all apps", "Dark-theme apps that have no dark mode", () -> selectTab(3)));
         f.add(new Feature("Disable HW overlays", "Draw with the GPU only, like the developer option", () -> selectTab(3)));
         f.add(new Feature("Animation speed", "Off, faster or slower system animations", () -> selectTab(3)));
@@ -1047,6 +1048,12 @@ public class MainActivity extends Activity {
                         : "Needs Android 14 or newer.", this::openFirewall);
         link(list, "Saved Wi-Fi networks",
                 "See saved passwords and share any network with a QR code.", this::openWifi);
+
+        section(list, "Developer options");
+        // Needs Shizuku only once, to grant itself access, so the row stays usable without it.
+        row(list, "Shut Up",
+                "Make chosen apps see developer options, USB debugging and Wireless debugging as off.",
+                arrow(), this::openShutUp, false);
 
         section(list, "Clipboard");
         link(list, "Clipboard guard",
@@ -1352,6 +1359,64 @@ public class MainActivity extends Activity {
                 () -> packages(Shell.run("appops query-op READ_CLIPBOARD ignore").out),
                 (pkg, on) -> error(Shell.run("appops set " + Shell.quote(pkg) + " READ_CLIPBOARD "
                         + (on ? "ignore" : "default"))));
+    }
+
+    // ---- Shut Up ----------------------------------------------------------------------------------
+
+    private void openShutUp() {
+        LinearLayout list = vertical();
+        list.addView(note("Some apps refuse to work, or nag you, when Developer options or USB or Wireless "
+                + "debugging are on. Choose those apps here. While one of them is on screen, TinyKit turns the "
+                + "three settings off, and it turns back on whatever was on the moment you leave the app. "
+                + "Android can't hide a setting from one app only, so every app sees it off during that time. "
+                + "An app that checks in its first moments, before TinyKit notices it, or that remembers an "
+                + "earlier check, can still see it."));
+        Switch onSwitch = new Switch(this);
+        onSwitch.setClickable(false);
+        onSwitch.setFocusable(false);
+        TextView status = text("", 13, false);
+        status.setPadding(dp(16), dp(0), dp(16), dp(8));
+        View[] choose = new View[1];
+        Runnable refresh = () -> {
+            boolean on = prefs.getBoolean(ShutUp.PREF_ON, false);
+            onSwitch.setChecked(on);
+            int n = ShutUp.apps(prefs).size();
+            ((TextView) choose[0].getTag()).setText(Tr.t(n == 0 ? "No app chosen yet."
+                    : n + (n == 1 ? " app chosen." : " apps chosen.")));
+            status.setText(Tr.t(ShutUpService.isRunning()
+                    ? (ShutUp.hidden(prefs) ? "Running. Hidden right now, because a chosen app is open."
+                    : "Running. Nothing is hidden until you open a chosen app.")
+                    : on ? (n == 0 ? "On, waiting for you to choose an app."
+                    : "Turned on, but not running yet. Open TinyKit again, or turn it off and on.")
+                    : "Off. TinyKit changes nothing and runs nothing."));
+        };
+        choose[0] = row(list, "Choose apps", "", arrow(), () -> openPicker("Shut Up apps",
+                "Checked apps see Developer options, USB debugging and Wireless debugging as off while they "
+                        + "are open.", true,
+                () -> {
+                    Set<String> checked = ShutUp.apps(prefs);
+                    checked.retainAll(FirewallPolicy.uids(this).keySet());
+                    return checked;
+                },
+                (pkg, on) -> ShutUp.choose(this, prefs, pkg, on)), false);
+        row(list, "Shut Up", "Off: nothing runs. On: a quiet notification and a small service watch which app "
+                + "is open (a couple of times a second, only while the screen is on). It uses very little "
+                + "battery. TinyKit is also asked not to be put to sleep.", onSwitch, () -> {
+                    boolean on = !prefs.getBoolean(ShutUp.PREF_ON, false);
+                    worker.execute(() -> {
+                        String error = ShutUpService.setEnabled(this, prefs, on);
+                        android.os.SystemClock.sleep(800);
+                        main.post(() -> {
+                            refresh.run();
+                            if (error != null) toast(Tr.t(error));
+                        });
+                    });
+                }, false);
+        list.addView(status);
+        View page = scroll(list);
+        page.setTag(refresh);
+        push("Shut Up", page);
+        refresh.run();
     }
 
     // ---- Block internet per app ---------------------------------------------------------------

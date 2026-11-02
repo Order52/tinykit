@@ -139,6 +139,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Analytics & telemetry** | Turns off Huawei's User Experience Programme, its background diagnostics apps and HiCloud, and limits Google ad personalisation. Your Huawei ID sign-in is never touched. |
 | **All sensors off** | Blocks every sensor, including motion, microphone and camera, for all apps. It works like the hidden *Sensors off* developer tile. |
 | **Block internet per app** | Cuts chosen apps off Wi-Fi and mobile data (Android 14+) with Android's own per-app firewall, or blocks everything except the apps you allow. Nothing runs in the background unless you turn on *Block new apps at once*: the system enforces it, and TinyKit puts it back after a restart as soon as Shizuku is running. |
+| **Shut Up** | Pick apps (banking apps, games) that refuse to run with Developer options or USB or Wireless debugging on. While one is open they look off, and they come back when you leave it. Off by default; needs its own switch and a small background service. |
 | **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
 | **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code. |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |

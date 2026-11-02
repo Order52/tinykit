@@ -173,6 +173,17 @@
                 android:value="Listens for newly installed apps to block their internet access" />
         </service>
 
+        <!-- Shut Up: while one of the apps you chose is open, Developer options and the debugging
+             switches look off to it. Off unless you turn Shut Up on; it puts everything back when it stops. -->
+        <service
+            android:name=".ShutUpService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Watches which app is open to hide developer options from the apps the user chose" />
+        </service>
+
         <!-- Starts that service again after a restart or an update of TinyKit. -->
         <receiver android:name=".StartReceiver" android:exported="false">
             <intent-filter>

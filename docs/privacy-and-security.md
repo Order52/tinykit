@@ -27,7 +27,7 @@ what it actually does, and what it never does.
 | `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE` | Network info reads the active connection's details |
 | `com.termux.permission.RUN_COMMAND` | Start Shizuku through Termux. Android asks you first. |
 | `KILL_BACKGROUND_PROCESSES` | Speed up phone without Shizuku on Android 13 and older. Closes only cached apps. |
-| `PACKAGE_USAGE_STATS` | Unused apps and Storage by app. Granted through Shizuku. |
+| `PACKAGE_USAGE_STATS` | Unused apps, Storage by app and Screen time. Also lets Shut Up (when you turn it on) see which app is open. Granted through Shizuku. |
 | `POST_NOTIFICATIONS` | A "TinyKit stopped, send the details?" notification when it crashes. Android 13+ asks you first, and only if you tap the option in the crash popup. |
 | `WRITE_SECURE_SETTINGS` | Lets toggles and tiles work with Shizuku stopped. Granted once through Shizuku. |
 
@@ -89,7 +89,7 @@ That's what it does. Turning it off restores your previous Private DNS setting.
 
 ## Things TinyKit will never do
 
-- Run in the background or start at boot, other than the optional *Block new apps at once* service and the Shizuku-start check above.
+- Run in the background or start at boot, other than the two optional services you switch on yourself (*Block new apps at once* and *Shut Up*) and the Shizuku-start check above.
 - Send any data anywhere other than the two requests above.
 - Touch your Huawei ID or Google account. The telemetry tools explicitly skip `hwid` packages.
 - Change anything you didn't tap. Opening a page only reads.

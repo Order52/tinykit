@@ -183,6 +183,16 @@ enum Tweak {
         return value == null || value.equals("null") || value.equals(DNS_HOST) ? null : value;
     }
 
+    /** A Global setting's value, or null when it isn't set. */
+    static String readGlobal(Context c, String key) {
+        return get(c, GLOBAL, key);
+    }
+
+    /** Writes a Global setting (null deletes it). True when it worked. */
+    static boolean writeGlobal(Context c, String key, String value) {
+        return put(c, GLOBAL, key, value);
+    }
+
     private static String get(Context c, int table, String key) {
         ContentResolver r = c.getContentResolver();
         try {

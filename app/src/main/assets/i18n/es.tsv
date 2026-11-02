@@ -1065,3 +1065,22 @@ eBook (EPUB)	Libro electrónico (EPUB)
 kept alive	mantenidas activas
 camera and microphone block	bloqueo de cámara y micrófono
 not allowed	no permitido
+# Shut Up
+Shut Up	Silenciar
+Hide developer options and USB debugging from chosen apps	Oculta las opciones de desarrollador y la depuración USB a las apps que elijas
+Make chosen apps see developer options, USB debugging and Wireless debugging as off.	Haz que las apps elegidas vean las opciones de desarrollador, la depuración USB y la depuración inalámbrica como apagadas.
+Some apps refuse to work, or nag you, when Developer options or USB or Wireless debugging are on. Choose those apps here. While one of them is on screen, TinyKit turns the three settings off, and it turns back on whatever was on the moment you leave the app. Android can't hide a setting from one app only, so every app sees it off during that time. An app that checks in its first moments, before TinyKit notices it, or that remembers an earlier check, can still see it.	Algunas apps no funcionan, o te molestan, cuando las opciones de desarrollador o la depuración USB o inalámbrica están activadas. Elige esas apps aquí. Mientras una de ellas está en pantalla, TinyKit apaga los tres ajustes, y vuelve a activar lo que estaba activado en cuanto sales de la app. Android no puede ocultar un ajuste solo a una app, así que todas las apps lo ven apagado durante ese tiempo. Una app que lo revisa en sus primeros instantes, antes de que TinyKit la detecte, o que recuerda una revisión anterior, todavía puede verlo.
+No app chosen yet.	Aún no has elegido ninguna app.
+ app chosen.	 app elegida.
+ apps chosen.	 apps elegidas.
+Running. Hidden right now, because a chosen app is open.	En ejecución. Oculto ahora mismo, porque hay una app elegida abierta.
+Running. Nothing is hidden until you open a chosen app.	En ejecución. No se oculta nada hasta que abras una app elegida.
+On, waiting for you to choose an app.	Activado, esperando a que elijas una app.
+Turned on, but not running yet. Open TinyKit again, or turn it off and on.	Activado, pero aún no se ejecuta. Abre TinyKit otra vez, o apágalo y vuelve a activarlo.
+Off. TinyKit changes nothing and runs nothing.	Apagado. TinyKit no cambia nada ni ejecuta nada.
+Shut Up apps	Apps de Silenciar
+Checked apps see Developer options, USB debugging and Wireless debugging as off while they are open.	Las apps marcadas ven las opciones de desarrollador, la depuración USB y la depuración inalámbrica como apagadas mientras están abiertas.
+Off: nothing runs. On: a quiet notification and a small service watch which app is open (a couple of times a second, only while the screen is on). It uses very little battery. TinyKit is also asked not to be put to sleep.	Apagado: no se ejecuta nada. Activado: una notificación discreta y un pequeño servicio vigilan qué app está abierta (un par de veces por segundo, solo con la pantalla encendida). Usa muy poca batería. También se le pide a Android que no suspenda TinyKit.
+Start Shizuku once and allow TinyKit, so it can change these settings and see which app is open without Shizuku.	Inicia Shizuku una vez y autoriza a TinyKit, para que pueda cambiar estos ajustes y ver qué app está abierta sin Shizuku.
+Shut Up is on	Silenciar está activado
+Hiding developer options and debugging from the apps you chose.	Ocultando las opciones de desarrollador y la depuración a las apps que elegiste.

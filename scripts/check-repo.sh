@@ -30,10 +30,10 @@ grep -o 'android:name="\.[A-Za-z$.]*"' app/src/main/AndroidManifest.xml | sed 's
 done | tee /tmp/tinykit-cls.$$ ; grep -q FAIL /tmp/tinykit-cls.$$ && fail=1; rm -f /tmp/tinykit-cls.$$
 
 # Nothing runs in the background by default: the only services are Quick Settings tiles and the
-# optional install watcher (NewAppService, off until the user turns it on); the only receivers are
+# optional watchers (NewAppService and ShutUpService, each off until the user turns it on); the only receivers are
 # the widget, the tile's reply and the one that restarts the watcher after a restart or an update.
 grep -A1 '<service\|<receiver' app/src/main/AndroidManifest.xml | grep -o 'android:name="[^"]*"' \
-  | grep -v 'Tiles\$\|ShizukuTile\|ScreenshotTile\|BoostWidget\|NewAppService\|StartReceiver' | grep -v 'action' | while read -r n; do
+  | grep -v 'Tiles\$\|ShizukuTile\|ScreenshotTile\|BoostWidget\|NewAppService\|ShutUpService\|StartReceiver' | grep -v 'action' | while read -r n; do
   echo "FAIL: unexpected service or receiver $n"
 done | tee /tmp/tinykit-bg.$$ ; grep -q FAIL /tmp/tinykit-bg.$$ && fail=1; rm -f /tmp/tinykit-bg.$$
 [ $fail = 0 ] && echo "repo checks passed"
