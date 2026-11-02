@@ -67,7 +67,7 @@ public class ShizukuTile extends TileService {
             // No token and no Termux: end the server directly. Stopping the app first keeps
             // Shizuku's Watchdog from starting it straight back up.
             WORKER.execute(() -> Shell.run("am force-stop " + SHIZUKU_PKG
-                    + "; pkill -f shizuku_server || killall shizuku_server"));
+                    + "; pkill -f '[s]hizuku_server' || killall shizuku_server"));
         } else {
             Toast.makeText(this, Tr.t("Set Shizuku's auth token in TinyKit, or install shizuku-termux, "
                     + "to start Shizuku from here."), Toast.LENGTH_LONG).show();

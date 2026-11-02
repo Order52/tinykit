@@ -148,6 +148,12 @@ turns back on whatever was on the moment you leave the app (or turn the screen o
 - What was on is written down before anything changes, so a crash, a restart or turning Shut Up
   off always puts it back. TinyKit restores through its own `WRITE_SECURE_SETTINGS`, so this works even
   if Shizuku stopped. It needs Shizuku once, to grant that and usage access.
+- **Stop Shizuku while they're open** (on by default): some apps notice Shizuku running. TinyKit
+  stops it while a chosen app is open and starts it again about 15 seconds after you leave. It only
+  does this when it can start Shizuku by itself: a Shizuku fork with start and stop intents and the auth
+  token saved in TinyKit, or Termux with shizuku-termux. With the standard Shizuku app alone it leaves
+  Shizuku running, because nothing could bring it back. Turning USB or Wireless debugging off can also
+  end a Shizuku started through adb, so TinyKit starts it again after that too.
 - An app that checks in its first moments, before TinyKit notices it, or that remembers an earlier
   check, can still see them. Turning USB debugging off ends an ADB session for a moment.
 

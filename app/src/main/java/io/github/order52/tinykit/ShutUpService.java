@@ -27,13 +27,15 @@ import java.util.concurrent.TimeUnit;
 public final class ShutUpService extends Service {
     private static final String CHANNEL = "shutup";
     private static final int NOTIFICATION = 8;
-    private static final long FAST_MS = 600, IDLE_MS = 3000;
+    private static final long FAST_MS = 600, IDLE_MS = 3000, GRACE_MS = 15_000;
 
     private static volatile boolean running;
 
     private ScheduledExecutorService loop;
     private SharedPreferences prefs;
     private ShutUp.Watcher watcher;
+    private long leftAt;
+    private boolean stopTried;
 
     static boolean isRunning() {
         return running;
@@ -70,7 +72,10 @@ public final class ShutUpService extends Service {
             if (Shell.ready()) Shell.run("dumpsys deviceidle whitelist +" + c.getPackageName());
         }
         p.edit().putBoolean(ShutUp.PREF_ON, on).apply();
-        if (!on) ShutUp.restore(c, p);
+        if (!on) {
+            ShutUp.restore(c, p);
+            ShutUp.startShizuku(c, p);
+        }
         sync(c);
         return null;
     }
@@ -86,6 +91,7 @@ public final class ShutUpService extends Service {
         prefs = getSharedPreferences("tinykit", MODE_PRIVATE);
         if (!ShutUp.needed(prefs) || !ShutUp.ready(this)) {
             ShutUp.restore(this, prefs);
+            ShutUp.startShizuku(this, prefs);
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -108,12 +114,34 @@ public final class ShutUpService extends Service {
             Set<String> chosen = ShutUp.apps(prefs);
             String front = watcher.poll();
             boolean want = front != null && chosen.contains(front);
-            if (want && (!ShutUp.hidden(prefs) || stillOn())) {
-                boolean ok = ShutUp.hide(this, prefs);
-                Log.i("TinyKit", "Shut Up: hid for " + front + " ok=" + ok + " saved=" + prefs.getString(ShutUp.PREF_SAVED, ""));
-            } else if (!want && ShutUp.hidden(prefs)) {
-                boolean ok = ShutUp.restore(this, prefs);
-                Log.i("TinyKit", "Shut Up: restored (front=" + front + ") ok=" + ok);
+            if (want) {
+                leftAt = 0;
+                if (!ShutUp.hidden(prefs) || stillOn()) {
+                    boolean ok = ShutUp.hide(this, prefs);
+                    Log.i("TinyKit", "Shut Up: hid for " + front + " ok=" + ok + " saved=" + prefs.getString(ShutUp.PREF_SAVED, ""));
+                }
+                if (!stopTried) {
+                    stopTried = true; // once per visit, so a Shizuku that won't stop isn't hammered
+                    ShutUp.stopShizuku(this, prefs);
+                }
+            } else {
+                stopTried = false;
+                if (ShutUp.hidden(prefs)) {
+                    boolean ok = ShutUp.restore(this, prefs);
+                    Log.i("TinyKit", "Shut Up: restored (front=" + front + ") ok=" + ok);
+                }
+                if (prefs.getBoolean(ShutUp.PREF_SHIZUKU_STOPPED, false)) {
+                    // Not started the moment you leave, so going back and forth between apps doesn't restart it each time.
+                    long now = System.currentTimeMillis();
+                    if (leftAt == 0) {
+                        leftAt = now;
+                    } else if (now - leftAt >= GRACE_MS) {
+                        leftAt = 0;
+                        ShutUp.startShizuku(this, prefs);
+                    }
+                } else {
+                    leftAt = 0;
+                }
             }
             if (!watcher.interactive() && !ShutUp.hidden(prefs)) next = IDLE_MS;
         } catch (RuntimeException e) {
@@ -159,7 +187,10 @@ public final class ShutUpService extends Service {
         // Whatever was hidden is put back, so stopping Shut Up never leaves the phone changed.
         if (prefs != null) {
             SharedPreferences p = prefs;
-            new Thread(() -> ShutUp.restore(getApplicationContext(), p)).start();
+            new Thread(() -> {
+                ShutUp.restore(getApplicationContext(), p);
+                ShutUp.startShizuku(getApplicationContext(), p);
+            }).start();
         }
         running = false;
         super.onDestroy();

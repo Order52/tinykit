@@ -1,0 +1,2 @@
+Shut Up can now stop Shizuku while a chosen app is open and start it again after you leave (needs the auth token of a Shizuku fork, or Termux with shizuku-termux). Shizuku is also started again if turning USB debugging off ended it.
+Fix: stopping Shizuku with the end-process command could end its own shell first.

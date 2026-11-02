@@ -702,7 +702,7 @@ public class MainActivity extends Activity {
         }
         if (!hasStartIntent()) {
             // The standard Shizuku app has no Watchdog, so ending the server stops it for good.
-            worker.execute(() -> Shell.run("pkill -f shizuku_server || killall shizuku_server"));
+            worker.execute(() -> Shell.run("pkill -f '[s]hizuku_server' || killall shizuku_server"));
             toast(Tr.t("Stopping Shizuku…"));
             main.postDelayed(this::refreshShizuku, 1500);
             return;
@@ -712,7 +712,7 @@ public class MainActivity extends Activity {
                 .setMessage(Tr.t("Without the auth token TinyKit ends Shizuku's process. If Shizuku's "
                         + "Watchdog is on, it will start Shizuku again. Set the auth token to stop it properly."))
                 .setPositiveButton(Tr.t("Stop anyway"), (d, w) -> worker.execute(() ->
-                        Shell.run("pkill -f shizuku_server || killall shizuku_server")))
+                        Shell.run("pkill -f '[s]hizuku_server' || killall shizuku_server")))
                 .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
@@ -1413,8 +1413,39 @@ public class MainActivity extends Activity {
                     });
                 }, false);
         list.addView(status);
+        Switch stopSwitch = new Switch(this);
+        stopSwitch.setClickable(false);
+        stopSwitch.setFocusable(false);
+        TextView stopStatus = text("", 13, false);
+        stopStatus.setPadding(dp(16), dp(0), dp(16), dp(8));
+        Runnable showStop = () -> {
+            boolean can = ShizukuControl.canRestart(this, prefs);
+            stopSwitch.setChecked(prefs.getBoolean(ShutUp.PREF_STOP_SHIZUKU, true) && can);
+            stopStatus.setText(Tr.t(can ? "TinyKit can start Shizuku again by itself."
+                    : "Not available: TinyKit has no way to start Shizuku by itself. Save Shizuku's auth token "
+                    + "(Shizuku tab, for a Shizuku fork with start and stop intents), or install Termux with "
+                    + "shizuku-termux and allow TinyKit to run commands there."));
+        };
+        row(list, "Stop Shizuku while they're open", "Some apps notice Shizuku running. With this on, TinyKit "
+                + "stops Shizuku while a chosen app is open and starts it again about 15 seconds after you "
+                + "leave. Turning USB or Wireless debugging off can end Shizuku too, so TinyKit also starts it "
+                + "again after that. It only does this when it can start Shizuku by itself.", stopSwitch, () -> {
+                    if (!ShizukuControl.canRestart(this, prefs)) {
+                        toast(Tr.t("TinyKit has no way to start Shizuku by itself yet. See the note below."));
+                        showStop.run();
+                        return;
+                    }
+                    prefs.edit().putBoolean(ShutUp.PREF_STOP_SHIZUKU,
+                            !prefs.getBoolean(ShutUp.PREF_STOP_SHIZUKU, true)).apply();
+                    showStop.run();
+                }, false);
+        list.addView(stopStatus);
+        showStop.run();
         View page = scroll(list);
-        page.setTag(refresh);
+        page.setTag((Runnable) () -> {
+            refresh.run();
+            showStop.run();
+        });
         push("Shut Up", page);
         refresh.run();
     }

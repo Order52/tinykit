@@ -25,6 +25,10 @@ final class ShutUp {
     static final String PREF_APPS = "shutup_apps";
     /** The settings that were on when they were turned off, "key,key"; empty when nothing is hidden. */
     static final String PREF_SAVED = "shutup_saved";
+    /** Also stop Shizuku while a chosen app is open (some apps notice it running). On unless turned off. */
+    static final String PREF_STOP_SHIZUKU = "shutup_stop_shizuku";
+    /** Set while Shizuku is stopped by Shut Up and still has to be started again. */
+    static final String PREF_SHIZUKU_STOPPED = "shutup_shizuku_stopped";
 
     /** Restore order matters: Developer options first, the debugging switches need it. */
     static final String[] KEYS = {"development_settings_enabled", "adb_enabled", "adb_wifi_enabled"};
@@ -44,6 +48,32 @@ final class ShutUp {
         return !p.getString(PREF_SAVED, "").isEmpty();
     }
 
+    /** Whether Shut Up stops Shizuku while a chosen app is open: wanted, and it can be started again. */
+    static boolean stopsShizuku(Context c, SharedPreferences p) {
+        return p.getBoolean(PREF_STOP_SHIZUKU, true) && ShizukuControl.canRestart(c, p);
+    }
+
+    /** Stops Shizuku once per visit to a chosen app. Call after {@link #hide}, off the main thread. */
+    static void stopShizuku(Context c, SharedPreferences p) {
+        if (!stopsShizuku(c, p) || !Shell.running()) return;
+        // Written down first, so a crash still starts it again.
+        p.edit().putBoolean(PREF_SHIZUKU_STOPPED, true).commit();
+        ShizukuControl.stop(c, p);
+        android.util.Log.i("TinyKit", "Shut Up: stopped Shizuku");
+    }
+
+    /**
+     * Starts Shizuku again if Shut Up stopped it, or if turning USB debugging off ended it. Call off
+     * the main thread, once the chosen app is gone.
+     */
+    static void startShizuku(Context c, SharedPreferences p) {
+        if (!p.getBoolean(PREF_SHIZUKU_STOPPED, false)) return;
+        p.edit().putBoolean(PREF_SHIZUKU_STOPPED, false).commit();
+        if (Shell.running()) return; // something else already started it
+        boolean ok = ShizukuControl.start(c, p);
+        android.util.Log.i("TinyKit", "Shut Up: started Shizuku ok=" + ok);
+    }
+
     /** Adds or removes an app. Returns null when it worked. */
     static String choose(Context c, SharedPreferences p, String pkg, boolean on) {
         Set<String> s = apps(p);
@@ -61,6 +91,9 @@ final class ShutUp {
             if (!has(saved.toString(), key)) saved.append(saved.length() == 0 ? "" : ",").append(key);
         }
         if (saved.length() == 0) return true;
+        // Turning USB or Wireless debugging off can end a Shizuku that was started through adb.
+        // Remember it was running, so it is started again afterwards.
+        if (Shell.running() && ShizukuControl.canRestart(c, p)) p.edit().putBoolean(PREF_SHIZUKU_STOPPED, true).commit();
         // Written down before anything changes, so it can always be put back.
         p.edit().putString(PREF_SAVED, saved.toString()).commit();
         boolean ok = true;
