@@ -1,0 +1,1 @@
+• Bigger bottom bar: Material 3 size, with an icon and a label for each section, and the whole bar height is the place to tap.

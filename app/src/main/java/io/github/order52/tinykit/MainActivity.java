@@ -251,6 +251,9 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private FrameLayout frame;
     private final TextView[] tabs = new TextView[TAB_NAMES.length];
+    private final ImageView[] tabIcons = new ImageView[TAB_NAMES.length];
+    private static final int[] TAB_ICONS = {R.drawable.ic_tile_shizuku, R.drawable.ic_nav_privacy,
+            R.drawable.ic_nav_apps, R.drawable.ic_nav_system, R.drawable.ic_nav_info};
     private View[] tabRoots;
     private View tabBar;
     private EditText searchBox;
@@ -561,21 +564,36 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Bottom bar: one tab per group, so every tool is at most two taps away. */
+    /**
+     * Bottom bar: one tab per group, so every tool is at most two taps away. Sized like Material 3's
+     * navigation bar: 80dp tall (the whole height is the touch target), a 24dp icon in a 64x32dp pill
+     * when selected, and a 12sp label 4dp below it.
+     */
     private View buildTabBar() {
         LinearLayout bar = new LinearLayout(this);
         bar.setBackgroundColor(0xFF0D0D0D);
-        bar.setPadding(dp(4), dp(6), dp(4), dp(6));
+        bar.setMinimumHeight(dp(80));
         for (int i = 0; i < TAB_NAMES.length; i++) {
-            TextView tab = text(TAB_NAMES[i], 13, false);
+            LinearLayout tab = vertical();
             tab.setGravity(Gravity.CENTER);
-            tab.setSingleLine(true);
-            tab.setPadding(dp(2), dp(10), dp(2), dp(10));
+            tab.setPadding(0, dp(12), 0, dp(16));
             tab.setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
+            tab.setContentDescription(Tr.t(TAB_NAMES[i]));
+            ImageView icon = new ImageView(this);
+            icon.setImageResource(TAB_ICONS[i]);
+            icon.setScaleType(ImageView.ScaleType.CENTER);
+            tabIcons[i] = icon;
+            tab.addView(icon, new LinearLayout.LayoutParams(dp(64), dp(32)));
+            TextView label = text(TAB_NAMES[i], 12, false);
+            label.setGravity(Gravity.CENTER);
+            label.setSingleLine(true);
+            label.setPadding(dp(2), dp(4), dp(2), 0);
+            label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            tabs[i] = label;
+            tab.addView(label, new LinearLayout.LayoutParams(-1, -2));
             int index = i;
             tab.setOnClickListener(v -> selectTab(index));
-            tabs[i] = tab;
-            bar.addView(tab, new LinearLayout.LayoutParams(0, -2, 1f));
+            bar.addView(tab, new LinearLayout.LayoutParams(0, -1, 1f));
         }
         // Large text or a narrow screen: every label shrinks to the same size so the longest fits.
         bar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -585,7 +603,7 @@ public class MainActivity extends Activity {
     }
 
     private void fitTabs() {
-        float px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 13, getResources().getDisplayMetrics());
+        float px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12, getResources().getDisplayMetrics());
         float min = px * 0.6f;
         android.text.TextPaint paint = new android.text.TextPaint(tabs[0].getPaint());
         paint.setTypeface(Typeface.DEFAULT_BOLD); // the selected tab is bold, and widest
@@ -605,19 +623,22 @@ public class MainActivity extends Activity {
 
     private void selectTab(int index) {
         prefs.edit().putInt("tab", index).apply();
+        int accent = attrColor(android.R.attr.colorAccent);
         for (int i = 0; i < tabs.length; i++) {
             boolean selected = i == index;
-            tabs[i].setTextColor(selected ? attrColor(android.R.attr.colorAccent) : 0xFFFFFFFF);
-            tabs[i].setAlpha(selected ? 1f : 0.6f);
+            tabs[i].setTextColor(selected ? accent : 0xFFFFFFFF);
+            tabs[i].setAlpha(selected ? 1f : 0.65f);
             tabs[i].setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            tabIcons[i].setColorFilter(selected ? accent : 0xA6FFFFFF);
             if (selected) {
                 GradientDrawable pill = new GradientDrawable();
-                pill.setCornerRadius(dp(20));
-                pill.setColor(0x268C9EFF);
-                tabs[i].setBackground(new android.graphics.drawable.InsetDrawable(pill, dp(2), 0, dp(2), 0));
+                pill.setCornerRadius(dp(16));
+                pill.setColor(0x338C9EFF);
+                tabIcons[i].setBackground(pill);
             } else {
-                tabs[i].setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
+                tabIcons[i].setBackground(null);
             }
+            ((View) tabs[i].getParent()).setSelected(selected);
         }
         pages.clear();
         titles.clear();
