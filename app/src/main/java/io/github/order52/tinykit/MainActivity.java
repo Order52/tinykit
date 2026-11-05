@@ -214,6 +214,8 @@ public class MainActivity extends Activity {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    /** Reads of switch states, kept off {@link #worker} because some take a second. */
+    private final ExecutorService reads = Executors.newSingleThreadExecutor();
     // Icons and recover-page thumbnails load off the main thread and are cached as small bitmaps,
     // both bounded (so memory stays low) and cleared when the app is sent to the background.
     private final ExecutorService thumbs = Executors.newFixedThreadPool(3);
@@ -309,13 +311,20 @@ public class MainActivity extends Activity {
         root.addView(tabBar);
         setContentView(root);
         tabRoots = new View[TAB_NAMES.length];
-        for (indexingTab = 0; indexingTab < TAB_NAMES.length; indexingTab++) {
-            tabRoots[indexingTab] = indexingTab == 0 ? buildShizuku() : indexingTab == 1 ? buildPrivacy()
-                    : indexingTab == 2 ? buildApps() : indexingTab == 3 ? buildSystem() : buildInfo();
-        }
-        indexingTab = -1;
-        int tab = getIntent().getIntExtra(EXTRA_TAB, prefs.getInt("tab", 0));
-        selectTab(Math.max(0, Math.min(tab, TAB_NAMES.length - 1)));
+        int tab = Math.max(0, Math.min(getIntent().getIntExtra(EXTRA_TAB, prefs.getInt("tab", 0)),
+                TAB_NAMES.length - 1));
+        // Only the tab on screen is built before the first frame; the others follow, one per turn of the
+        // main loop, and any of them is built on the spot if it is needed sooner (a tap, the search).
+        buildTab(0); // Shizuku's status views are updated whenever its binder comes or goes
+        selectTab(tab);
+        root.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                root.getViewTreeObserver().removeOnPreDrawListener(this);
+                main.post(MainActivity.this::buildNextTab);
+                return true;
+            }
+        });
         Shizuku.addBinderReceivedListenerSticky(binderReceived);
         Shizuku.addBinderDeadListener(binderDead);
         Shizuku.addRequestPermissionResultListener(permissionResult);
@@ -621,6 +630,30 @@ public class MainActivity extends Activity {
         return true;
     }
 
+    private View buildTab(int i) {
+        if (tabRoots[i] == null) {
+            int before = indexingTab;
+            indexingTab = i; // lets rows register for search and for refreshing
+            try {
+                tabRoots[i] = i == 0 ? buildShizuku() : i == 1 ? buildPrivacy()
+                        : i == 2 ? buildApps() : i == 3 ? buildSystem() : buildInfo();
+            } finally {
+                indexingTab = before;
+            }
+        }
+        return tabRoots[i];
+    }
+
+    private void buildNextTab() {
+        for (int i = 0; i < tabRoots.length; i++) {
+            if (tabRoots[i] == null) {
+                buildTab(i);
+                main.post(this::buildNextTab);
+                return;
+            }
+        }
+    }
+
     private void selectTab(int index) {
         prefs.edit().putInt("tab", index).apply();
         int accent = attrColor(android.R.attr.colorAccent);
@@ -642,7 +675,7 @@ public class MainActivity extends Activity {
         }
         pages.clear();
         titles.clear();
-        push(index == 0 ? getString(R.string.app_name) : TAB_NAMES[index], tabRoots[index]);
+        push(index == 0 ? getString(R.string.app_name) : TAB_NAMES[index], buildTab(index));
         loadSettings();
     }
 
@@ -999,6 +1032,7 @@ public class MainActivity extends Activity {
             for (int i = 0; i < terms.length; i++) terms[i] = squash(terms[i]);
             List<Feature> titleHits = new ArrayList<>();
             List<Feature> otherHits = new ArrayList<>();
+            for (int i = 0; i < tabRoots.length; i++) buildTab(i); // search covers every tab
             for (Feature f : searchIndex) {
                 String title = squash(f.title + " " + Tr.t(f.title));
                 String hay = title + squash(f.summary + " " + Tr.t(f.summary));
@@ -1122,11 +1156,22 @@ public class MainActivity extends Activity {
                         && "0".equals(s.get("ble_scan_always_enabled")),
                 on -> "settings put global wifi_scan_always_enabled " + (on ? 0 : 1)
                         + "; settings put global ble_scan_always_enabled " + (on ? 0 : 1));
+        // Each call starts a Java process (about a second), so right after a change its result is trusted.
+        long[] sensorsSet = {0};
+        boolean[] sensorsNow = {false};
         privacySwitch(list, "All sensors off",
                 "Blocks every sensor for all apps — motion, microphone and camera — like the hidden "
                         + "developer \"Sensors off\" tile. Resets on reboot.",
-                () -> "true".equals(Shell.run(sensorsCmd(this, "state")).out.trim()),
-                block -> error(Shell.run(sensorsCmd(this, block ? "on" : "off"))));
+                () -> android.os.SystemClock.elapsedRealtime() - sensorsSet[0] < 3000 ? Boolean.valueOf(sensorsNow[0])
+                        : "true".equals(Shell.run(sensorsCmd(this, "state")).out.trim()),
+                block -> {
+                    String failed = error(Shell.run(sensorsCmd(this, block ? "on" : "off")));
+                    if (failed == null) {
+                        sensorsNow[0] = block;
+                        sensorsSet[0] = android.os.SystemClock.elapsedRealtime();
+                    }
+                    return failed;
+                });
 
         section(list, "Developer options");
         toggle(list, "Hide developer options",
@@ -1185,6 +1230,9 @@ public class MainActivity extends Activity {
         section(list, "Manage");
         link(list, "Work profile", "A separate space for apps, with their own data and accounts. Freeze them "
                 + "when you don't need them.", this::openWork);
+        if (ShareTo.supported()) row(list, "Share menu pins", "Pin the apps you share to most. They show "
+                + "in the top row of the share menu, so you don't scroll to find them (Android 10+).", arrow(),
+                this::openSharePins, false);
         link(list, "Default apps", "Set the default launcher, browser, phone and more.", this::openDefaults);
         link(list, "Hide apps", "Hide apps from the launcher by disabling them.", this::openHide);
         link(list, "Unused apps", "Apps you haven't opened in a long time.", this::openUnused);
@@ -1458,6 +1506,26 @@ public class MainActivity extends Activity {
                                     + "; appops set " + q + " RUN_ANY_IN_BACKGROUND allow"
                                     + "; appops set " + q + " WAKE_LOCK allow"
                             : "dumpsys deviceidle whitelist -" + q));
+                });
+    }
+
+    private void openSharePins() {
+        openPicker("Share menu pins",
+                "The first three apps you check show in the top row of the share menu. Up to "
+                        + ShareTo.MAX + ": the rest are in the Pinned apps entry. Tapping one hands what you share "
+                        + "straight to that app.", true,
+                () -> new HashSet<>(ShareTo.pins(prefs)),
+                (pkg, on) -> ShareTo.choose(this, prefs, pkg, on),
+                () -> {
+                    Set<String> found = new HashSet<>();
+                    for (String type : new String[]{"text/plain", "image/png", "video/mp4", "application/pdf",
+                            "audio/mpeg", "*/*"}) {
+                        Intent send = new Intent(Intent.ACTION_SEND).setType(type);
+                        for (android.content.pm.ResolveInfo r : getPackageManager().queryIntentActivities(send, 0)) {
+                            found.add(r.activityInfo.packageName);
+                        }
+                    }
+                    return found;
                 });
     }
 
@@ -5734,10 +5802,15 @@ public class MainActivity extends Activity {
         Switch view = new Switch(this);
         view.setClickable(false);
         view.setFocusable(false);
+        // A read can take a second (some switches start a Java process), so reads run on their own thread,
+        // never queue behind each other for the same switch, and never overwrite a newer toggle.
+        java.util.concurrent.atomic.AtomicBoolean reading = new java.util.concurrent.atomic.AtomicBoolean();
+        int[] toggled = {0};
         View row = row(list, title, summary, view, () -> {
             boolean block = !view.isChecked();
             view.setChecked(block);
             view.setEnabled(false);
+            toggled[0]++;
             worker.execute(() -> {
                 String err = applier.apply(block);
                 Boolean now = checker.check();
@@ -5749,24 +5822,37 @@ public class MainActivity extends Activity {
             });
         }, true);
         TextView sub = (TextView) row.getTag();
-        Runnable read = () -> worker.execute(() -> {
-            if (!Shell.ready()) return; // read again once Shizuku is usable
-            Boolean state = checker.check();
-            main.post(() -> {
-                if (state == null) {
-                    row.setEnabled(false);
-                    view.setEnabled(false);
-                    shizukuRows.remove(row);
-                    row.setAlpha(0.4f);
-                    sub.setText(Tr.t(summary + "  ·  Not on this phone"));
-                } else {
-                    view.setChecked(state);
+        Runnable read = () -> {
+            if (!reading.compareAndSet(false, true)) return;
+            int version = toggled[0];
+            reads.execute(() -> {
+                try {
+                    if (!Shell.ready()) return; // read again once Shizuku is usable
+                    Boolean state = checker.check();
+                    main.post(() -> {
+                        if (version != toggled[0]) return;
+                        showPrivacyState(row, view, sub, summary, state);
+                    });
+                } finally {
+                    reading.set(false);
                 }
             });
-        });
+        };
         // Tab switches are read again whenever the settings are (Shizuku connecting, a tab opening).
         if (indexingTab >= 0) liveSwitches.add(read);
         read.run();
+    }
+
+    private void showPrivacyState(View row, Switch view, TextView sub, String summary, Boolean state) {
+        if (state == null) {
+            row.setEnabled(false);
+            view.setEnabled(false);
+            shizukuRows.remove(row);
+            row.setAlpha(0.4f);
+            sub.setText(Tr.t(summary + "  ·  Not on this phone"));
+        } else {
+            view.setChecked(state);
+        }
     }
 
     private Checker pkgChecker(String[] patterns) {

@@ -21,6 +21,7 @@
     <string name="tile_internet_block">Bloqueo de internet</string>
     <string name="tile_hw_overlays_off">Superposiciones de HW desactivadas</string>
     <string name="tile_force_dark">Forzar modo oscuro</string>
+    <string name="share_pinned">Apps fijadas</string>
     <string name="tile_work_profile">Perfil de trabajo</string>
     <string name="tile_free_ram">Liberar RAM</string>
     <string name="tile_screen_record">Grabar pantalla</string>

@@ -325,6 +325,20 @@ does. TinyKit never uses `am start-user -w` (on a profile with its own PIN it wa
 puts a time limit on every command that talks to the profile. It stores only the list of auto-freeze
 apps and the waits; the profile and its apps are read back from Android each time.
 
+### Share menu pins
+
+Pin the apps you share to most, so they sit in the top row of Android's share menu and you don't
+scroll to find them. **Apps tab > Share menu pins** (Android 10 or newer; needs no Shizuku).
+
+Android keeps the share menu's own pins private, so TinyKit uses what apps are allowed to do: it
+gives each of your first three pins a sharing shortcut, which the menu shows in its top row
+(Android shows at most three shortcuts from one app). Tapping one hands what you are sharing
+straight to that app. You can pin up to eight. All of them are in the **Pinned apps** entry that
+appears in the share menu, and the first three are also in the menu on TinyKit's launcher icon,
+where a tap opens the app. The entry only exists while something is pinned. An app that can't
+take what you share (a text-only app given an image) shows "That app can't take this." Android
+decides where the top row sits and, on some phones, how many fit.
+
 ### Hide apps
 
 Checked apps are **disabled**. They disappear from the launcher and can't run until you uncheck

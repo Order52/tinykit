@@ -1156,3 +1156,10 @@ That current PIN isn't right.	Ese PIN actual no es correcto.
 The profile already has a PIN. Type it in the first box to change or remove it.	El perfil ya tiene un PIN. Escríbelo en el primer cuadro para cambiarlo o quitarlo.
 That PIN isn't right.	Ese PIN no es correcto.
 Couldn't open it.	No se pudo abrir.
+Share menu pins	Apps fijadas al compartir
+Pin the apps you share to most. They show in the top row of the share menu, so you don't scroll to find them (Android 10+).	Fija las apps con las que más compartes. Salen en la fila de arriba del menú de compartir, sin tener que desplazarte (Android 10+).
+The first three apps you check show in the top row of the share menu. Up to 8: the rest are in the Pinned apps entry. Tapping one hands what you share straight to that app.	Las tres primeras apps que marques salen en la fila de arriba del menú de compartir. Hasta 8: las demás están en la entrada Apps fijadas. Al tocar una, lo que compartes va directo a esa app.
+You can pin up to 8 apps.	Puedes fijar hasta 8 apps.
+Needs Android 10 or newer.	Requiere Android 10 o posterior.
+Share with	Compartir con
+That app can't take this.	Esa app no puede recibir esto.

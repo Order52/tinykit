@@ -74,6 +74,7 @@ tinykit/
 │       │   ├── Bloat.java          Safety ratings for the Debloater
 │       │   ├── Work.java           Work profile: create, add apps, freeze, pause, auto-freeze, shortcuts (pm commands)
 │       │   ├── WorkOpen.java       No-screen activity a work-app shortcut starts: unfreeze and open
+│       │   ├── ShareTo.java        Share menu pins: sharing shortcuts, hands what is shared to the pinned app
 │       │   ├── ApkInstaller.java   Installs .apk, .apks, .xapk and .apkm through pm, streaming
 │       │   ├── WifiDump.java       app_process helper: saved Wi-Fi credentials
 │       │   └── Qr.java             Small QR encoder for Wi-Fi codes

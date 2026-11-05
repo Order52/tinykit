@@ -52,6 +52,18 @@ public class WorkTest {
     }
 
     @Test
+    public void readsPausedFromTheQuietFlag() {
+        String running = "Users:\n\tUserInfo{0:Owner:4c13} running\n\tUserInfo{15:Work:1030} running";
+        String paused = "Users:\n\tUserInfo{0:Owner:4c13} running\n\tUserInfo{15:Work:10b0} running";
+        assertFalse(Work.quiet(running, 15));
+        assertTrue(Work.quiet(paused, 15));
+        assertFalse(Work.quiet(paused, 0)); // only the asked user counts
+        assertFalse(Work.quiet(paused, 16));
+        assertFalse(Work.quiet("", 15));
+        assertFalse(Work.quiet("UserInfo{15:Work:zzzz}", 15));
+    }
+
+    @Test
     public void readsAppsAndFrozenState() {
         String out = "16 activities found:\n  Activity #0:\n    priority=0 preferredOrder=0 match=0x108000\n"
                 + "    com.example.frozen/.Main\n  Activity #1:\n    priority=0\n"

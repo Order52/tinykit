@@ -61,6 +61,7 @@ final class Work {
 
     private static final int PER_USER_RANGE = 100000;
     private static final long FLAG_MANAGED = 0x20;
+    private static final long FLAG_QUIET = 0x80;
     private static final Pattern USER = Pattern.compile("UserInfo\\{(\\d+):(.*):([0-9a-fA-F]+)\\}");
     /** Other kinds of separate space that must never be mistaken for the work profile (Samsung's Secure Folder is user 150). */
     private static final Pattern FOREIGN = Pattern.compile(
@@ -90,7 +91,7 @@ final class Work {
     /**
      * Android's own "pause work apps" (quiet mode), the switch Pixel's Work tab has: every app in the
      * profile stops and its notifications go quiet until it is switched back. Started with app_process
-     * as the shell user, the way {@link Sensors} is. Args: {@code paused|pause|resume <user id>}. The
+     * as the shell user, the way {@link Sensors} is. Args: {@code pause|resume <user id>}. The
      * method has had three shapes (Android 7 to 16), so the arguments are filled in by type.
      */
     public static void main(String[] args) throws Exception {
@@ -99,10 +100,6 @@ final class Work {
                         .invoke(null, "user"));
         int id = Integer.parseInt(args[1]);
         try {
-            if (args[0].equals("paused")) {
-                System.out.println(users.getClass().getMethod("isQuietModeEnabled", int.class).invoke(users, id));
-                return;
-            }
             boolean on = args[0].equals("pause");
             for (String name : new String[]{"requestQuietModeEnabled", "setQuietModeEnabled"}) {
                 for (Method m : users.getClass().getMethods()) {
@@ -232,9 +229,26 @@ final class Work {
                 + arg + " " + id;
     }
 
+    /**
+     * Whether the profile is paused, read from the quiet-mode flag in {@code pm list users} ("1030" becomes
+     * "10b0" while paused), which costs a few milliseconds. Asking Android's user service through app_process
+     * says the same, and takes a second while a whole Java process starts.
+     */
     static boolean paused(Context c, int id) {
-        Shell.Result r = run(quiet(c, "paused", id), 20_000);
-        return r.ok() && r.out.endsWith("true");
+        Shell.Result r = run("pm list users", 10_000);
+        return r.ok() && quiet(r.out, id);
+    }
+
+    static boolean quiet(String out, int id) {
+        Matcher m = USER.matcher(out);
+        while (m.find()) {
+            try {
+                if (Integer.parseInt(m.group(1)) == id) return (Long.parseLong(m.group(3), 16) & FLAG_QUIET) != 0;
+            } catch (NumberFormatException skip) {
+                // Not a line of the list.
+            }
+        }
+        return false;
     }
 
     /** Pauses or resumes the profile. Returns null on success, else why not (or what to do next). */
@@ -242,9 +256,9 @@ final class Work {
         Shell.Result r = run(quiet(c, on ? "pause" : "resume", id), 20_000);
         // Android 11 and older keep quiet mode from the shell user; stopping the profile does the job.
         if (!r.ok()) return pauseByStopping(c, id, on);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 15; i++) {
             if (paused(c, id) == on) return null;
-            android.os.SystemClock.sleep(400);
+            android.os.SystemClock.sleep(200);
         }
         return on ? "This phone didn't pause the work profile."
                 : "Enter the work profile's PIN on the screen that opened, to switch it back on.";

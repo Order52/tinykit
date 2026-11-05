@@ -151,6 +151,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**. [See above](#-fake-permissions). |
 | **Default apps** | Choose the launcher, browser, phone, SMS and assistant apps, and see which app opens each file type. |
 | **Work profile** | Makes a work profile in one tap (no setup screens, no extra app inside it) and manages it like Shelter, Island and Samsung's Secure Folder together: separate copies of apps, freeze one or all, **auto-freeze** chosen apps, a **PIN of its own** that locks it, **auto-lock** when the screen is off or after a restart, **pause** (switch or Quick Settings tile), **launcher shortcuts** that unfreeze and open an app, install APKs straight into it. |
+| **Share menu pins** | Pins the apps you share to most in the top row of Android's share menu, so there is no scrolling to find them (Android 10+). |
 | **Hide apps** | Removes apps from the launcher, and they stop running until you restore them. |
 | **Unused apps** | Lists apps by how long since you last used them. |
 | **Storage by app** | Shows how much space each app uses. |
