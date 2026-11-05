@@ -4903,16 +4903,22 @@ public class MainActivity extends Activity {
                     + "themselves, so they don't run at all. Give it its own PIN and it locks like Samsung's Secure "
                     + "Folder. Android allows one. TinyKit makes it by itself: no setup screens and no extra app "
                     + "inside it."));
-            row(body, "Create work profile", "Takes a few seconds.", null, () -> {
-                toast(Tr.t("Creating…"));
-                worker.execute(() -> {
-                    String error = Work.create(this);
-                    main.post(() -> {
-                        if (error != null) workMessage(error);
-                        again.run();
-                    });
-                });
-            }, true);
+            row(body, "Create work profile", "Takes a few seconds.", null, () -> new AlertDialog.Builder(this)
+                    .setTitle(Tr.t("Create work profile?"))
+                    .setMessage(Tr.t("This adds a second, separate space to your phone. Your own apps and data "
+                            + "stay as they are. You can remove it later."))
+                    .setPositiveButton(Tr.t("Create"), (d, w) -> {
+                        toast(Tr.t("Creating…"));
+                        worker.execute(() -> {
+                            String error = Work.create(this);
+                            main.post(() -> {
+                                if (error != null) workMessage(error);
+                                again.run();
+                            });
+                        });
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show(), true);
             return;
         }
         int frozen = 0;
