@@ -1,0 +1,1 @@
+• Cleaner look: the five tab icons share one outlined style, buttons are rounded pills (Start is filled), search boxes in app lists match the main one, and "Requires Shizuku" is one note per tab instead of a line under every tool.

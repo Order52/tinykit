@@ -3,9 +3,10 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Four squares, for the Apps tab. -->
+    <!-- Four outlined squares, for the Apps tab. -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M4,4h7v7H4Z M13,4h7v7h-7Z M4,13h7v7H4Z M13,13h7v7h-7Z" />
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round"
+        android:pathData="M5,5h5v5H5Z M14,5h5v5h-5Z M5,14h5v5H5Z M14,14h5v5h-5Z" />
 </vector>

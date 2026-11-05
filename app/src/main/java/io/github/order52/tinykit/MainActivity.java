@@ -946,14 +946,14 @@ public class MainActivity extends Activity {
         status.addView(shizukuText);
         LinearLayout buttons = new LinearLayout(this);
         buttons.setPadding(0, dp(12), 0, 0);
-        startButton = button("Start", v -> startShizuku());
+        startButton = primary(button("Start", v -> startShizuku()));
         stopButton = button("Stop", v -> stopShizuku());
         buttons.addView(startButton, weight());
         buttons.addView(stopButton, weight());
         status.addView(buttons);
         shizukuButton = button("", null);
         LinearLayout.LayoutParams full = new LinearLayout.LayoutParams(-1, -2);
-        full.setMargins(dp(4), 0, dp(4), 0);
+        full.setMargins(dp(4), dp(8), dp(4), 0);
         status.addView(shizukuButton, full);
         LinearLayout.LayoutParams cardMargin = new LinearLayout.LayoutParams(-1, -2);
         cardMargin.setMargins(dp(12), dp(8), dp(12), dp(4));
@@ -983,6 +983,23 @@ public class MainActivity extends Activity {
      * content for a results list; clearing it brings the home screen back. A result that opens a page
      * opens it; a switch or an action is shown in its tab, so nothing runs by surprise.
      */
+    /** A search box in the same rounded style as the one on the first tab. */
+    private EditText searchField(String hint) {
+        EditText search = new EditText(this);
+        search.setHint(Tr.t(hint));
+        search.setSingleLine(true);
+        search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        search.setPadding(dp(16), dp(10), dp(16), dp(10));
+        search.setBackground(roundRect(0xFF1A1A1A, 24));
+        return search;
+    }
+
+    private LinearLayout.LayoutParams fieldMargin() {
+        LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-1, -2);
+        margin.setMargins(0, dp(4), 0, dp(4));
+        return margin;
+    }
+
     private View withSearch(View home) {
         LinearLayout outer = vertical();
         EditText search = new EditText(this);
@@ -1149,6 +1166,7 @@ public class MainActivity extends Activity {
 
     private View buildPrivacy() {
         LinearLayout list = vertical();
+        shizukuNote(list);
         section(list, "Quick toggles");
         toggle(list, "Ad-blocking DNS",
                 "Blocks ads and trackers in every app and browser (AdGuard Private DNS).",
@@ -1211,6 +1229,7 @@ public class MainActivity extends Activity {
 
     private View buildApps() {
         LinearLayout list = vertical();
+        shizukuNote(list);
         section(list, "Permissions");
         link(list, "App permissions",
                 "Set any app's permissions to Real, Fake (looks granted, gets nothing) or Off.",
@@ -1274,6 +1293,7 @@ public class MainActivity extends Activity {
 
     private View buildSystem() {
         LinearLayout list = vertical();
+        shizukuNote(list);
         section(list, "Display");
         privacySwitch(list, "Force dark on all apps",
                 "Dark-themes apps that have no dark mode (Android's force-dark). Takes effect as each "
@@ -1343,6 +1363,7 @@ public class MainActivity extends Activity {
 
     private View buildInfo() {
         LinearLayout list = vertical();
+        shizukuNote(list);
         section(list, "Device");
         row(list, "Phone info", "Battery, memory, storage and system details.", arrow(), this::openInfo, false);
         // These pages show what Android gives any app, and add more details when Shizuku is on.
@@ -1885,10 +1906,8 @@ public class MainActivity extends Activity {
                 + "Hold an app to read about it.", 13, false);
         help.setAlpha(0.8f);
         page.addView(help);
-        EditText search = new EditText(this);
-        search.setHint(Tr.t("Search apps"));
-        search.setSingleLine(true);
-        page.addView(search);
+        EditText search = searchField("Search apps");
+        page.addView(search, fieldMargin());
         CheckBox mine = new CheckBox(this);
         mine.setText(Tr.t("Also show apps I installed"));
         page.addView(mine);
@@ -2690,10 +2709,8 @@ public class MainActivity extends Activity {
         TextView helpView = text(help, 14, false);
         helpView.setAlpha(0.8f);
         page.addView(helpView);
-        EditText search = new EditText(this);
-        search.setHint(Tr.t("Search apps"));
-        search.setSingleLine(true);
-        page.addView(search);
+        EditText search = searchField("Search apps");
+        page.addView(search, fieldMargin());
         CheckBox system = new CheckBox(this);
         system.setText(Tr.t("Show system apps"));
         page.addView(system);
@@ -4559,10 +4576,8 @@ public class MainActivity extends Activity {
         TextView helpView = text(help, 14, false);
         helpView.setAlpha(0.8f);
         page.addView(helpView);
-        EditText search = new EditText(this);
-        search.setHint(Tr.t("Search apps"));
-        search.setSingleLine(true);
-        page.addView(search);
+        EditText search = searchField("Search apps");
+        page.addView(search, fieldMargin());
         CheckBox system = new CheckBox(this);
         system.setText(Tr.t("Show system apps"));
         page.addView(system);
@@ -5155,10 +5170,8 @@ public class MainActivity extends Activity {
                 + "shortcut. A frozen app is off and keeps its data.", 13, false);
         help.setAlpha(0.7f);
         page.addView(help);
-        EditText search = new EditText(this);
-        search.setHint(Tr.t("Search apps"));
-        search.setSingleLine(true);
-        page.addView(search);
+        EditText search = searchField("Search apps");
+        page.addView(search, fieldMargin());
         CheckBox system = new CheckBox(this);
         system.setText(Tr.t("Show system apps"));
         page.addView(system);
@@ -5643,10 +5656,8 @@ public class MainActivity extends Activity {
                 + "nothing runs in the background.", 13, false);
         help.setAlpha(0.7f);
         page.addView(help);
-        EditText search = new EditText(this);
-        search.setHint(Tr.t("Search apps"));
-        search.setSingleLine(true);
-        page.addView(search);
+        EditText search = searchField("Search apps");
+        page.addView(search, fieldMargin());
         CheckBox system = new CheckBox(this);
         system.setText(Tr.t("Show system apps"));
         page.addView(system);
@@ -5925,10 +5936,8 @@ public class MainActivity extends Activity {
         TextView help = text("Tap a network to see its password and a QR code to share it.", 13, false);
         help.setAlpha(0.7f);
         page.addView(help);
-        EditText search = new EditText(this);
-        search.setHint(Tr.t("Search networks"));
-        search.setSingleLine(true);
-        page.addView(search);
+        EditText search = searchField("Search networks");
+        page.addView(search, fieldMargin());
         TextView loading = text("Reading saved networks…", 14, false);
         page.addView(loading);
         ListView listView = new ListView(this);
@@ -6818,15 +6827,6 @@ public class MainActivity extends Activity {
         TextView sub = text(summary, 13, false);
         sub.setAlpha(0.7f);
         texts.addView(sub);
-        if (needsShizuku) {
-            // Shown only while Shizuku isn't usable, so rows that work without it stay plain.
-            TextView label = text("Requires Shizuku", 12, true);
-            label.setTextColor(attrColor(android.R.attr.colorAccent));
-            label.setPadding(0, dp(2), 0, 0);
-            label.setVisibility(Shell.ready() ? View.GONE : View.VISIBLE);
-            texts.addView(label);
-            shizukuLabels.add(label);
-        }
         row.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
         if (end != null) row.addView(end);
         row.setTag(sub);
@@ -6982,7 +6982,48 @@ public class MainActivity extends Activity {
         button.setText(Tr.t(label));
         button.setAllCaps(false);
         button.setOnClickListener(listener);
+        button.setStateListAnimator(null); // no raised shadow: a flat pill like the rest of the app
+        button.setBackground(pillBackground(0xFF2C2C30));
+        button.setTextColor(new android.content.res.ColorStateList(
+                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{0x66FFFFFF, 0xFFFFFFFF}));
         return button;
+    }
+
+    /** The main button of a screen: filled with the accent colour. */
+    private Button primary(Button button) {
+        button.setBackground(pillBackground(attrColor(android.R.attr.colorAccent)));
+        button.setTextColor(new android.content.res.ColorStateList(
+                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{0x66FFFFFF, 0xFF0D0D0D}));
+        return button;
+    }
+
+    private GradientDrawable roundRect(int color, int radiusDp) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setCornerRadius(dp(radiusDp));
+        shape.setColor(color);
+        return shape;
+    }
+
+    /** A fully rounded button background that ripples when pressed and goes dark when disabled. */
+    private android.graphics.drawable.Drawable pillBackground(int color) {
+        android.graphics.drawable.StateListDrawable states = new android.graphics.drawable.StateListDrawable();
+        states.addState(new int[]{-android.R.attr.state_enabled}, roundRect(0xFF1E1E22, 24));
+        states.addState(new int[]{}, roundRect(color, 24));
+        return new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x33FFFFFF), states, roundRect(0xFF000000, 24));
+    }
+
+    /** One line at the top of a tab: dimmed tools need Shizuku. Shown only while it isn't usable. */
+    private void shizukuNote(LinearLayout list) {
+        TextView note = text("Dimmed tools need Shizuku. Start it on the first tab.", 13, false);
+        note.setTextColor(attrColor(android.R.attr.colorAccent));
+        note.setPadding(dp(16), dp(12), dp(16), dp(12));
+        note.setBackground(roundRect(0xFF121212, 16));
+        note.setVisibility(Shell.ready() ? View.GONE : View.VISIBLE);
+        shizukuLabels.add(note);
+        LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-1, -2);
+        margin.setMargins(dp(12), dp(8), dp(12), 0);
+        list.addView(note, margin);
     }
 
     private LinearLayout.LayoutParams weight() {
