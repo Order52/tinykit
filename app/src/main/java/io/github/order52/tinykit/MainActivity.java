@@ -586,9 +586,9 @@ public class MainActivity extends Activity {
             LinearLayout tab = vertical();
             tab.setGravity(Gravity.CENTER);
             tab.setPadding(0, dp(12), 0, dp(16));
-            tab.setBackgroundResource(attrResource(android.R.attr.selectableItemBackground));
             tab.setContentDescription(Tr.t(TAB_NAMES[i]));
             ImageView icon = new ImageView(this);
+            icon.setDuplicateParentStateEnabled(true); // the pill behind the icon is the only thing that lights up
             icon.setImageResource(TAB_ICONS[i]);
             icon.setScaleType(ImageView.ScaleType.CENTER);
             tabIcons[i] = icon;
@@ -630,6 +630,18 @@ public class MainActivity extends Activity {
         return true;
     }
 
+    /** The rounded pill behind a tab's icon: filled when selected, and the one place a press shows. */
+    private android.graphics.drawable.RippleDrawable pill(boolean selected) {
+        GradientDrawable fill = new GradientDrawable();
+        fill.setCornerRadius(dp(16));
+        fill.setColor(selected ? 0x338C9EFF : 0);
+        GradientDrawable mask = new GradientDrawable();
+        mask.setCornerRadius(dp(16));
+        mask.setColor(0xFF000000);
+        return new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x4DFFFFFF), fill, mask);
+    }
+
     private View buildTab(int i) {
         if (tabRoots[i] == null) {
             int before = indexingTab;
@@ -663,14 +675,7 @@ public class MainActivity extends Activity {
             tabs[i].setAlpha(selected ? 1f : 0.65f);
             tabs[i].setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             tabIcons[i].setColorFilter(selected ? accent : 0xA6FFFFFF);
-            if (selected) {
-                GradientDrawable pill = new GradientDrawable();
-                pill.setCornerRadius(dp(16));
-                pill.setColor(0x338C9EFF);
-                tabIcons[i].setBackground(pill);
-            } else {
-                tabIcons[i].setBackground(null);
-            }
+            tabIcons[i].setBackground(pill(selected));
             ((View) tabs[i].getParent()).setSelected(selected);
         }
         pages.clear();
