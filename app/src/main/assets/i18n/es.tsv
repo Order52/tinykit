@@ -1026,7 +1026,6 @@ Undo	Deshacer
 Running now for: 	Ejecutándose ahora para: 
 new apps	apps nuevas
 On. Nothing needs it right now, so nothing is running.	Activado. Ahora nada lo necesita, así que no se ejecuta nada.
-Lets TinyKit keep a small service running, with a quiet notification, for the tools that need it: Shut Up, and blocking a new app's internet the moment it is installed. It only runs while one of them is in use, and uses almost no battery or memory. Off: TinyKit never runs by itself.	Permite que TinyKit mantenga un pequeño servicio en marcha, con una notificación discreta, para las herramientas que lo necesitan: Silenciar y bloquear internet a una app nueva en cuanto se instala. Solo se ejecuta mientras una de ellas está en uso y casi no gasta batería ni memoria. Desactivado: TinyKit nunca se ejecuta por sí solo.
 Blocked apps can't use Wi-Fi or mobile data. Android itself enforces it, so TinyKit runs nothing in the background unless you turn on "Run in the background" below, and the block comes back by itself after a restart as soon as Shizuku is running again.	Las apps bloqueadas no pueden usar Wi-Fi ni datos móviles. Lo aplica el propio Android, así que TinyKit no ejecuta nada en segundo plano salvo que actives "Ejecutar en segundo plano" abajo, y el bloqueo vuelve solo tras reiniciar en cuanto Shizuku vuelve a funcionar.
 Block every app except the ones you allow. Apps you install later are blocked when you next open TinyKit, or at once with "Run in the background" below. Allow Google Play services if you want push notifications.	Bloquea todas las apps excepto las que permitas. Las apps que instales después se bloquean la próxima vez que abras TinyKit, o al instante con "Ejecutar en segundo plano" abajo. Permite los servicios de Google Play si quieres notificaciones push.
 Blocks a new app the moment you install it, with a quiet notification. This is the same switch as in the Info tab, shared with Shut Up. It uses almost no battery or memory.	Bloquea una app nueva en cuanto la instalas, con una notificación discreta. Es el mismo interruptor que en la pestaña Info, compartido con Silenciar. Casi no gasta batería ni memoria.
@@ -1053,3 +1052,107 @@ Shizuku didn't stop. Try again, or stop it in the Shizuku app.	Shizuku no se det
 Open Termux	Abrir Termux
 Shizuku didn't start	Shizuku no se inició
 Shizuku didn't stop	Shizuku no se detuvo
+Work profile	Perfil de trabajo
+A separate space for apps, with their own data and accounts. Freeze them when you don't need them.	Un espacio aparte para apps, con sus propios datos y cuentas. Congélalas cuando no las necesites.
+Create work profile	Crear perfil de trabajo
+Takes a few seconds.	Tarda unos segundos.
+Creating…	Creando…
+This phone allows only one work profile, and it already has one.	Este teléfono permite un solo perfil de trabajo, y ya tiene uno.
+Add or remove apps	Agregar o quitar apps
+Choose which apps have a copy in the work profile.	Elige qué apps tienen una copia en el perfil de trabajo.
+Checked apps have a copy in the work profile. Check one to add it. Uncheck it to remove that copy and its data from the work profile.	Las apps marcadas tienen una copia en el perfil de trabajo. Marca una para agregarla. Desmárcala para quitar esa copia y sus datos del perfil de trabajo.
+Freeze	Congelar
+Freeze all	Congelar todo
+Turns every work app off: it can't run, wake the phone or show in the launcher, and keeps its data.	Apaga cada app de trabajo: no puede ejecutarse, despertar el teléfono ni aparecer en el launcher, y conserva sus datos.
+Unfreeze all	Descongelar todo
+Turns them all back on.	Las vuelve a encender todas.
+Profile	Perfil
+Remove work profile	Quitar perfil de trabajo
+Deletes the profile, every app in it and all their data.	Borra el perfil, cada app dentro y todos sus datos.
+Remove the work profile?	¿Quitar el perfil de trabajo?
+Every app in it and all their data are deleted for good. Your main profile is not touched.	Todas las apps y sus datos se borran para siempre. Tu perfil principal no se toca.
+Freezing…	Congelando…
+Unfreezing…	Descongelando…
+Nothing to change.	Nada que cambiar.
+Froze 	Se congelaron 
+Unfroze 	Se descongelaron 
+Frozen	Congelada
+No apps in the work profile yet.	Aún no hay apps en el perfil de trabajo.
+Unfreeze and open	Descongelar y abrir
+Unfreeze	Descongelar
+Remove from work profile	Quitar del perfil de trabajo
+Its copy in the work profile and that copy's data are deleted. The app on your main profile stays.	Su copia en el perfil de trabajo y los datos de esa copia se borran. La app de tu perfil principal se queda.
+Lets TinyKit keep a small service running, with a quiet notification, for the tools that need it: Shut Up, blocking a new app's internet the moment it is installed, and freezing work apps when the screen is off. It only runs while one of them is in use, and uses almost no battery or memory. Off: TinyKit never runs by itself.	Permite que TinyKit mantenga un pequeño servicio en marcha, con una notificación discreta, para las herramientas que lo necesitan: Silenciar, bloquear internet a una app nueva en cuanto se instala y congelar apps de trabajo cuando la pantalla está apagada. Solo se ejecuta mientras una de ellas está en uso y casi no gasta batería ni memoria. Desactivado: TinyKit nunca se ejecuta por sí solo.
+Running	En marcha
+app	app
+apps	apps
+frozen	congeladas
+Pause work profile	Pausar perfil de trabajo
+Open, freeze, add a launcher shortcut to, or remove the apps in the work profile.	Abre, congela, agrega un acceso directo a, o quita las apps del perfil de trabajo.
+Install APK in the work profile	Instalar APK en el perfil de trabajo
+Install .apk, .apks, .xapk and .apkm files into the work profile only.	Instala archivos .apk, .apks, .xapk y .apkm solo en el perfil de trabajo.
+Freeze when the screen is off	Congelar con la pantalla apagada
+No app chosen yet. Open Work apps, tap an app and choose Auto-freeze.	Aún no hay apps elegidas. Abre Apps de trabajo, toca una app y elige Congelar sola.
+. Tap to change the wait.	. Toca para cambiar la espera.
+Right away	De inmediato
+After 1 minute	Después de 1 minuto
+After 5 minutes	Después de 5 minutos
+After 15 minutes	Después de 15 minutos
+Freeze after the screen has been off	Congelar después de que la pantalla esté apagada
+Run in the background is on now. Auto-freeze and auto-lock need it.	Ejecutar en segundo plano está activado. Congelar sola y bloquear sola lo necesitan.
+Tap an app to open it, freeze it, set it to freeze by itself, or add a launcher shortcut. A frozen app is off and keeps its data.	Toca una app para abrirla, congelarla, hacer que se congele sola o agregar un acceso directo. Una app congelada está apagada y conserva sus datos.
+No match. Tick Show system apps to see more.	Sin resultados. Marca Mostrar apps del sistema para ver más.
+Auto-freeze	Congelar sola
+Stop auto-freezing	Dejar de congelar sola
+Auto-freeze when the screen is off	Congelar sola con la pantalla apagada
+Add launcher shortcut	Agregar acceso directo
+Clear data	Borrar datos
+Clear data of 	Borrar datos de 
+Everything the app saved in the work profile is deleted: accounts, files and settings. The app stays.	Se borra todo lo que la app guardó en el perfil de trabajo: cuentas, archivos y ajustes. La app se queda.
+work	trabajo
+work profile	perfil de trabajo
+This phone doesn't let TinyKit pause the work profile.	Este teléfono no deja que TinyKit pause el perfil de trabajo.
+There is no work profile.	No hay perfil de trabajo.
+That app isn't in the work profile any more.	Esa app ya no está en el perfil de trabajo.
+Needs Android 8 or newer.	Requiere Android 8 o superior.
+Your launcher can't add shortcuts.	Tu launcher no puede agregar accesos directos.
+Your launcher didn't add it.	Tu launcher no lo agregó.
+Create the work profile in TinyKit first (Apps tab).	Primero crea el perfil de trabajo en TinyKit (pestaña Apps).
+Pause and resume your work profile.	Pausa y reanuda tu perfil de trabajo.
+Start Shizuku	Inicia Shizuku
+On	Activado
+This phone can't have a work profile: it needs Android 8 or newer, and work profile support from its maker.	Este teléfono no puede tener un perfil de trabajo: requiere Android 8 o superior y que el fabricante admita perfiles de trabajo.
+A work profile is a second, separate space on this phone. Apps you add to it are copies with their own accounts, data and notifications. Freeze them, or let them freeze by themselves, so they don't run at all. Give it its own PIN and it locks like Samsung's Secure Folder. Android allows one. TinyKit makes it by itself: no setup screens and no extra app inside it.	Un perfil de trabajo es un segundo espacio, aparte, en este teléfono. Las apps que le agregas son copias con sus propias cuentas, datos y notificaciones. Congélalas, o deja que se congelen solas, para que no se ejecuten. Dale su propio PIN y se bloquea como la Carpeta segura de Samsung. Android permite uno. TinyKit lo crea solo: sin pantallas de configuración y sin una app extra dentro.
+Locked	Bloqueado
+Unlock work profile	Desbloquear perfil de trabajo
+The work profile is locked. Enter its PIN to use its apps.	El perfil de trabajo está bloqueado. Escribe su PIN para usar sus apps.
+Stops every work app and silences its notifications, like the Work switch in your launcher. With a PIN of its own (see Lock) it stays locked until the PIN is entered.	Detiene cada app de trabajo y silencia sus notificaciones, como el interruptor Trabajo de tu launcher. Con un PIN propio (ver Bloqueo) queda bloqueado hasta que se escriba el PIN.
+Lock	Bloqueo
+Give the work profile its own PIN, like Samsung's Secure Folder. Pausing then locks it: only the PIN opens it again.	Dale al perfil de trabajo su propio PIN, como la Carpeta segura de Samsung. Al pausarlo se bloquea: solo el PIN lo vuelve a abrir.
+No PIN of its own yet. Add one, and pausing locks the profile.	Aún no tiene PIN propio. Agrega uno y, al pausarlo, el perfil se bloquea.
+It has a PIN of its own. Tap to change or remove it.	Tiene un PIN propio. Toca para cambiarlo o quitarlo.
+Work profile PIN	PIN del perfil de trabajo
+Lock when the screen is off	Bloquear con la pantalla apagada
+. Pauses the whole work profile. Tap to change.	. Pausa todo el perfil de trabajo. Toca para cambiar.
+Lock after the screen has been off	Bloquear después de que la pantalla esté apagada
+Lock after a restart	Bloquear tras reiniciar
+Pauses the work profile once each time the phone restarts, as soon as Shizuku is running again.	Pausa el perfil de trabajo una vez cada vez que el teléfono se reinicia, en cuanto Shizuku vuelve a funcionar.
+PIN	PIN
+Current PIN (empty if none)	PIN actual (vacío si no hay)
+New PIN (empty removes it)	PIN nuevo (vacío lo quita)
+A PIN is 4 to 16 digits. With one of its own the work profile's data is locked until the PIN is entered. If you forget it, those apps and their data can't be opened again: the only way out is to remove the work profile.	Un PIN tiene de 4 a 16 dígitos. Con uno propio, los datos del perfil de trabajo quedan bloqueados hasta que se escriba el PIN. Si lo olvidas, esas apps y sus datos no se podrán abrir de nuevo: la única salida es quitar el perfil de trabajo.
+PIN removed.	PIN quitado.
+PIN saved.	PIN guardado.
+This phone can't have a work profile.	Este teléfono no puede tener un perfil de trabajo.
+Android refused: 	Android lo rechazó: 
+no reason given.	sin motivo.
+\n\nSome phones block work profiles. Dual Apps, App Twin, Second space and a custom recovery are common causes: turn those off and try again.	\n\nAlgunos teléfonos bloquean los perfiles de trabajo. Apps duales, App Twin, Segundo espacio y una recovery personalizada son causas comunes: desactívalas e inténtalo de nuevo.
+Android didn't create the profile.	Android no creó el perfil.
+This phone didn't pause the work profile.	Este teléfono no pausó el perfil de trabajo.
+Enter the work profile's PIN on the screen that opened, to switch it back on.	Escribe el PIN del perfil de trabajo en la pantalla que se abrió para volver a activarlo.
+The work profile is locked. Open TinyKit > Apps > Work profile and unlock it with its PIN.	El perfil de trabajo está bloqueado. Abre TinyKit > Apps > Perfil de trabajo y desbloquéalo con su PIN.
+A PIN is 4 to 16 digits.	Un PIN tiene de 4 a 16 dígitos.
+That current PIN isn't right.	Ese PIN actual no es correcto.
+The profile already has a PIN. Type it in the first box to change or remove it.	El perfil ya tiene un PIN. Escríbelo en el primer cuadro para cambiarlo o quitarlo.
+That PIN isn't right.	Ese PIN no es correcto.
+Couldn't open it.	No se pudo abrir.

@@ -38,6 +38,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   With the screen off it puts everything back and sleeps until the screen comes on: no timer, no
  *   wake-ups.
  *
+ * - Work profile: when the screen goes off, freezes the work apps chosen for it after the wait the user
+ *   picked, and cancels that if the screen comes back first (see {@link Work}). An alarm does the
+ *   waiting, so nothing runs in between.
+ *
  * Nothing else runs: no thread while there's no install to handle, no network, no wake locks. One
  * quiet notification says which of them are running. Whatever Shut Up hid is put back when it stops.
  */
@@ -48,13 +52,13 @@ public final class BackgroundService extends Service {
     private static final int NOTIFICATION = 7;
     private static final long FAST_MS = 600, IDLE_MS = 3000, GRACE_MS = 15_000;
 
-    private static volatile boolean running, shutUpRunning, installsRunning;
+    private static volatile boolean running, shutUpRunning, installsRunning, workRunning;
 
     // Its thread exists only while an install is being handled.
     private final ExecutorService worker = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>());
     private SharedPreferences prefs;
-    private BroadcastReceiver receiver, screenOn;
+    private BroadcastReceiver receiver, screenOn, screenWork;
     private ScheduledExecutorService loop;
     private ShutUp.Watcher watcher;
     private long leftAt;
@@ -78,7 +82,7 @@ public final class BackgroundService extends Service {
 
     /** The service runs only while the switch is on and at least one tool needs it. */
     static boolean needed(Context c, SharedPreferences p) {
-        return on(p) && (watchesInstalls(p) || watchesApps(c, p));
+        return on(p) && (watchesInstalls(p) || watchesApps(c, p) || Work.wanted(p));
     }
 
     static boolean isRunning() {
@@ -91,6 +95,10 @@ public final class BackgroundService extends Service {
 
     static boolean installsRunning() {
         return running && installsRunning;
+    }
+
+    static boolean workRunning() {
+        return running && workRunning;
     }
 
     /**
@@ -134,19 +142,47 @@ public final class BackgroundService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         boolean installs = on(prefs) && watchesInstalls(prefs);
         boolean apps = on(prefs) && watchesApps(this, prefs);
+        boolean work = on(prefs) && Work.wanted(prefs);
         // Android expects startForeground soon after startForegroundService, even when stopping at once.
         if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(NOTIFICATION, notification(installs, apps), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            startForeground(NOTIFICATION, notification(installs, apps, work), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         } else {
-            startForeground(NOTIFICATION, notification(installs, apps));
+            startForeground(NOTIFICATION, notification(installs, apps, work));
         }
-        if (!installs && !apps) {
+        if (!installs && !apps && !work) {
             stopSelf();
             return START_NOT_STICKY;
         }
         watchInstalls(installs);
         watchApps(apps);
+        watchWork(work);
         return START_STICKY;
+    }
+
+    // ---- Work profile -----------------------------------------------------------------------------
+
+    private synchronized void watchWork(boolean on) {
+        workRunning = on;
+        if (on && screenWork == null) {
+            screenWork = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent i) {
+                    if (Intent.ACTION_SCREEN_OFF.equals(i.getAction())) Work.schedule(context, prefs);
+                    else Work.cancel(context);
+                }
+            };
+            IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+            filter.addAction(Intent.ACTION_SCREEN_ON);
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(screenWork, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                registerReceiver(screenWork, filter);
+            }
+        } else if (!on && screenWork != null) {
+            unregisterReceiver(screenWork);
+            screenWork = null;
+            Work.cancel(this);
+        }
     }
 
     // ---- New apps ---------------------------------------------------------------------------------
@@ -301,7 +337,7 @@ public final class BackgroundService extends Service {
 
     // ---- Notification -----------------------------------------------------------------------------
 
-    private Notification notification(boolean installs, boolean apps) {
+    private Notification notification(boolean installs, boolean apps, boolean work) {
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel channel = new NotificationChannel(CHANNEL, Tr.t("Run in the background"),
@@ -315,6 +351,7 @@ public final class BackgroundService extends Service {
         List<String> jobs = new ArrayList<>();
         if (apps) jobs.add(Tr.t("Shut Up"));
         if (installs) jobs.add(Tr.t("New apps"));
+        if (work) jobs.add(Tr.t("Work profile"));
         Intent open = new Intent(this, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(MainActivity.EXTRA_TAB, 4);
         PendingIntent tap = PendingIntent.getActivity(this, 0, open,
@@ -335,6 +372,7 @@ public final class BackgroundService extends Service {
             receiver = null;
         }
         installsRunning = false;
+        watchWork(false);
         if (loop != null) stopLoop();
         shutUpRunning = false;
         worker.shutdown();

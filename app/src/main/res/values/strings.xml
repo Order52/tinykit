@@ -21,6 +21,7 @@
     <string name="tile_internet_block">Internet block</string>
     <string name="tile_hw_overlays_off">HW overlays off</string>
     <string name="tile_force_dark">Force dark</string>
+    <string name="tile_work_profile">Work profile</string>
     <string name="tile_free_ram">Free RAM</string>
     <string name="tile_screen_record">Screen record</string>
 </resources>

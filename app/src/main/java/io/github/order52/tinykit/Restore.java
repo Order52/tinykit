@@ -66,6 +66,8 @@ final class Restore {
         // Allow list mode: block whatever was installed since TinyKit last ran (this is how new apps
         // are caught when "Block new apps at once" is off).
         if (FirewallPolicy.supported() && FirewallPolicy.allowMode(p)) FirewallPolicy.apply(c, p, false);
+        // Once per restart, lock the work profile if the user asked for that.
+        Work.lockAfterRestart(c, p);
         // Already done since the last restart (tiles and the widget start this process often).
         if (boot != -1 && boot == p.getInt(PREF_BOOT, -2)) return;
         boolean ok = true;

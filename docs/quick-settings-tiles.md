@@ -1,6 +1,6 @@
 # Quick Settings tiles
 
-TinyKit adds 18 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
+TinyKit adds 19 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
 nothing when you aren't using them: Android only binds a tile while the panel is open, and none
 of them keeps a service running.
 
@@ -33,6 +33,7 @@ of them keeps a service running.
 | <img src="images/tiles/firewall.svg" width="40" alt=""> | **Internet block** | Pauses or resumes **Block internet per app** and keeps your lists (Android 14+) | Blocking / Paused | Yes |
 | <img src="images/tiles/overlays.svg" width="40" alt=""> | **HW overlays off** | Turns the "Disable HW overlays" developer option on or off | On / off | Yes |
 | <img src="images/tiles/forcedark.svg" width="40" alt=""> | **Force dark** | Dark-themes apps that have no dark mode | On / off | Yes |
+|  | **Work profile** | Pauses (locks) or resumes the work profile | On / Paused / Locked / Not set up | Yes |
 | <img src="images/tiles/kill.svg" width="40" alt=""> | **Close app** | Force-stops the app on screen | — | Yes |
 
 ¹ The Shizuku tile needs either the auth token or Termux with shizuku-termux. See

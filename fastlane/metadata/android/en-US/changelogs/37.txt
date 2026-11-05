@@ -1,0 +1,3 @@
+• Work profile: make one in a tap, with no setup screens and no second app inside it. Add apps as separate copies, open them, freeze them one by one or all at once, and let chosen apps freeze by themselves when the screen has been off for a while.
+• Lock it like Samsung's Secure Folder: give it a PIN of its own, lock it when the screen goes off or after a restart, and unlock it with the PIN. Pause the whole profile with one switch or a Quick Settings tile.
+• Pin a launcher shortcut that unfreezes and opens an app, install APKs straight into the profile, and clear an app's data there. A profile made by Shelter or Island works too.

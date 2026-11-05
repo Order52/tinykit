@@ -82,6 +82,11 @@ final class ApkInstaller {
 
     /** Installs the picked files as one app and returns the message to show. */
     static String install(Context context, List<Uri> uris, Progress progress) {
+        return install(context, uris, progress, -1);
+    }
+
+    /** As above; {@code user} puts the app into that user (the work profile), or -1 for the usual one. */
+    static String install(Context context, List<Uri> uris, Progress progress, int user) {
         ContentResolver resolver = context.getContentResolver();
         List<Closeable> open = new ArrayList<>();
         List<File> temp = new ArrayList<>();
@@ -100,6 +105,7 @@ final class ApkInstaller {
             for (Part p : parts) total += p.size;
             int options = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE).getInt(PREF, 0);
             Shell.Result create = Shell.run("pm install-create -r -i io.github.order52.tinykit" + flags(options)
+                    + (user >= 0 ? " --user " + user : "")
                     + (Build.VERSION.SDK_INT >= 34 ? " --bypass-low-target-sdk-block" : "") + " -S " + total);
             Matcher session = SESSION.matcher(create.out);
             if (!create.ok() || !session.find()) return explain(create.out);

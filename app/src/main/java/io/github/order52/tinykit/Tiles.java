@@ -195,6 +195,35 @@ public abstract class Tiles extends TileService {
         }
     }
 
+    /** Pauses and resumes the work profile (Android's own pause), if there is one. */
+    public static final class WorkProfile extends Tiles {
+        @Override
+        Object[] state() {
+            if (!Shell.await()) return state(false, "Start Shizuku");
+            int id = Work.id(this);
+            if (id < 0) return state(false, "Not set up");
+            int state = Work.state(this, id);
+            return state(state == Work.RUNNING, state == Work.PAUSED ? "Paused" : state == Work.LOCKED ? "Locked" : "On");
+        }
+
+        @Override
+        void tap(boolean active) {
+            if (!shizuku()) return;
+            int id = Work.id(this);
+            if (id < 0) {
+                toast(Tr.t("Create the work profile in TinyKit first (Apps tab)."));
+                return;
+            }
+            if (Work.state(this, id) == Work.LOCKED) {
+                toast(Tr.t("The work profile is locked. Open TinyKit > Apps > Work profile and unlock it with its PIN."));
+                return;
+            }
+            // Active means running, so a tap pauses (locks); otherwise it resumes.
+            String error = Work.pause(this, id, active);
+            if (error != null) toast(Tr.t(error));
+        }
+    }
+
     /** Pauses and resumes the internet block without losing the lists (Android 14+). */
     public static final class Firewall extends Tiles {
         @Override

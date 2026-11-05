@@ -239,6 +239,92 @@ and CSV. Shows the current default (`cmd package resolve-activity`) and every ap
 that type. Android only lets the system pin a file-type default, so set one by opening a file and
 choosing **Always**.
 
+### Work profile
+
+A separate space on the phone where apps run as **copies** with their own accounts, data and
+notifications. **Apps → Work profile** makes it in one tap: no setup screens, no device-admin
+rights and no second copy of TinyKit inside it. Android allows one work profile per user; one
+made by Shelter or Island is managed the same way. It never touches Samsung's **Secure Folder**,
+Dual Messenger, App Twin or other kinds of separate space (they are different users, which TinyKit
+skips). ♻️
+
+The page opens with the state (*Running · 23 apps · 1 frozen*, or *Paused*, or *Locked*) and a
+**Pause work profile** switch: Android's own pause, the one in your launcher's Work tab. Every work app
+stops and its notifications go quiet until you switch it back. The **Work profile** Quick Settings tile
+does the same.
+
+#### Apps
+
+- **Add or remove apps**: check an app to put a copy in the profile; uncheck to remove that copy
+  and its data there. The app on your main profile is never touched.
+- **Work apps**: searchable, with system apps behind a checkbox. Tap an app for:
+  - **Open** (or **Unfreeze and open**), which also wakes a paused profile.
+  - **Freeze / Unfreeze**: a frozen app is off (can't run, wake the phone or show in the launcher)
+    and keeps its data.
+  - **Auto-freeze when the screen is off**: see below.
+  - **Add launcher shortcut**: a home-screen icon (`Chrome (work)`) that unfreezes and opens the app
+    in one tap, so a frozen app is never lost.
+  - **Clear data** and **Remove from work profile**, each asking first.
+- **Install APK in the work profile**: the same installer as *Install APK files* (split apps,
+  `.xapk`, `.apkm`), but the app goes into the work profile only.
+
+#### Freeze
+
+- **Freeze when the screen is off**: apps set to *Auto-freeze* are frozen once the screen has been
+  off for the wait you choose (right away, 1, 5 or 15 minutes). Turning the screen back on first
+  cancels it.
+- **Freeze all / Unfreeze all**.
+
+#### Lock (like Samsung's Secure Folder)
+
+Secure Folder is a separate user with its own lock that stops its apps and silences their
+notifications until you unlock it. Android's work profile can do the same, and TinyKit sets it up:
+
+- **Work profile PIN** gives the profile a lock of its own (4 to 16 digits; the dialog sets, changes
+  or removes it). Pausing then locks it: its storage stays locked and no app can run until the PIN is
+  entered. Android shows its own PIN screen to switch the profile back on, and TinyKit's **Unlock**
+  row takes the PIN too. ⚠️ If you forget the PIN, the profile's data can't be opened again; the only
+  way out is **Remove work profile**.
+- **Lock when the screen is off** pauses (locks) the whole profile after the wait you choose, like
+  Secure Folder's auto lock.
+- **Lock after a restart** pauses it once after every restart, as soon as Shizuku is running again.
+
+Freezing and locking use the optional **Run in the background** service, which turns on with the first
+app or wait you choose; alarms do the waiting, so nothing runs in between.
+
+**Remove work profile** deletes it with every app and all its data.
+
+Sharing between the two sides uses Android's own default for a work profile: *Share* sheets show the
+other side's apps, and file pickers in the work profile can reach the main profile's files.
+
+#### Android versions
+
+| | |
+| --- | --- |
+| **Android 8 and newer** | The work profile, apps, freezing, shortcuts, installing, auto-freeze, auto-lock. (Android 7 has no way to add an app to another user, so the page says so.) |
+| **Android 10 and newer** | The profile PIN (`cmd lock_settings`). |
+| **Pause** | Android's own quiet mode where it lets TinyKit use it (tested on Android 13 to 16). On Android 8 to 11 it doesn't, so **Pause** stops the profile instead: its apps end, a profile with a PIN comes back locked, and it shows as *Paused*. |
+
+Every command below was run on Android 8.0, 10, 11, 13, 14, 15 (16 KB pages) and 16 emulators, then the
+screens were used on 8.0, 11 and 14, with no TinyKit crashes on any of them. Phones can still differ: some makers block work
+profiles (Samsung with a custom recovery, Dual Apps / App Twin / Second space using the same feature).
+TinyKit then shows Android's own reason.
+
+```sh
+pm create-user --profileOf 0 --managed Work   # make it
+cmd package install-existing --user <id> <pkg>   # add an app
+pm install-create --user <id> ...             # install an APK into it
+pm disable-user --user <id> <pkg>             # freeze (pm enable to unfreeze)
+pm uninstall --user <id> <pkg>                # remove an app from it
+cmd lock_settings set-pin --user <id> <PIN>   # its own PIN (verify, clear)
+pm remove-user <id>                           # remove the profile
+```
+
+Pausing calls `IUserManager.requestQuietModeEnabled` through `app_process`, the way *Sensors off*
+does. TinyKit never uses `am start-user -w` (on a profile with its own PIN it waits for minutes) and
+puts a time limit on every command that talks to the profile. It stores only the list of auto-freeze
+apps and the waits; the profile and its apps are read back from Android each time.
+
 ### Hide apps
 
 Checked apps are **disabled**. They disappear from the launcher and can't run until you uncheck
@@ -599,7 +685,7 @@ with `ifconfig.me` as a fallback, and only while you have the page open.
 
 The first row of the **TinyKit** section, the one switch for everything TinyKit may keep running. Off
 (the default): TinyKit never runs by itself. On: one small foreground service with a quiet notification
-runs, but only while a tool needs it: **Shut Up**, or watching installs while an internet block or a
+runs, but only while a tool needs it: **Shut Up**, **auto-freezing work apps**, or watching installs while an internet block or a
 permission choice is set up (so a new app is blocked at once, and Fake comes back after an app update). The
 line under the switch says what it is running for right now. The same switch is on the **Block internet
 per app** page, and turning **Shut Up** on turns it on too.

@@ -1183,6 +1183,8 @@ public class MainActivity extends Activity {
                 this::confirmResetPermissions);
 
         section(list, "Manage");
+        link(list, "Work profile", "A separate space for apps, with their own data and accounts. Freeze them "
+                + "when you don't need them.", this::openWork);
         link(list, "Default apps", "Set the default launcher, browser, phone and more.", this::openDefaults);
         link(list, "Hide apps", "Hide apps from the launcher by disabling them.", this::openHide);
         link(list, "Unused apps", "Apps you haven't opened in a long time.", this::openUnused);
@@ -1204,7 +1206,7 @@ public class MainActivity extends Activity {
         section(list, "Install & remove");
         link(list, "Install APK files",
                 "Install .apk, .apks, .xapk and .apkm files, including apps split into several parts.",
-                this::pickApks);
+                () -> pickApks(-1));
         View[] installOptions = new View[1];
         installOptions[0] = row(list, "Install options", installOptionsSummary(), arrow(),
                 () -> chooseInstallOptions((TextView) installOptions[0].getTag()), false);
@@ -1320,6 +1322,7 @@ public class MainActivity extends Activity {
             List<String> jobs = new ArrayList<>();
             if (BackgroundService.shutUpRunning()) jobs.add(Tr.t("Shut Up"));
             if (BackgroundService.installsRunning()) jobs.add(Tr.t("new apps"));
+            if (BackgroundService.workRunning()) jobs.add(Tr.t("work profile"));
             backgroundStatus.setText(!jobs.isEmpty() ? Tr.t("Running now for: ") + TextUtils.join(", ", jobs) + "."
                     : Tr.t(!on ? "Off. TinyKit never runs by itself."
                     : BackgroundService.needed(this, prefs) ? "Starting…"
@@ -1327,9 +1330,9 @@ public class MainActivity extends Activity {
         };
         showBackground.run();
         row(list, "Run in the background", "Lets TinyKit keep a small service running, with a quiet "
-                + "notification, for the tools that need it: Shut Up, and blocking a new app's internet the moment "
-                + "it is installed. It only runs while one of them is in use, and uses almost no battery or memory. "
-                + "Off: TinyKit never runs by itself.", backgroundSwitch, () -> {
+                + "notification, for the tools that need it: Shut Up, blocking a new app's internet the moment "
+                + "it is installed, and freezing work apps when the screen is off. It only runs while one of them "
+                + "is in use, and uses almost no battery or memory. Off: TinyKit never runs by itself.", backgroundSwitch, () -> {
                     boolean on = !BackgroundService.on(prefs);
                     backgroundSwitch.setChecked(on);
                     worker.execute(() -> {
@@ -2527,7 +2530,11 @@ public class MainActivity extends Activity {
 
     // ---- Install APK files ----------------------------------------------------------------
 
-    private void pickApks() {
+    /** The user the picked files go to: the work profile's id, or -1 for the usual install. */
+    private int pickUser = -1;
+
+    private void pickApks(int user) {
+        pickUser = user;
         if (!Shell.ready()) {
             toast(Tr.t("Start Shizuku and allow TinyKit first."));
             return;
@@ -2554,13 +2561,15 @@ public class MainActivity extends Activity {
             uris.add(data.getData());
         }
         if (uris.isEmpty()) return;
+        int user = pickUser;
         TextView message = text("Reading files…", 15, false);
         message.setPadding(dp(24), dp(16), dp(24), dp(8));
         AlertDialog progress = new AlertDialog.Builder(this).setTitle(Tr.t("Installing"))
                 .setView(message).setCancelable(false).show();
         // Its own thread: an install can take a while and shouldn't hold up the other commands.
         new Thread(() -> {
-            String result = ApkInstaller.install(this, uris, text -> main.post(() -> message.setText(Tr.t(text))));
+            String result = ApkInstaller.install(this, uris, text -> main.post(() -> message.setText(Tr.t(text))),
+                    user);
             main.post(() -> {
                 if (!alive()) return;
                 dismiss(progress);
@@ -3240,7 +3249,8 @@ public class MainActivity extends Activity {
                 {Tiles.ScreenRecord.class, "Screen record", "Record the screen to Movies.", R.drawable.ic_tile_record},
                 {Tiles.Firewall.class, "Internet block", "Pause and resume blocking apps' internet.", R.drawable.ic_tile_firewall},
                 {Tiles.HwOverlays.class, "HW overlays off", "Turn off hardware overlays (developer option).", R.drawable.ic_tile_overlays},
-                {Tiles.ForceDark.class, "Force dark", "Dark-theme apps that have no dark mode.", R.drawable.ic_tile_forcedark}};
+                {Tiles.ForceDark.class, "Force dark", "Dark-theme apps that have no dark mode.", R.drawable.ic_tile_forcedark},
+                {Tiles.WorkProfile.class, "Work profile", "Pause and resume your work profile.", R.drawable.ic_tile_work}};
         LinearLayout list = vertical();
         list.addView(note("Tap a tile to add it to your quick panel. On Android 13+ that's one tap; "
                 + "on older phones TinyKit shows where to drag it."));
@@ -4749,6 +4759,426 @@ public class MainActivity extends Activity {
     }
 
     // ---- Apps: hide, defaults, usage, storage, recent access ------------------------------------
+
+    // ---- Work profile -------------------------------------------------------------------------
+
+    private static final String[] WORK_WAITS = {"Right away", "After 1 minute", "After 5 minutes", "After 15 minutes"};
+
+    private void openWork() {
+        LinearLayout body = vertical();
+        View page = scroll(body);
+        Runnable[] again = new Runnable[1];
+        // Runs when the page opens and every time it comes back into view.
+        again[0] = () -> worker.execute(() -> {
+            int id = -1;
+            int state = Work.RUNNING;
+            List<Work.App> apps = new ArrayList<>();
+            String lock = null;
+            boolean lockOk = false;
+            try {
+                if (Shell.ready() && Work.supported(this)) {
+                    id = Work.id(this);
+                    if (id >= 0) {
+                        state = Work.state(this, id);
+                        apps = Work.apps(this, id);
+                        lockOk = Work.lockSupported();
+                        lock = lockOk ? Work.lockType(id) : null;
+                    }
+                }
+            } catch (RuntimeException e) {
+                android.util.Log.w("TinyKit", "work page: " + e);
+            }
+            int shownId = id;
+            int shownState = state;
+            List<Work.App> shownApps = apps;
+            String shownLock = lock;
+            boolean shownLockOk = lockOk;
+            main.post(() -> renderWork(body, shownId, shownState, shownApps, shownLockOk, shownLock, again[0]));
+        });
+        body.addView(note("Loading…"));
+        page.setTag(again[0]);
+        push("Work profile", page);
+    }
+
+    /** {@code lockOk}: this Android can give the profile a PIN; {@code lock} is what locks it now, when known. */
+    private void renderWork(LinearLayout body, int id, int state, List<Work.App> apps, boolean lockOk, String lock,
+                            Runnable again) {
+        body.removeAllViews();
+        if (!Work.supported(this)) {
+            body.addView(note("This phone can't have a work profile: it needs Android 8 or newer, and work "
+                    + "profile support from its maker."));
+            return;
+        }
+        if (id < 0) {
+            body.addView(note("A work profile is a second, separate space on this phone. Apps you add to it are "
+                    + "copies with their own accounts, data and notifications. Freeze them, or let them freeze by "
+                    + "themselves, so they don't run at all. Give it its own PIN and it locks like Samsung's Secure "
+                    + "Folder. Android allows one. TinyKit makes it by itself: no setup screens and no extra app "
+                    + "inside it."));
+            row(body, "Create work profile", "Takes a few seconds.", null, () -> {
+                toast(Tr.t("Creating…"));
+                worker.execute(() -> {
+                    String error = Work.create(this);
+                    main.post(() -> {
+                        if (error != null) workMessage(error);
+                        again.run();
+                    });
+                });
+            }, true);
+            return;
+        }
+        int frozen = 0;
+        for (Work.App a : apps) if (a.frozen) frozen++;
+        TextView status = text(Tr.t(state == Work.PAUSED ? "Paused" : state == Work.LOCKED ? "Locked" : "Running")
+                + " · " + apps.size() + " " + Tr.t(apps.size() == 1 ? "app" : "apps")
+                + (frozen > 0 ? " · " + frozen + " " + Tr.t("frozen") : ""), 16, true);
+        status.setTextColor(attrColor(android.R.attr.colorAccent));
+        status.setPadding(dp(16), dp(16), dp(16), dp(4));
+        body.addView(status);
+        if (state == Work.LOCKED) {
+            row(body, "Unlock work profile", "The work profile is locked. Enter its PIN to use its apps.", arrow(),
+                    () -> askPin("Unlock work profile", null, pin -> worker.execute(() -> {
+                        String error = Work.unlock(this, id, pin);
+                        main.post(() -> {
+                            if (error != null) workMessage(error);
+                            again.run();
+                        });
+                    })), true);
+        }
+        Switch pause = new Switch(this);
+        pause.setClickable(false);
+        pause.setFocusable(false);
+        pause.setChecked(state == Work.PAUSED);
+        row(body, "Pause work profile", "Stops every work app and silences its notifications, like the Work "
+                + "switch in your launcher. With a PIN of its own (see Lock) it stays locked until the PIN is "
+                + "entered.", pause, () -> {
+            boolean on = state != Work.PAUSED;
+            pause.setChecked(on);
+            worker.execute(() -> {
+                String error = Work.pause(this, id, on);
+                main.post(() -> {
+                    if (error != null) workMessage(error);
+                    again.run();
+                });
+            });
+        }, true);
+
+        section(body, "Apps");
+        link(body, "Add or remove apps", "Choose which apps have a copy in the work profile.",
+                () -> openPicker("Work apps", "Checked apps have a copy in the work profile. Check one to add it. "
+                                + "Uncheck it to remove that copy and its data from the work profile.", true,
+                        () -> {
+                            Set<String> in = new HashSet<>();
+                            for (Work.App a : Work.apps(this, id)) in.add(a.pkg);
+                            return in;
+                        },
+                        (pkg, on) -> {
+                            String error = on ? Work.add(id, pkg) : Work.delete(id, pkg);
+                            if (error == null && !on) forgetAutoFreeze(pkg);
+                            return error;
+                        }));
+        link(body, "Work apps", "Open, freeze, add a launcher shortcut to, or remove the apps in the work profile.",
+                () -> openWorkApps(id));
+        link(body, "Install APK in the work profile", "Install .apk, .apks, .xapk and .apkm files into the work "
+                + "profile only.", () -> pickApks(id));
+
+        section(body, "Freeze");
+        int auto = Work.auto(prefs).size();
+        int delay = prefs.getInt(Work.PREF_DELAY, 60);
+        row(body, "Freeze when the screen is off", auto == 0
+                ? "No app chosen yet. Open Work apps, tap an app and choose Auto-freeze."
+                : auto + " " + Tr.t(auto == 1 ? "app" : "apps") + " · " + Tr.t(waitName(delay))
+                + ". Tap to change the wait.",
+                arrow(), () -> chooseWait("Freeze after the screen has been off", Work.DELAYS, Work.PREF_DELAY,
+                        60, again), false);
+        row(body, "Freeze all", "Turns every work app off: it can't run, wake the phone or show in the launcher, "
+                + "and keeps its data.", null, () -> freezeWork(id, true), true);
+        row(body, "Unfreeze all", "Turns them all back on.", null, () -> freezeWork(id, false), true);
+
+        section(body, "Lock");
+        if (lockOk) {
+            String pinState = lock == null ? "Give the work profile its own PIN, like Samsung's Secure Folder. "
+                    + "Pausing then locks it: only the PIN opens it again."
+                    : lock.equals("NONE") ? "No PIN of its own yet. Add one, and pausing locks the profile."
+                    : "It has a PIN of its own. Tap to change or remove it.";
+            row(body, "Work profile PIN", pinState, arrow(), () -> changePin(id, again), true);
+        }
+        int lockDelay = prefs.getInt(Work.PREF_LOCK, -1);
+        row(body, "Lock when the screen is off", Tr.t(waitName(lockDelay))
+                + ". Pauses the whole work profile. Tap to change.", arrow(),
+                () -> chooseWait("Lock after the screen has been off", Work.LOCK_DELAYS, Work.PREF_LOCK, -1, again),
+                false);
+        Switch boot = new Switch(this);
+        boot.setClickable(false);
+        boot.setFocusable(false);
+        boot.setChecked(prefs.getBoolean(Work.PREF_LOCK_BOOT, false));
+        row(body, "Lock after a restart", "Pauses the work profile once each time the phone restarts, as soon as "
+                + "Shizuku is running again.", boot, () -> {
+            boolean on = !prefs.getBoolean(Work.PREF_LOCK_BOOT, false);
+            prefs.edit().putBoolean(Work.PREF_LOCK_BOOT, on).apply();
+            boot.setChecked(on);
+        }, false);
+
+        section(body, "Profile");
+        row(body, "Remove work profile", "Deletes the profile, every app in it and all their data.", null,
+                () -> new AlertDialog.Builder(this)
+                        .setTitle(Tr.t("Remove the work profile?"))
+                        .setMessage(Tr.t("Every app in it and all their data are deleted for good. Your main "
+                                + "profile is not touched."))
+                        .setPositiveButton(Tr.t("Remove"), (d, w) -> worker.execute(() -> {
+                            String error = Work.remove(id);
+                            if (error == null) forgetAutoFreeze(null);
+                            main.post(() -> {
+                                toast(Tr.t(error != null ? error : "Removed."));
+                                again.run();
+                            });
+                        }))
+                        .setNegativeButton(Tr.t("Cancel"), null)
+                        .show(), true);
+    }
+
+    /** A longer message than a toast fits (why Android refused to make the profile). */
+    private void workMessage(String message) {
+        if (message.length() < 80) {
+            toast(Tr.t(message));
+        } else if (alive()) {
+            new AlertDialog.Builder(this).setMessage(Tr.t(message)).setPositiveButton(Tr.t("OK"), null).show();
+        }
+    }
+
+    private static String waitName(int seconds) {
+        return seconds < 0 ? "Never" : seconds == 0 ? "Right away" : seconds == 60 ? "After 1 minute"
+                : seconds == 300 ? "After 5 minutes" : "After 15 minutes";
+    }
+
+    private void chooseWait(String title, int[] values, String pref, int standard, Runnable again) {
+        int current = prefs.getInt(pref, standard);
+        String[] names = new String[values.length];
+        int checked = 0;
+        for (int i = 0; i < values.length; i++) {
+            names[i] = waitName(values[i]);
+            if (values[i] == current) checked = i;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(Tr.t(title))
+                .setSingleChoiceItems(Tr.all(names), checked, (d, which) -> {
+                    prefs.edit().putInt(pref, values[which]).apply();
+                    d.dismiss();
+                    // The service starts or stops to match what now waits for the screen to go off; choosing
+                    // a lock wait turns on "Run in the background" (which it needs), as choosing an app to
+                    // freeze does.
+                    boolean needsService = pref.equals(Work.PREF_LOCK) && values[which] >= 0;
+                    worker.execute(() -> {
+                        boolean enabled = needsService && !BackgroundService.on(prefs);
+                        if (enabled) BackgroundService.setEnabled(this, prefs, true);
+                        else BackgroundService.sync(this);
+                        if (enabled) main.post(() -> toast(Tr.t("Run in the background is on now. Auto-freeze and auto-lock need it.")));
+                    });
+                    again.run();
+                })
+                .setNegativeButton(Tr.t("Cancel"), null)
+                .show();
+    }
+
+    /** One number box in a dialog; {@code onPin} gets the digits. */
+    private void askPin(String title, String message, OnText onPin) {
+        EditText pin = new EditText(this);
+        pin.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pin.setTypeface(Typeface.DEFAULT); // a number-password box would otherwise use a monospaced font
+        pin.setHint(Tr.t("PIN"));
+        LinearLayout box = vertical();
+        box.setPadding(dp(24), dp(8), dp(24), 0);
+        if (message != null) box.addView(text(message, 14, false));
+        box.addView(pin);
+        new AlertDialog.Builder(this).setTitle(Tr.t(title)).setView(box)
+                .setPositiveButton(Tr.t("OK"), (d, w) -> onPin.run(pin.getText().toString()))
+                .setNegativeButton(Tr.t("Cancel"), null).show();
+    }
+
+    /** Set, change or remove the work profile's own PIN: current PIN (if any) and new PIN (empty removes). */
+    private void changePin(int id, Runnable again) {
+        int type = android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD;
+        EditText old = new EditText(this);
+        old.setInputType(type);
+        old.setTypeface(Typeface.DEFAULT);
+        old.setHint(Tr.t("Current PIN (empty if none)"));
+        EditText next = new EditText(this);
+        next.setInputType(type);
+        next.setTypeface(Typeface.DEFAULT);
+        next.setHint(Tr.t("New PIN (empty removes it)"));
+        LinearLayout box = vertical();
+        box.setPadding(dp(24), dp(8), dp(24), 0);
+        box.addView(text("A PIN is 4 to 16 digits. With one of its own the work profile's data is locked until "
+                + "the PIN is entered. If you forget it, those apps and their data can't be opened again: the only "
+                + "way out is to remove the work profile.", 14, false));
+        box.addView(old);
+        box.addView(next);
+        new AlertDialog.Builder(this).setTitle(Tr.t("Work profile PIN")).setView(box)
+                .setPositiveButton(Tr.t("Save"), (d, w) -> {
+                    String before = old.getText().toString();
+                    String after = next.getText().toString();
+                    worker.execute(() -> {
+                        String error = Work.setLock(id, before, after);
+                        main.post(() -> {
+                            toast(Tr.t(error != null ? error : after.isEmpty() ? "PIN removed." : "PIN saved."));
+                            again.run();
+                        });
+                    });
+                })
+                .setNegativeButton(Tr.t("Cancel"), null).show();
+    }
+
+    private void freezeWork(int id, boolean frozen) {
+        toast(Tr.t(frozen ? "Freezing…" : "Unfreezing…"));
+        worker.execute(() -> {
+            List<String> todo = new ArrayList<>();
+            for (Work.App a : Work.apps(this, id)) if (a.frozen != frozen) todo.add(a.pkg);
+            String error = Work.freezeAll(id, todo, frozen);
+            main.post(() -> toast(Tr.t(error != null ? error : todo.isEmpty() ? "Nothing to change."
+                    : (frozen ? "Froze " : "Unfroze ") + todo.size() + (todo.size() == 1 ? " app." : " apps."))));
+        });
+    }
+
+    /** Adds or takes away an app's "freeze when the screen is off" choice; the service starts or stops to match. */
+    private void toggleAutoFreeze(String pkg, Runnable done) {
+        Set<String> auto = Work.auto(prefs);
+        boolean on = auto.add(pkg);
+        if (!on) auto.remove(pkg);
+        prefs.edit().putStringSet(Work.PREF_AUTO, auto).apply();
+        worker.execute(() -> {
+            // It needs "Run in the background"; turning the first app on turns that on, like Shut Up does.
+            boolean enabled = on && !BackgroundService.on(prefs);
+            if (enabled) BackgroundService.setEnabled(this, prefs, true);
+            else BackgroundService.sync(this);
+            main.post(() -> {
+                if (enabled) toast(Tr.t("Run in the background is on now. Auto-freeze and auto-lock need it."));
+                done.run();
+            });
+        });
+    }
+
+    /** An app (or, with null, every app) that left the work profile no longer needs freezing by itself. */
+    private void forgetAutoFreeze(String pkg) {
+        Set<String> auto = Work.auto(prefs);
+        if (pkg == null ? auto.isEmpty() : !auto.remove(pkg)) return;
+        if (pkg == null) auto.clear();
+        prefs.edit().putStringSet(Work.PREF_AUTO, auto).apply();
+        BackgroundService.sync(this);
+    }
+
+    private boolean systemApp(String pkg) {
+        try {
+            int flags = getPackageManager().getApplicationInfo(pkg, 0).flags;
+            return (flags & ApplicationInfo.FLAG_SYSTEM) != 0 && (flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    private void openWorkApps(int id) {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Tap an app to open it, freeze it, set it to freeze by itself, or add a launcher "
+                + "shortcut. A frozen app is off and keeps its data.", 13, false);
+        help.setAlpha(0.7f);
+        page.addView(help);
+        EditText search = new EditText(this);
+        search.setHint(Tr.t("Search apps"));
+        search.setSingleLine(true);
+        page.addView(search);
+        CheckBox system = new CheckBox(this);
+        system.setText(Tr.t("Show system apps"));
+        page.addView(system);
+        TextView loading = text("Loading…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        List<Work.App> all = new ArrayList<>();
+        Adapter<Work.App> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(label(a.pkg));
+            row.second.setText(a.pkg);
+            List<String> tags = new ArrayList<>();
+            if (a.frozen) tags.add(Tr.t("Frozen"));
+            if (Work.auto(prefs).contains(a.pkg)) tags.add(Tr.t("Auto-freeze"));
+            row.third.setText(TextUtils.join(" · ", tags));
+            showIcon(row, a.pkg);
+        });
+        listView.setAdapter(adapter);
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            Set<String> auto = Work.auto(prefs);
+            List<Work.App> shown = new ArrayList<>();
+            for (Work.App a : all) {
+                // Frozen and auto-freeze apps always show, so one never gets lost behind the filter.
+                boolean show = system.isChecked() || a.frozen || auto.contains(a.pkg) || !systemApp(a.pkg);
+                if (show && (label(a.pkg).toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) shown.add(a);
+            }
+            adapter.set(shown);
+            loading.setText(Tr.t(all.isEmpty() ? "No apps in the work profile yet."
+                    : "No match. Tick Show system apps to see more."));
+            loading.setVisibility(shown.isEmpty() ? View.VISIBLE : View.GONE);
+        };
+        search.addTextChangedListener(watcher(filter));
+        system.setOnCheckedChangeListener((v, checked) -> filter.run());
+        Runnable load = () -> worker.execute(() -> {
+            List<Work.App> apps = Work.apps(this, id);
+            Collections.sort(apps, (x, y) -> label(x.pkg).compareToIgnoreCase(label(y.pkg)));
+            main.post(() -> {
+                all.clear();
+                all.addAll(apps);
+                filter.run();
+            });
+        });
+        Runnable reload = load;
+        listView.setOnItemClickListener((parentView, view, position, rowId) -> {
+            Work.App a = adapter.getItem(position);
+            boolean auto = Work.auto(prefs).contains(a.pkg);
+            String[] items = {a.frozen ? "Unfreeze and open" : "Open", a.frozen ? "Unfreeze" : "Freeze",
+                    auto ? "Stop auto-freezing" : "Auto-freeze when the screen is off", "Add launcher shortcut",
+                    "Clear data", "Remove from work profile"};
+            new AlertDialog.Builder(this)
+                    .setTitle(label(a.pkg))
+                    .setItems(Tr.all(items), (d, which) -> {
+                        if (which == 2) {
+                            toggleAutoFreeze(a.pkg, reload);
+                        } else if (which == 3) {
+                            String error = Work.pin(this, a.pkg, label(a.pkg));
+                            if (error != null) toast(Tr.t(error));
+                        } else if (which >= 4) {
+                            boolean wipe = which == 4;
+                            new AlertDialog.Builder(this)
+                                    .setTitle(Tr.t((wipe ? "Clear data of " : "Remove ") + label(a.pkg) + "?"))
+                                    .setMessage(Tr.t(wipe ? "Everything the app saved in the work profile is "
+                                            + "deleted: accounts, files and settings. The app stays."
+                                            : "Its copy in the work profile and that copy's data are deleted. The "
+                                            + "app on your main profile stays."))
+                                    .setPositiveButton(Tr.t(wipe ? "Clear" : "Remove"), (d2, w2) -> worker.execute(() -> {
+                                        String error = wipe ? Work.clear(id, a.pkg) : Work.delete(id, a.pkg);
+                                        if (error == null && !wipe) forgetAutoFreeze(a.pkg);
+                                        main.post(() -> {
+                                            if (error != null) toast(Tr.t(error));
+                                            reload.run();
+                                        });
+                                    }))
+                                    .setNegativeButton(Tr.t("Cancel"), null)
+                                    .show();
+                        } else {
+                            worker.execute(() -> {
+                                String error = which == 0 ? Work.launch(this, a.pkg)
+                                        : Work.freeze(id, a.pkg, !a.frozen);
+                                main.post(() -> {
+                                    if (error != null) toast(Tr.t(error));
+                                    reload.run();
+                                });
+                            });
+                        }
+                    })
+                    .setNegativeButton(Tr.t("Cancel"), null)
+                    .show();
+        });
+        push("Work apps", page);
+        load.run();
+    }
 
     private void openHide() {
         openPicker("Hide apps",

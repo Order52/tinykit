@@ -72,6 +72,8 @@ tinykit/
 │       │   ├── FakePolicy.java     Remembers Fake permissions and puts back any Android reset to Real
 │       │   ├── TinyKitApp.java     Application: starts Restore when Shizuku's binder arrives
 │       │   ├── Bloat.java          Safety ratings for the Debloater
+│       │   ├── Work.java           Work profile: create, add apps, freeze, pause, auto-freeze, shortcuts (pm commands)
+│       │   ├── WorkOpen.java       No-screen activity a work-app shortcut starts: unfreeze and open
 │       │   ├── ApkInstaller.java   Installs .apk, .apks, .xapk and .apkm through pm, streaming
 │       │   ├── WifiDump.java       app_process helper: saved Wi-Fi credentials
 │       │   └── Qr.java             Small QR encoder for Wi-Fi codes

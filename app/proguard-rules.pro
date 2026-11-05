@@ -17,3 +17,5 @@
 -keep class io.github.order52.tinykit.Sensors { public static void main(java.lang.String[]); }
 -keep class io.github.order52.tinykit.Firewall { public static void main(java.lang.String[]); }
 -keep class io.github.order52.tinykit.Channels { public static void main(java.lang.String[]); }
+# Pauses and resumes the work profile (Android's quiet mode) the same way.
+-keep class io.github.order52.tinykit.Work { public static void main(java.lang.String[]); }

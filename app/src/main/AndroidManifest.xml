@@ -147,6 +147,18 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
+        <service android:name=".Tiles$WorkProfile" android:exported="true" android:icon="@drawable/ic_tile_work" android:label="@string/tile_work_profile" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <!-- What a pinned work-app shortcut starts: no screen, it unfreezes and opens the app. -->
+        <activity
+            android:name=".WorkOpen"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
         <!-- Home screen widget: one tap frees RAM and clears app caches. -->
         <receiver android:name=".BoostWidget" android:exported="false" android:label="@string/widget_name">
             <intent-filter>
@@ -171,7 +183,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Listens for newly installed apps to block their internet access, and watches which app is open to hide developer options from the apps the user chose" />
+                android:value="Listens for newly installed apps to block their internet access, watches which app is open to hide developer options from the apps the user chose, and freezes the work-profile apps the user chose when the screen has been off for a while" />
         </service>
 
         <!-- Starts that service again after a restart or an update of TinyKit. -->
