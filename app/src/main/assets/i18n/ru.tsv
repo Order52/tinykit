@@ -1306,3 +1306,5 @@ Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.	Отла
 No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.	Способ запуска Shizuku не найден. Нужен root, adb по Wi-Fi (adb tcpip 5555 с компьютера, один раз после каждой перезагрузки) или отладка по Wi-Fi, которой, похоже, нет.
 Add to home screen	Добавить на главный экран
 Some launchers don't show a new icon by themselves. This asks yours to add it.	Некоторые лаунчеры сами не показывают новый значок. Это просит ваш добавить его.
+Secure folder is off. Touch and hold this icon, then Remove.	Защищённая папка выключена. Нажмите и удерживайте значок, затем «Удалить».
+The old Secure folder icon is still on your home screen: touch and hold it, then Remove.	Старый значок защищённой папки всё ещё на главном экране: нажмите и удерживайте его, затем «Удалить».

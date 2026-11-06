@@ -1303,3 +1303,5 @@ Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.	La depur
 No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.	No se encontró ninguna forma de iniciar Shizuku. Este teléfono necesita root, adb por Wi-Fi (adb tcpip 5555 desde un ordenador, una vez tras cada reinicio) o depuración inalámbrica, que no parece tener.
 Add to home screen	Añadir a la pantalla de inicio
 Some launchers don't show a new icon by themselves. This asks yours to add it.	Algunos lanzadores no muestran un icono nuevo por sí solos. Esto le pide al tuyo que lo añada.
+Secure folder is off. Touch and hold this icon, then Remove.	La carpeta segura está desactivada. Mantén pulsado este icono y elige Quitar.
+The old Secure folder icon is still on your home screen: touch and hold it, then Remove.	El icono antiguo de la carpeta segura sigue en tu pantalla de inicio: mantenlo pulsado y elige Quitar.

@@ -84,10 +84,12 @@ public final class SecureFolder extends Activity {
         try {
             ShortcutManager manager = c.getSystemService(ShortcutManager.class);
             if (manager == null || !manager.isRequestPinShortcutSupported()) return "Your launcher can't add shortcuts.";
+            manager.enableShortcuts(java.util.Collections.singletonList("secure_folder"));
             ShortcutInfo info = new ShortcutInfo.Builder(c, "secure_folder")
                     .setShortLabel(c.getString(R.string.secure_folder))
                     .setIcon(Icon.createWithResource(c, R.mipmap.ic_secure_folder))
                     .setIntent(new Intent(c, SecureFolder.class).setAction(Intent.ACTION_MAIN))
+                    .setLongLived(true)
                     .build();
             return manager.requestPinShortcut(info, null) ? null : "Your launcher didn't add it.";
         } catch (RuntimeException e) {
@@ -95,16 +97,37 @@ public final class SecureFolder extends Activity {
         }
     }
 
+    /** Whether a Secure folder shortcut is still on the home screen (only the person can take it off). */
+    static boolean onHomeScreen(Context c) {
+        if (Build.VERSION.SDK_INT < 26) return false;
+        try {
+            ShortcutManager manager = c.getSystemService(ShortcutManager.class);
+            if (manager != null) for (ShortcutInfo i : manager.getPinnedShortcuts()) if ("secure_folder".equals(i.getId())) return true;
+        } catch (RuntimeException ignored) {
+        }
+        return false;
+    }
+
     /** Shows or hides the home screen icon (it exists only while there is a work profile and the person wants it). */
     static void icon(Context c, boolean on) {
         c.getPackageManager().setComponentEnabledSetting(new ComponentName(c, SecureFolder.class),
                 on ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP);
+        if (on && Build.VERSION.SDK_INT >= 26) { // a shortcut that was switched off while the look was plain works again
+            try {
+                ShortcutManager manager = c.getSystemService(ShortcutManager.class);
+                if (manager != null) manager.enableShortcuts(java.util.Collections.singletonList("secure_folder"));
+            } catch (RuntimeException ignored) {
+            }
+        }
         if (!on && Build.VERSION.SDK_INT >= 26) { // a shortcut put on the home screen goes too (greyed out), so the look doesn't linger
             try {
                 ShortcutManager manager = c.getSystemService(ShortcutManager.class);
+                if (manager != null && Build.VERSION.SDK_INT >= 30) { // takes a long-lived shortcut off the home screen too, where the launcher lets it
+                    manager.removeLongLivedShortcuts(java.util.Collections.singletonList("secure_folder"));
+                }
                 if (manager != null) manager.disableShortcuts(java.util.Collections.singletonList("secure_folder"),
-                        c.getString(R.string.secure_folder));
+                        Tr.t("Secure folder is off. Touch and hold this icon, then Remove."));
             } catch (RuntimeException ignored) {
             }
         }

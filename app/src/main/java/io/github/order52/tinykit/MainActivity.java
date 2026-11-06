@@ -6250,6 +6250,9 @@ public class MainActivity extends Activity {
                     boolean secure = which == 0;
                     if (secure == now) return;
                     applyStyle(secure);
+                    if (!secure && SecureFolder.onHomeScreen(this)) {
+                        toast(Tr.t("The old Secure folder icon is still on your home screen: touch and hold it, then Remove."));
+                    }
                     if (!secure) {
                         Set<String> auto = Work.auto(prefs);
                         List<String> back = new ArrayList<>();

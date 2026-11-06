@@ -1,0 +1,2 @@
+• Switching the work profile to plain tells you when a Secure folder icon is still on the home screen (only you can remove it), and switching back reuses it instead of adding another.
+• The Secure folder shortcut is marked so Android can take it off the home screen when you go plain.
