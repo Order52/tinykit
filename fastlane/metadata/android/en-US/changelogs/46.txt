@@ -1,0 +1,2 @@
+• Termux setup is one command now: TinyKit copies it, you paste it in Termux once, and it switches on what is needed, installs adb and brings TinyKit back. No folder to pick.
+• A Shizuku started through root no longer dies a moment later (the start command ignores the hang-up).

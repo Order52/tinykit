@@ -131,7 +131,6 @@ public class MainActivity extends Activity {
     private static final String REPO = "https://github.com/Order52/tinykit";
     private static final int REQUEST_NOTIFICATIONS = 2;
     private static final int REQUEST_RUN_COMMAND = 3;
-    private static final int REQUEST_TERMUX_HOME = 5;
     private static final int REQUEST_PICK_APK = 4;
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
@@ -513,6 +512,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (intent.getBooleanExtra("termux_done", false)) { // the pasted command finished
+            termuxResume = false;
+            termuxChecked = false;
+            main.postDelayed(this::startShizuku, 500);
+            return;
+        }
         if (intent.hasExtra(EXTRA_TAB)) {
             selectTab(Math.max(0, Math.min(intent.getIntExtra(EXTRA_TAB, 0), TAB_NAMES.length - 1)));
         }
@@ -823,10 +828,11 @@ public class MainActivity extends Activity {
                     startShizuku();
                 } else if (r.allowMissing && !askedTermuxSetup) {
                     askedTermuxSetup = true;
-                    toast(Tr.t("Pick Termux, then Use this folder. TinyKit switches on what it needs there."));
-                    try {
-                        startActivityForResult(Termux.homePicker(), REQUEST_TERMUX_HOME);
-                    } catch (RuntimeException e) {
+                    // The one command, copied: pasting it in Termux sets everything up and brings TinyKit back.
+                    if (Termux.setUp(this)) {
+                        termuxResume = true;
+                        toast(Tr.t("Command copied. Paste it in Termux (hold, Paste) and press Enter."));
+                    } else {
                         termuxChecked = true;
                         startShizuku();
                     }
@@ -3157,46 +3163,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_TERMUX_HOME) {
-            Uri tree = resultCode == RESULT_OK && data != null ? data.getData() : null;
-            if (tree == null) {
-                termuxChecked = true; // not picked: the other way
-                startShizuku();
-                return;
-            }
-            try {
-                getContentResolver().takePersistableUriPermission(tree,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            } catch (RuntimeException ignored) {
-            }
-            starting = true;
-            refreshShizuku();
-            worker.execute(() -> {
-                String error = Termux.allowExternalApps(this, tree);
-                Termux.Result r = error == null ? Termux.probe(this) : null;
-                main.post(() -> {
-                    starting = false;
-                    if (error != null) {
-                        toast(Tr.t(error));
-                        termuxChecked = true;
-                        startShizuku();
-                    } else if (r != null && r.ran()) {
-                        prefs.edit().putBoolean(AdbService.PREF_TERMUX, true).apply();
-                        termuxChecked = true;
-                        startShizuku();
-                    } else if (r != null && r.allowMissing) {
-                        // Termux is running with the old settings: opening it once makes it read them again.
-                        termuxResume = true;
-                        Intent launch = getPackageManager().getLaunchIntentForPackage(Termux.PACKAGE);
-                        if (launch != null) startActivity(launch); else { termuxChecked = true; startShizuku(); }
-                    } else {
-                        termuxChecked = true;
-                        startShizuku();
-                    }
-                });
-            });
-            return;
-        }
         if (requestCode != REQUEST_PICK_APK || resultCode != RESULT_OK || data == null) return;
         List<Uri> uris = new ArrayList<>();
         if (data.getClipData() != null) {

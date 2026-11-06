@@ -1225,11 +1225,9 @@ This Android can only mute an app, not turn it down. Android 13 and newer can do
 Pick apps Android must never kill or delay, like Termux or messengers.	Выберите приложения, которые Android никогда не должен выгружать или задерживать (например, Termux или мессенджеры).
 This Android is older than 11, so it has no Wireless debugging, and this phone has neither root nor adb over the network switched on. On Android 10 and older one of those has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).	Этот Android старше 11, поэтому в нём нет отладки по Wi-Fi, а на телефоне не включены ни root, ни adb по сети. На Android 10 и старше нужно одно из двух: root или один раз adb tcpip 5555 с компьютера (действует до перезагрузки телефона).
 If the phone asks to allow USB debugging, choose Allow (Always allow).	Если телефон спросит о разрешении отладки по USB, выберите «Разрешить» (всегда).
-Pick Termux, then Use this folder. TinyKit switches on what it needs there.	Выберите Termux, затем «Использовать эту папку». TinyKit сам включит там всё нужное.
 Through Termux, in the background.	Через Termux, в фоне.
-Pick Termux's home folder (Termux, then Use this folder).	Выберите домашнюю папку Termux (Termux, затем «Использовать эту папку»).
-Couldn't write Termux's settings: 	Не удалось записать настройки Termux: 
 Termux didn't answer in time.	Termux не ответил вовремя.
 Couldn't reach Termux: 	Не удалось связаться с Termux: 
 Termux refused.	Termux отказал.
 Termux returned no result.	Termux не вернул результата.
+Command copied. Paste it in Termux (hold, Paste) and press Enter.	Команда скопирована. Вставьте её в Termux (удерживайте, «Вставить») и нажмите Enter.

@@ -53,8 +53,9 @@ public final class AdbService extends Service {
     /**
      * Runs Shizuku's own starter as the adb or root user, the way Shizuku's start script does, after lifting the
      * limit Android 12+ puts on background processes (which kills a Shizuku started this way within minutes).
+     * It ignores the hang-up sent when the session it was started in closes, which would end the server at once.
      */
-    static final String START = "if [ \"$(getprop ro.build.version.sdk)\" -ge 31 ]; then "
+    static final String START = "trap '' HUP; if [ \"$(getprop ro.build.version.sdk)\" -ge 31 ]; then "
             + "(device_config set_sync_disabled_for_tests persistent; "
             + "device_config put activity_manager max_phantom_processes 2147483647; "
             + "settings put global settings_enable_monitor_phantom_procs false) >/dev/null 2>&1; fi; "

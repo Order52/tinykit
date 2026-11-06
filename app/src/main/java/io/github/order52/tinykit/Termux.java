@@ -2,20 +2,12 @@ package io.github.order52.tinykit;
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.DocumentsContract;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -23,16 +15,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Starts Shizuku through Termux, with everything Termux needs set up by TinyKit: the permission to run
- * commands there, the one Termux setting that lets other apps do so (written through Termux's own file
- * provider, after the person picks Termux's folder once), and a start script that installs what it needs
- * (adb) the first time. The script runs in the background, no Termux window opens.
+ * commands there, and the one Termux setting that lets other apps do so (one command, copied for the person to
+ * paste in Termux once, which also installs adb and brings TinyKit back), and a start script. The script runs
+ * in the background, no Termux window opens.
  */
 final class Termux {
     static final String PACKAGE = "com.termux";
     static final String PERMISSION = "com.termux.permission.RUN_COMMAND";
     private static final String BIN = "/data/data/com.termux/files/usr/bin/";
-    private static final String AUTHORITY = "com.termux.documents";
-    static final String HOME = "/data/data/com.termux/files/home";
 
     /** Exit codes of {@link #SCRIPT}. */
     static final int STARTED = 0, NOT_CONNECTED = 3, PAIR_FAILED = 4, NO_ADB = 5;
@@ -165,63 +155,26 @@ final class Termux {
 
     // ---- The one setting Termux needs ------------------------------------------------------------
 
-    /** The picker that asks for Termux's home folder, opened on it. */
-    static Intent homePicker() {
-        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        pick.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri(AUTHORITY, HOME));
-        pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
-        return pick;
-    }
-
     /**
-     * Switches on allow-external-apps in ~/.termux/termux.properties, through the folder the person picked
-     * (it has to be Termux's home). Returns null when written, else why not.
+     * The one command to paste in Termux, which does everything there: switches on allow-external-apps (keeping the
+     * rest of the settings), makes Termux read them, installs adb if it isn't working, and brings TinyKit back
+     * to the front so it carries on by itself.
      */
-    static String allowExternalApps(Context c, Uri tree) {
-        ContentResolver cr = c.getContentResolver();
-        try {
-            String homeId = DocumentsContract.getTreeDocumentId(tree);
-            if (!homeId.endsWith("/home")) return "Pick Termux's home folder (Termux, then Use this folder).";
-            Uri dir = child(cr, tree, homeId, ".termux", true);
-            String dirId = DocumentsContract.getDocumentId(dir);
-            Uri props = child(cr, tree, dirId, "termux.properties", false);
-            StringBuilder text = new StringBuilder();
-            try (InputStream in = cr.openInputStream(props)) {
-                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                byte[] buffer = new byte[4096];
-                for (int n; in != null && (n = in.read(buffer)) > 0; ) bytes.write(buffer, 0, n);
-                for (String line : bytes.toString("UTF-8").split("\n")) {
-                    String t = line.trim();
-                    if (!t.isEmpty() && !t.startsWith("#") && t.replace(" ", "").startsWith("allow-external-apps=")) continue;
-                    text.append(line).append('\n');
-                }
-            }
-            text.append("allow-external-apps = true\n");
-            try (OutputStream out = cr.openOutputStream(props, "wt")) {
-                out.write(text.toString().getBytes(StandardCharsets.UTF_8));
-            }
-            return null;
-        } catch (Exception e) {
-            return "Couldn't write Termux's settings: " + e.getMessage();
-        }
+    static String setupCommand() {
+        return "mkdir -p ~/.termux && { grep -v '^allow-external-apps' ~/.termux/termux.properties 2>/dev/null; "
+                + "echo 'allow-external-apps = true'; } > ~/.termux/.tk && mv ~/.termux/.tk ~/.termux/termux.properties "
+                + "&& termux-reload-settings; (adb version >/dev/null 2>&1 || pkg install -y android-tools); "
+                + "am start -n io.github.order52.tinykit/.MainActivity --ez termux_done true >/dev/null 2>&1; echo; "
+                + "echo 'TinyKit is set up. You can go back to it.'";
     }
 
-    /** A file or folder in a folder of the tree: found, or made when {@code folder} says so (or as an empty file). */
-    private static Uri child(ContentResolver cr, Uri tree, String parentId, String name, boolean folder) throws Exception {
-        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, parentId);
-        try (Cursor cursor = cr.query(children, new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
-            while (cursor != null && cursor.moveToNext()) {
-                if (name.equals(cursor.getString(1))) {
-                    return DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0));
-                }
-            }
-        }
-        Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, parentId);
-        Uri made = DocumentsContract.createDocument(cr, parent,
-                folder ? DocumentsContract.Document.MIME_TYPE_DIR : "text/plain", name);
-        if (made == null) throw new java.io.IOException("could not create " + name);
-        return made;
+    /** Copies {@link #setupCommand} and opens Termux: pasting it and pressing Enter is all that is left. False if Termux can't be opened. */
+    static boolean setUp(Context c) {
+        ((android.content.ClipboardManager) c.getSystemService(Context.CLIPBOARD_SERVICE))
+                .setPrimaryClip(android.content.ClipData.newPlainText("TinyKit setup for Termux", setupCommand()));
+        Intent launch = c.getPackageManager().getLaunchIntentForPackage(PACKAGE);
+        if (launch == null) return false;
+        c.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        return true;
     }
 }

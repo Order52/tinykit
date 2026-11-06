@@ -80,9 +80,10 @@ If [Termux](https://f-droid.org/packages/com.termux/) is installed, **Start** go
 background (no Termux window opens), and TinyKit prepares Termux itself the first time:
 
 1. Android asks you to allow TinyKit to *run commands in Termux*. Allow it.
-2. TinyKit switches on the one Termux setting that lets other apps do that (`allow-external-apps`). It
-   writes it through Termux's own file provider, so you only pick **Termux** and tap **Use this folder**
-   once (and **Allow**) in Android's folder picker. No command to type, nothing to copy.
+2. TinyKit copies **one command** and opens Termux. Paste it (hold, **Paste**) and press Enter. It switches
+   on the one Termux setting that lets other apps run commands there (`allow-external-apps`, keeping your other
+   settings), makes Termux read it, installs `adb` if needed, and brings TinyKit back to the front, which then
+   carries on by itself. Once only; no other repo, no folder to pick.
 3. TinyKit runs its own start script in Termux (built in; no other repo). It tries, as shizuku-termux does:
    already running, root, adb over the network (port 5555), then Wireless debugging. It installs `adb`
    (`android-tools`) in Termux by itself the first time it needs it.
