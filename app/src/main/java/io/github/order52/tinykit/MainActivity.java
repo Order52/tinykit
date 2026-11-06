@@ -5977,6 +5977,11 @@ public class MainActivity extends Activity {
         if (secure) section(body, "Secure folder");
         if (secure) row(body, "Open Secure folder", "Your work apps behind the phone's lock screen, like Samsung's Secure Folder.",
                 arrow(), () -> startActivity(new Intent(this, SecureFolder.class)), false);
+        if (secure && Build.VERSION.SDK_INT >= 26) row(body, "Add to home screen", "Some launchers don't show a new icon by themselves. "
+                + "This asks yours to add it.", arrow(), () -> {
+            String why = SecureFolder.pin(this);
+            if (why != null) toast(Tr.t(why));
+        }, false);
         if (secure) prefRow(body, "Secure folder icon", "Show it on the home screen and in the app list.", SecureFolder.PREF_ICON, true,
                 on -> SecureFolder.sync(this, prefs));
         if (secure) prefRow(body, "Ask for my lock screen first", "Opening the Secure folder needs your PIN, pattern or fingerprint, "
@@ -6286,6 +6291,7 @@ public class MainActivity extends Activity {
             if (enabled) BackgroundService.setEnabled(this, prefs, true);
             if (error == null) prefs.edit().putBoolean(SecureFolder.PREF_EXISTS, true).apply();
             main.post(() -> {
+                if (error == null && secure && Build.VERSION.SDK_INT >= 26) SecureFolder.pin(this); // the launcher may not add the icon itself
                 if (error != null) workMessage(error);
                 else if (enabled) toast(Tr.t("Run in the background is on now. Auto-freeze and auto-lock need it."));
                 SecureFolder.sync(this, prefs); // the icon is there at once, before the page is opened again

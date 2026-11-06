@@ -47,6 +47,8 @@ public final class AdbService extends Service {
     static final String PREF_TERMUX = "termux_ready";
     private static final String TERMUX_SKIP = "skip";
     private static final String NEEDS_WIRELESS = "wireless", NEEDS_PAIRING = "pairing", NEEDS_NOTHING = "nothing";
+    private static final String NO_WAY = "No way to start Shizuku was found. This phone needs root, adb over Wi-Fi "
+            + "(adb tcpip 5555 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.";
     private static final String NOTHING_AVAILABLE = "This Android is older than 11, so it has no Wireless debugging, and "
             + "this phone has neither root nor adb over the network switched on. On Android 10 and older one of those "
             + "has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).";
@@ -66,6 +68,7 @@ public final class AdbService extends Service {
     private final LinkedBlockingQueue<String> codes = new LinkedBlockingQueue<>();
     private volatile boolean running, silent, skipped, cancelled;
     private volatile Thread flowThread;
+    private volatile boolean wirelessRefused;
     /** True from the moment a start is asked for until it ends, so the screen never waits on one that is over. */
     static volatile boolean active;
     /** What the start is doing now, for the Shizuku card; and why the last one failed, if it did. */
@@ -194,15 +197,20 @@ public final class AdbService extends Service {
             }
             result = connectAndStart(adb, 4000);
             if (NEEDS_WIRELESS.equals(result) && enableWireless()) result = connectAndStart(adb, 12_000);
+            if (wirelessRefused) result = NO_WAY;
             long end = System.currentTimeMillis() + (silent ? 90_000L : 5 * 60_000L); // Wi-Fi can be late after a restart
             while ((NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)) && System.currentTimeMillis() < end
                     && !cancelled) {
                 if (silent && NEEDS_PAIRING.equals(result)) break; // never asks for a code on its own
                 if (NEEDS_WIRELESS.equals(result)) {
                     boolean on = Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 1;
-                    if (!on && enableWireless()) { // Wi-Fi can be late after a restart, and Android turns it off again until then
+                    if (!on && wirelessRefused) {
+                        result = NO_WAY;
+                    } else if (!on && enableWireless()) { // Wi-Fi can be late after a restart, and Android turns it off again until then
                         say("Waiting for Wi-Fi", "Turning Wireless debugging on. It needs Wi-Fi.", false, null);
                         result = connectAndStart(adb, 8000);
+                    } else if (wirelessRefused) {
+                        result = NO_WAY;
                     } else if (on) {
                         say("Waiting for Wi-Fi", "Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.",
                                 false, null);
@@ -255,7 +263,7 @@ public final class AdbService extends Service {
         }
         android.util.Log.i("TinyKit", "adb: flow ended with " + result);
         finish(result == null ? null : NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)
-                ? "No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging." : result);
+                ? NO_WAY : result);
     }
 
     /**
@@ -275,6 +283,8 @@ public final class AdbService extends Service {
                 if (enableWireless()) {
                     Thread.sleep(5000); // the network needs a moment to announce it
                     r = Termux.start(this, START, join(discover(CONNECT, 4000)));
+                } else if (wirelessRefused) {
+                    return NO_WAY;
                 } else {
                     boolean developer = Settings.Global.getInt(getContentResolver(),
                             Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1;
@@ -324,7 +334,7 @@ public final class AdbService extends Service {
             }
         }
         if (r.exitCode == 0) return null;
-        if (r.exitCode == Termux.NOT_CONNECTED) return "No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging.";
+        if (r.exitCode == Termux.NOT_CONNECTED) return NO_WAY;
         return TERMUX_SKIP;
     }
 
@@ -431,8 +441,18 @@ public final class AdbService extends Service {
         if (checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") != PackageManager.PERMISSION_GRANTED) return false;
         try {
             Settings.Global.putInt(getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 1);
-            return Settings.Global.putInt(getContentResolver(), "adb_wifi_enabled", 1);
+            Settings.Global.putInt(getContentResolver(), "adb_wifi_enabled", 1);
+            // A phone with no Wireless debugging (some Huawei and Honor ones) takes the write and puts it back at once.
+            for (int i = 0; i < 6; i++) {
+                Thread.sleep(250);
+                if (Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 1) return true;
+            }
+            wirelessRefused = true;
+            return false;
         } catch (RuntimeException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return false;
         }
     }

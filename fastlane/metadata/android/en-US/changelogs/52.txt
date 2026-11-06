@@ -1,0 +1,3 @@
+• Secure folder: "Add to home screen" (also offered when it is created). Some launchers, Huawei's among them, don't add a new icon by themselves.
+• Start: a phone with no Wireless debugging now says so at once instead of waiting for it.
+• Switching to the plain work profile also greys out a Secure folder shortcut on the home screen.

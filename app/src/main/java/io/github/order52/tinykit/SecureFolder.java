@@ -8,7 +8,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.Icon;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -71,11 +75,39 @@ public final class SecureFolder extends Activity {
         icon(c, secure(p) && p.getBoolean(PREF_ICON, true) && exists(c, p));
     }
 
+    /**
+     * Asks the launcher to put the Secure folder on the home screen. Some launchers (Huawei's without an app drawer, for one)
+     * don't add an icon by themselves when an app gets a new one. Returns null when the launcher was asked, else why not.
+     */
+    static String pin(Context c) {
+        if (Build.VERSION.SDK_INT < 26) return "Needs Android 8 or newer.";
+        try {
+            ShortcutManager manager = c.getSystemService(ShortcutManager.class);
+            if (manager == null || !manager.isRequestPinShortcutSupported()) return "Your launcher can't add shortcuts.";
+            ShortcutInfo info = new ShortcutInfo.Builder(c, "secure_folder")
+                    .setShortLabel(c.getString(R.string.secure_folder))
+                    .setIcon(Icon.createWithResource(c, R.mipmap.ic_secure_folder))
+                    .setIntent(new Intent(c, SecureFolder.class).setAction(Intent.ACTION_MAIN))
+                    .build();
+            return manager.requestPinShortcut(info, null) ? null : "Your launcher didn't add it.";
+        } catch (RuntimeException e) {
+            return "Your launcher didn't add it.";
+        }
+    }
+
     /** Shows or hides the home screen icon (it exists only while there is a work profile and the person wants it). */
     static void icon(Context c, boolean on) {
         c.getPackageManager().setComponentEnabledSetting(new ComponentName(c, SecureFolder.class),
                 on ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP);
+        if (!on && Build.VERSION.SDK_INT >= 26) { // a shortcut put on the home screen goes too (greyed out), so the look doesn't linger
+            try {
+                ShortcutManager manager = c.getSystemService(ShortcutManager.class);
+                if (manager != null) manager.disableShortcuts(java.util.Collections.singletonList("secure_folder"),
+                        c.getString(R.string.secure_folder));
+            } catch (RuntimeException ignored) {
+            }
+        }
     }
 
     @Override
