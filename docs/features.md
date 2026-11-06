@@ -204,6 +204,13 @@ Android only lets privileged callers read saved Wi-Fi credentials. TinyKit runs 
 QR code is generated on the device by TinyKit's own encoder (`Qr.java`), so no library and no
 network are involved.
 
+**Export** saves every network and its password as plain text in `Download/TinyKit/wifi-….txt`
+(one `name, type, password` line each; TinyKit warns you, because anyone who gets the file can read
+the passwords). **Import** reads such a file and saves the networks this phone doesn't have yet,
+through `IWifiManager.addOrUpdateNetwork` as the `shell` user. Open and WPA networks come back;
+enterprise (EAP) networks have no password to export, and old WEP ones are refused by newer
+Android. Tried on Android 14.
+
 ---
 
 ## Apps tab
@@ -219,6 +226,10 @@ top.
 Set every sensitive permission and hidden app-op per app. **Fake** shows the app the permission
 as granted while it gets nothing. This is TinyKit's flagship feature, with its own guide:
 **[Fake permissions →](fake-permissions.md)**
+
+On an app's page, **All permissions** sets Real, Fake or Off for every permission shown in one tap.
+**Permissions by type** goes the other way: pick a permission (location, camera, microphone, ...)
+and see every app that asks for it, the ones that have it first, with a tap to open that app.
 
 <br clear="right">
 
@@ -325,6 +336,28 @@ does. TinyKit never uses `am start-user -w` (on a profile with its own PIN it wa
 puts a time limit on every command that talks to the profile. It stores only the list of auto-freeze
 apps and the waits; the profile and its apps are read back from Android each time.
 
+### Audio mixer
+
+A volume slider for each app, so one app can be quieter than another. **Apps tab > Audio mixer**
+(Android 13 or newer, needs Shizuku; older versions don't let Shizuku see which app is playing).
+At the top is the phone's media volume. **Open now** lists the apps playing right now first, then
+the other open apps (the recent-apps list), and **All apps** lists every app with a launcher icon
+with a search box. Apps in the work profile are in both lists, marked **Work profile**, with
+their own sliders. Sliders move in 5% steps and 0% mutes. A **Quick Settings tile** opens it.
+
+Android caps one app at 100%, so "louder" means raising the phone's volume and turning the others
+down. Volumes belong to the app, not to one song: the next video or song starts at the same
+level, and they come back after a restart once Shizuku is running again.
+
+How it works: Android lets the shell user scale any one player (the AudioTrack or MediaPlayer an app
+plays through) by a factor from 0 to 1. A small helper, started the way the sensors helper is,
+holds your volumes and applies them to each player within a third of a second of it starting,
+which is why it has to stay running while any app is lowered. It ends by itself a few seconds
+after you leave the screen if every app is back at 100%, and puts the players back to full volume
+as it goes. Running it takes about 45 MB, so TinyKit only keeps it for as long as it is needed. An
+app that plays through its own audio engine instead of Android's players (some games) can't be scaled.
+Other Shizuku mixers (VolumeManager, Volume++) use the same call and also need Android 13.
+
 ### Share menu pins
 
 Pin the apps you share to most, so they sit in the top row of Android's share menu and you don't
@@ -375,9 +408,10 @@ Android's audio system enforces both, so nothing runs in the background. ♻️
 
 ### Running apps
 
-Everything running, with its memory use (from `dumpsys meminfo`), sorted by memory or name, and
-a used/total RAM summary. Tap an app to stop it (`am force-stop`). Persistent system processes
-can't be stopped and are labelled as such.
+Everything running, with its memory use (from `dumpsys meminfo`) and its CPU use (from `top`'s second
+sample), sorted by memory, CPU or name, and a used/total RAM summary. Tap an app to stop it
+(`am force-stop`), or hold one to pick several and **Stop selected**. **Ask before stopping**
+turns the confirmation off. Persistent system processes can't be stopped and are labelled as such.
 
 ### Stop background activity
 

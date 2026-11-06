@@ -654,7 +654,6 @@ Search networks	Поиск сетей
 Searching…	Поиск…
 Security patch	Обновление безопасности
 See an app's log output (Huawei hides most of it).	Просмотр логов приложения (Huawei скрывает большую их часть).
-See saved passwords and share any network with a QR code.	Просматривайте сохранённые пароли и делитесь любой сетью через QR-код.
 See which ad and analytics libraries each app carries.	Просмотр рекламных и аналитических библиотек в каждом приложении.
 See why an app crashed or closed by itself.	Узнайте, почему приложение аварийно завершило работу или закрылось само.
 Send	Отправить
@@ -729,7 +728,6 @@ Tap a network to see its password and a QR code to share it.	Нажмите на
 Tap a tile to add it to the end of your panel.	Нажмите на плитку, чтобы добавить её в конец панели.
 Tap a tile to add it to your quick panel. On Android 13+ that's one tap; on older phones TinyKit shows where to drag it.	Нажмите на плитку, чтобы добавить её в панель быстрых настроек. В Android 13+ это делается в одно касание; на старых версиях TinyKit покажет, куда её перетащить.
 Tap an app to save its APK to Download/TinyKit.	Нажмите на приложение, чтобы сохранить его APK в папку Download/TinyKit.
-Tap an app to stop it. System processes can't be stopped.	Нажмите на приложение, чтобы остановить его. Системные процессы остановить нельзя.
 Tap another tile to swap them, use the buttons below, or tap it again to let go.	Нажмите на другую плитку, чтобы поменять их местами, используйте кнопки ниже или коснитесь её снова, чтобы отменить выбор.
 Tap to send the crash details so it can be fixed.	Нажмите, чтобы отправить сведения о сбое для его исправления.
 Tap to speed up	Нажмите для ускорения
@@ -1172,3 +1170,42 @@ This adds a second, separate space to your phone. Your own apps and data stay as
 Create	Создать
 Light theme	Светлая тема
 Use a light background instead of OLED black.	Использовать светлый фон вместо глубокого чёрного для OLED.
+Audio mixer	Аудиомикшер
+Turn one app's volume down so another stands out. Works for apps in the work profile too (Android 13+).	Уменьшите громкость одного приложения, чтобы другое было слышнее. Работает и с приложениями рабочего профиля (Android 13+).
+Phone volume	Громкость телефона
+Media volume	Громкость мультимедиа
+Android caps an app at 100%. To make one app louder, raise this and turn the others down.	Android не позволяет превысить 100% для одного приложения. Чтобы одно звучало громче, увеличьте этот ползунок и уменьшите остальные.
+Open now	Открыто сейчас
+No app is open. Open one, or start a video or a song, and it shows up here.	Нет открытых приложений. Откройте приложение или включите видео или песню — оно появится здесь.
+All apps	Все приложения
+Reset all volumes	Сбросить все уровни громкости
+Playing now	Играет сейчас
+App	Приложение
+Start Shizuku first. It is what lets TinyKit change one app's volume.	Сначала запустите Shizuku. Именно он позволяет TinyKit менять громкость отдельного приложения.
+TinyKit couldn't save the volumes. Is Shizuku running?	TinyKit не смог сохранить уровни громкости. Shizuku запущен?
+The mixer didn't start.	Микшер не запустился.
+Volume per app	Громкость по приложениям
+Permissions by type	Разрешения по типу
+Pick a permission, like location or camera, and see every app that asks for it and which ones have it.	Выберите разрешение, например геолокацию или камеру, и посмотрите, какие приложения его запрашивают и у каких оно есть.
+Pick a permission to see which apps ask for it and which have it.	Выберите разрешение, чтобы увидеть, какие приложения его запрашивают и у каких оно есть.
+of	из
+apps have it	приложений имеют его
+Allowed	Разрешено
+Not allowed	Не разрешено
+All permissions	Все разрешения
+Ask before stopping	Спрашивать перед остановкой
+Stop selected	Остановить выбранные
+They close now and can start again when you open them or they're needed.	Они закроются сейчас и смогут запуститься снова, когда вы их откроете или они понадобятся.
+Tap an app to stop it. Hold one to pick several. System processes can't be stopped.	Нажмите на приложение, чтобы остановить его. Удерживайте, чтобы выбрать несколько. Системные процессы остановить нельзя.
+CPU	ЦП
+Export	Экспорт
+Import	Импорт
+Export networks?	Экспортировать сети?
+Saves every network with its password as plain text in Download/TinyKit. Anyone who gets the file can read the passwords, so delete it when you're done.	Сохраняет каждую сеть с паролем открытым текстом в Download/TinyKit. Любой, у кого окажется файл, сможет прочитать пароли, поэтому удалите его, когда закончите.
+Couldn't save the file.	Не удалось сохранить файл.
+No exported networks yet. Export first, or put a wifi-….txt file in Download/TinyKit.	Пока нет экспортированных сетей. Сначала выполните экспорт или поместите файл wifi-….txt в Download/TinyKit.
+Import which file?	Какой файл импортировать?
+Added 	Добавлено 
+ networks that weren't saved yet.	 сетей, которых ещё не было в списке.
+This phone doesn't let TinyKit add networks.	Этот телефон не позволяет TinyKit добавлять сети.
+See saved passwords, share any network with a QR code, and export or import them.	Просмотр сохранённых паролей, обмен любой сетью через QR-код, экспорт и импорт.

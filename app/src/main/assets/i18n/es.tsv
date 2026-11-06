@@ -651,7 +651,6 @@ Search networks	Buscar redes
 Searching…	Buscando…
 Security patch	Parche de seguridad
 See an app's log output (Huawei hides most of it).	Mira el registro de una app (Huawei oculta la mayor parte).
-See saved passwords and share any network with a QR code.	Mira las contraseñas guardadas y comparte cualquier red con un código QR.
 See which ad and analytics libraries each app carries.	Mira qué bibliotecas de anuncios y análisis lleva cada app.
 See why an app crashed or closed by itself.	Mira por qué una app falló o se cerró sola.
 Send	Enviar
@@ -726,7 +725,6 @@ Tap a network to see its password and a QR code to share it.	Toca una red para v
 Tap a tile to add it to the end of your panel.	Toca un mosaico para agregarlo al final de tu panel.
 Tap a tile to add it to your quick panel. On Android 13+ that's one tap; on older phones TinyKit shows where to drag it.	Toca un mosaico para agregarlo a tu panel rápido. En Android 13 o posterior es un toque; en teléfonos más antiguos TinyKit te muestra dónde arrastrarlo.
 Tap an app to save its APK to Download/TinyKit.	Toca una app para guardar su APK en Download/TinyKit.
-Tap an app to stop it. System processes can't be stopped.	Toca una app para detenerla. Los procesos del sistema no se pueden detener.
 Tap another tile to swap them, use the buttons below, or tap it again to let go.	Toca otro mosaico para intercambiarlos, usa los botones de abajo, o tócalo otra vez para soltarlo.
 Tap to send the crash details so it can be fixed.	Toca para enviar los detalles del fallo y que se pueda arreglar.
 Tap to speed up	Toca para acelerar
@@ -1168,3 +1166,43 @@ This adds a second, separate space to your phone. Your own apps and data stay as
 Create	Crear
 Light theme	Tema claro
 Use a light background instead of OLED black.	Usa un fondo claro en lugar del negro OLED.
+Audio mixer	Mezclador de audio
+Turn one app's volume down so another stands out. Works for apps in the work profile too (Android 13+).	Baja el volumen de una app para que otra destaque. También funciona con apps del perfil de trabajo (Android 13+).
+Phone volume	Volumen del teléfono
+Media volume	Volumen multimedia
+Android caps an app at 100%. To make one app louder, raise this and turn the others down.	Android limita cada app al 100 %. Para que una suene más fuerte, sube este y baja las demás.
+Reset all volumes	Restablecer todos los volúmenes
+Playing now	Sonando ahora
+App	App
+Start Shizuku first. It is what lets TinyKit change one app's volume.	Inicia Shizuku primero. Es lo que permite a TinyKit cambiar el volumen de una app.
+TinyKit couldn't save the volumes. Is Shizuku running?	TinyKit no pudo guardar los volúmenes. ¿Shizuku está en marcha?
+The mixer didn't start.	El mezclador no se inició.
+
+Open now	Abiertas ahora
+No app is open. Open one, or start a video or a song, and it shows up here.	No hay ninguna app abierta. Abre una, o pon un vídeo o una canción, y aparece aquí.
+All apps	Todas las apps
+Volume per app	Volumen por app
+Permissions by type	Permisos por tipo
+Pick a permission, like location or camera, and see every app that asks for it and which ones have it.	Elige un permiso, como ubicación o cámara, y mira qué apps lo piden y cuáles lo tienen.
+Pick a permission to see which apps ask for it and which have it.	Elige un permiso para ver qué apps lo piden y cuáles lo tienen.
+of	de
+apps have it	apps lo tienen
+Allowed	Permitido
+Not allowed	No permitido
+All permissions	Todos los permisos
+Ask before stopping	Preguntar antes de detener
+Stop selected	Detener seleccionadas
+They close now and can start again when you open them or they're needed.	Se cierran ahora y pueden volver a iniciarse cuando las abras o se necesiten.
+Tap an app to stop it. Hold one to pick several. System processes can't be stopped.	Toca una app para detenerla. Mantén pulsada una para elegir varias. Los procesos del sistema no se pueden detener.
+CPU	CPU
+Export	Exportar
+Import	Importar
+Export networks?	¿Exportar redes?
+Saves every network with its password as plain text in Download/TinyKit. Anyone who gets the file can read the passwords, so delete it when you're done.	Guarda cada red con su contraseña como texto sin cifrar en Download/TinyKit. Quien reciba el archivo puede leer las contraseñas, así que bórralo al terminar.
+Couldn't save the file.	No se pudo guardar el archivo.
+No exported networks yet. Export first, or put a wifi-….txt file in Download/TinyKit.	Aún no hay redes exportadas. Exporta primero, o pon un archivo wifi-….txt en Download/TinyKit.
+Import which file?	¿Importar qué archivo?
+Added 	Se añadieron 
+ networks that weren't saved yet.	 redes que aún no estaban guardadas.
+This phone doesn't let TinyKit add networks.	Este teléfono no permite a TinyKit añadir redes.
+See saved passwords, share any network with a QR code, and export or import them.	Mira las contraseñas guardadas, comparte cualquier red con un código QR, y expórtalas o impórtalas.

@@ -74,6 +74,7 @@ tinykit/
 │       │   ├── Bloat.java          Safety ratings for the Debloater
 │       │   ├── Work.java           Work profile: create, add apps, freeze, pause, auto-freeze, shortcuts (pm commands)
 │       │   ├── WorkOpen.java       No-screen activity a work-app shortcut starts: unfreeze and open
+│       │   ├── Mixer.java          Audio mixer: app_process helper that scales each app's players, plus its settings and start-up
 │       │   ├── ShareTo.java        Share menu pins: sharing shortcuts, hands what is shared to the pinned app
 │       │   ├── ApkInstaller.java   Installs .apk, .apks, .xapk and .apkm through pm, streaming
 │       │   ├── WifiDump.java       app_process helper: saved Wi-Fi credentials
@@ -207,7 +208,7 @@ saves a shell call each time.
   five bottom tabs reset the stack. There are no fragments.
 - **Lists** use one generic `Adapter<T>` with a `Binder<T>` lambda, and app icons are loaded
   lazily.
-- **Theme**: Pure black (ndroid:Theme.Material, #000000) with accent #8C9EFF by default, or an optional soft light theme (ndroid:Theme.Material.Light, #F4F4F6) with accent #2962FF, and green/blue/red for Real/Fake/Off.
+- **Theme**: `android:Theme.Material` with a pure black background (`#000000`) and accent `#8C9EFF`, or the optional light theme (Info tab, `AppTheme_Light`: `#F4F4F6`, accent `#1A56DB`). Green, blue and red mean Real, Fake and Off.
 
 ## Threading
 

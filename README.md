@@ -141,16 +141,17 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Block internet per app** | Cuts chosen apps off Wi-Fi and mobile data (Android 14+) with Android's own per-app firewall, or blocks everything except the apps you allow. Nothing runs in the background unless you turn on *Run in the background*: the system enforces it, and TinyKit puts it back after a restart as soon as Shizuku is running. |
 | **Shut Up** | Pick apps (banking apps, games) that refuse to run with Developer options or USB or Wireless debugging on. While one is open they look off, and they come back when you leave it. Off by default; turning it on also turns on Run in the background, which it needs. |
 | **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
-| **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code. |
+| **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code, export them all to a file and import them on another phone. |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |
 
 ### Apps
 
 | Tool | What it does |
 | --- | --- |
-| **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**. [See above](#-fake-permissions). |
+| **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**, one at a time or all at once. **Permissions by type** shows which apps have a permission. [See above](#-fake-permissions). |
 | **Default apps** | Choose the launcher, browser, phone, SMS and assistant apps, and see which app opens each file type. |
 | **Work profile** | Makes a work profile in one tap (no setup screens, no extra app inside it) and manages it like Shelter, Island and Samsung's Secure Folder together: separate copies of apps, freeze one or all, **auto-freeze** chosen apps, a **PIN of its own** that locks it, **auto-lock** when the screen is off or after a restart, **pause** (switch or Quick Settings tile), **launcher shortcuts** that unfreeze and open an app, install APKs straight into it. |
+| **Audio mixer** | A volume slider for each app, so you can turn YouTube down and leave your music up, with the phone's media volume at the top. Shows the apps open now, and every app below with search, **including apps in the work profile**. Volumes stick for each new video or song. Has a Quick Settings tile (Android 13+). |
 | **Share menu pins** | Pins the apps you share to most in the top row of Android's share menu, so there is no scrolling to find them (Android 10+). |
 | **Hide apps** | Removes apps from the launcher, and they stop running until you restore them. |
 | **Unused apps** | Lists apps by how long since you last used them. |
@@ -165,7 +166,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Install options** | Allow downgrade, grant all permissions or allow test-only apps for the APK installer. |
 | **Installed with TinyKit** | The apps the installer put on, with a remove button. Stores nothing: read from Android's own records. |
 | **Install APK files** | Installs `.apk`, `.apks`, `.xapk` and `.apkm` files, including apps split into parts and game data. Streams the files, installs only the parts your phone needs. |
-| **More** | Running apps (stop any of them) · Stop background activity (full Restricted mode) · Keep apps alive · Back up an app as an APK |
+| **More** | Running apps (sort by memory or CPU, stop one or several) · Stop background activity (full Restricted mode) · Keep apps alive · Back up an app as an APK |
 
 ### System
 

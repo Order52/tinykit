@@ -30,6 +30,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.media.AudioManager;
 import android.media.MediaScannerConnection;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
@@ -75,6 +76,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -119,6 +121,8 @@ public class MainActivity extends Activity {
 
     /** Opens TinyKit on this tab (the background notification opens the Info tab). */
     static final String EXTRA_TAB = "tab";
+    /** Set by the Audio mixer tile: open the mixer page. */
+    static final String EXTRA_MIXER = "mixer";
     private static final int REQUEST_SHIZUKU = 1;
     private static final String SHIZUKU_PKG = "moe.shizuku.privileged.api";
     // thedjchi's fork adds a Watchdog that restarts Shizuku when Android kills it.
@@ -139,6 +143,7 @@ public class MainActivity extends Activity {
             + "ble_scan_always_enabled tether_dun_required mobile_data_always_on; do "
             + "echo \"$k=$(settings get global $k)\"; done";
     private static final Pattern PACKAGE = Pattern.compile("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+");
+    private static final Pattern CPUINFO = Pattern.compile("^\\s*\\d+\\s+([\\d.]+)\\s+(\\S+)");
     private static final Pattern MEMINFO = Pattern.compile("^\\s*([\\d,]+)K: (\\S+) \\(pid \\d+");
 
     private interface IsOn {
@@ -210,6 +215,7 @@ public class MainActivity extends Activity {
         String label;
         String pkg;
         long kb;
+        float cpu; // percent of the CPU in the recent past, from dumpsys cpuinfo
     }
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -340,6 +346,10 @@ public class MainActivity extends Activity {
         // main loop, and any of them is built on the spot if it is needed sooner (a tap, the search).
         buildTab(0); // Shizuku's status views are updated whenever its binder comes or goes
         selectTab(tab);
+        if (getIntent().getBooleanExtra(EXTRA_MIXER, false)) {
+            getIntent().removeExtra(EXTRA_MIXER); // so turning the phone doesn't open it again
+            if (Mixer.supported()) main.post(this::openMixer);
+        }
         root.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
             @Override
             public boolean onPreDraw() {
@@ -523,6 +533,10 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         if (intent.hasExtra(EXTRA_TAB)) {
             selectTab(Math.max(0, Math.min(intent.getIntExtra(EXTRA_TAB, 0), TAB_NAMES.length - 1)));
+        }
+        if (intent.getBooleanExtra(EXTRA_MIXER, false) && Mixer.supported()) {
+            selectTab(2); // the Apps tab, so Back from the mixer lands where the row is
+            openMixer();
         }
     }
 
@@ -1248,7 +1262,7 @@ public class MainActivity extends Activity {
                         ? "Cut chosen apps off Wi-Fi and mobile data."
                         : "Needs Android 14 or newer.", this::openFirewall);
         link(list, "Saved Wi-Fi networks",
-                "See saved passwords and share any network with a QR code.", this::openWifi);
+                "See saved passwords, share any network with a QR code, and export or import them.", this::openWifi);
 
         section(list, "Tracking");
         link(list, "Analytics & telemetry",
@@ -1273,6 +1287,8 @@ public class MainActivity extends Activity {
                         this::openAppPage));
         link(list, "Special access", "Install unknown apps, draw over apps, all files access and more, "
                 + "per app.", this::openSpecialAccess);
+        link(list, "Permissions by type", "Pick a permission, like location or camera, and see every app "
+                + "that asks for it and which ones have it.", this::openPermissionTypes);
         action(list, "Repair permissions",
                 "If the camera or microphone stopped working (\"Can't connect to the camera\", mic only works in "
                         + "calls) or an app you never changed broke, this fixes it.", () -> {
@@ -1290,6 +1306,8 @@ public class MainActivity extends Activity {
         section(list, "Manage");
         link(list, "Work profile", "A separate space for apps, with their own data and accounts. Freeze them "
                 + "when you don't need them.", this::openWork);
+        if (Mixer.supported()) link(list, "Audio mixer", "Turn one app's volume down so another stands out. "
+                + "Works for apps in the work profile too (Android 13+).", this::openMixer);
         if (ShareTo.supported()) row(list, "Share menu pins", "Pin the apps you share to most. They show "
                 + "in the top row of the share menu, so you don't scroll to find them (Android 10+).", arrow(),
                 this::openSharePins, false);
@@ -1599,6 +1617,402 @@ public class MainActivity extends Activity {
                     }
                     return found;
                 });
+    }
+
+    // ---- Audio mixer ------------------------------------------------------------------------
+
+    /** One app of the mixer, by uid: a work profile's copy of an app has its own uid. */
+    private static final class Voice {
+        int uid;
+        String pkg;
+        String label;
+        boolean work;
+    }
+
+    private final java.util.concurrent.atomic.AtomicBoolean mixerQueued = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /** Sends the volumes to the helper; changes made while it is busy ride along with the next send. */
+    private void mixerApply() {
+        if (mixerQueued.getAndSet(true)) return;
+        worker.execute(() -> {
+            mixerQueued.set(false);
+            Mixer.apply(this, prefs);
+        });
+    }
+
+    /** The app behind a uid. A work profile's apps are copies of the main profile's, with the same app id. */
+    private Voice voice(int uid) {
+        Voice v = new Voice();
+        v.uid = uid;
+        int owner = Work.parent();
+        v.work = uid / 100000 != owner;
+        v.label = Tr.t("App") + " " + uid;
+        PackageManager pm = getPackageManager();
+        String[] names = pm.getPackagesForUid(uid % 100000 + owner * 100000);
+        if (names != null && names.length > 0) {
+            v.pkg = names[0];
+            try {
+                v.label = String.valueOf(pm.getApplicationInfo(v.pkg, 0).loadLabel(pm));
+            } catch (PackageManager.NameNotFoundException e) {
+                v.label = v.pkg;
+            }
+        }
+        return v;
+    }
+
+    private static String percentText(int percent) {
+        return percent == 0 ? Tr.t("Muted") : percent + "%";
+    }
+
+    private SeekBar slider(int max, int progress) {
+        SeekBar bar = new SeekBar(this);
+        bar.setMax(max);
+        bar.setProgress(progress);
+        android.content.res.ColorStateList accent = android.content.res.ColorStateList.valueOf(
+                attrColor(android.R.attr.colorAccent));
+        bar.setProgressTintList(accent);
+        bar.setThumbTintList(accent);
+        return bar;
+    }
+
+    private interface Changed {
+        void to(int progress, boolean fromUser);
+    }
+
+    private static void onSlide(SeekBar bar, boolean[] dragging, Changed changed) {
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar b, int progress, boolean fromUser) {
+                changed.to(progress, fromUser);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar b) {
+                dragging[0] = true;
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar b) {
+                dragging[0] = false;
+            }
+        });
+    }
+
+    /** One app's line in the mixer: icon, name, what it is doing, its percent, and the slider. */
+    private final class MixRow {
+        final LinearLayout view = vertical();
+        final ImageView icon = new ImageView(MainActivity.this);
+        final TextView name = text("", 16, false);
+        final TextView sub = text("", 13, false);
+        final TextView value = text("", 14, true);
+        final SeekBar bar = slider(20, 20);
+        Voice voice;
+
+        MixRow(Map<Integer, Integer> volumes, boolean[] dragging) {
+            view.setPadding(dp(16), dp(10), dp(16), dp(2));
+            LinearLayout top = new LinearLayout(MainActivity.this);
+            top.setGravity(Gravity.CENTER_VERTICAL);
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(dp(40), dp(40));
+            size.setMargins(0, 0, dp(14), 0);
+            top.addView(icon, size);
+            LinearLayout texts = vertical();
+            texts.addView(name);
+            sub.setAlpha(0.7f);
+            texts.addView(sub);
+            top.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
+            top.addView(value);
+            view.addView(top);
+            view.addView(bar);
+            view.setTag(this);
+            onSlide(bar, dragging, (progress, fromUser) -> {
+                value.setText(percentText(progress * 5));
+                if (!fromUser || voice == null) return;
+                if (progress == 20) volumes.remove(voice.uid);
+                else volumes.put(voice.uid, progress * 5);
+                Mixer.save(prefs, volumes);
+                mixerApply();
+            });
+        }
+
+        void bind(Voice v, String state, int percent) {
+            voice = v;
+            name.setText(v.label);
+            sub.setText(state);
+            icon.setTag(null);
+            if (v.pkg != null) showIcon(icon, v.pkg);
+            else icon.setImageResource(android.R.drawable.sym_def_app_icon);
+            value.setText(percentText(percent));
+            bar.setProgress(percent / 5);
+        }
+    }
+
+    /** The audio mixer: the apps open now on top, every app below, a volume slider for each. */
+    private void openMixer() {
+        final Map<Integer, Integer> volumes = new java.util.TreeMap<>();
+        final Set<Integer> playing = new HashSet<>();
+        final List<Integer> open = new ArrayList<>();
+        final String[] shown = {null}; // what the "open now" part was drawn from
+        final boolean[] dragging = {false};
+        final int[] gen = {0};
+        final boolean[] polling = {false};
+        final boolean[] wasAlive = {false};
+        final List<Voice> all = new ArrayList<>();
+        final List<Voice> filtered = new ArrayList<>();
+        final Set<Integer> launchable = new HashSet<>();
+
+        ListView page = new ListView(this);
+        page.setDivider(null);
+        page.setHeaderDividersEnabled(false);
+        LinearLayout top = vertical();
+        LinearLayout upper = vertical(); // everything above the list of all apps, hidden while searching
+        top.addView(upper);
+
+        TextView problem = text("", 13, false);
+        problem.setTextColor(attrColor(android.R.attr.colorAccent));
+        problem.setPadding(dp(16), dp(12), dp(16), dp(12));
+        problem.setBackground(roundRect(lightTheme ? 0xFFFFFFFF : 0xFF121212, 16));
+        problem.setVisibility(View.GONE);
+        LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-1, -2);
+        margin.setMargins(dp(12), dp(8), dp(12), 0);
+        upper.addView(problem, margin);
+
+        section(upper, "Phone volume");
+        AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+        LinearLayout master = vertical();
+        master.setPadding(dp(16), dp(4), dp(16), dp(4));
+        LinearLayout masterTop = new LinearLayout(this);
+        masterTop.setGravity(Gravity.CENTER_VERTICAL);
+        masterTop.addView(text("Media volume", 16, false), new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView masterValue = text("", 14, true);
+        masterTop.addView(masterValue);
+        master.addView(masterTop);
+        int steps = Math.max(1, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC));
+        SeekBar masterBar = slider(steps, audio.getStreamVolume(AudioManager.STREAM_MUSIC));
+        master.addView(masterBar);
+        upper.addView(master);
+        final boolean[] masterDragging = {false};
+        onSlide(masterBar, masterDragging, (progress, fromUser) -> {
+            masterValue.setText(progress * 100 / steps + "%");
+            if (fromUser) audio.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0);
+        });
+        masterValue.setText(masterBar.getProgress() * 100 / steps + "%");
+        upper.addView(note("Android caps an app at 100%. To make one app louder, raise this and turn the others down."));
+
+        section(upper, "Open now");
+        LinearLayout openBox = vertical();
+        upper.addView(openBox);
+        TextView empty = note("No app is open. Open one, or start a video or a song, and it shows up here.");
+        upper.addView(empty);
+
+        Button reset = button("Reset all volumes", v -> {
+            volumes.clear();
+            Mixer.save(prefs, volumes);
+            mixerApply();
+            shown[0] = null;
+            ((Runnable) page.getTag()).run();
+        });
+        reset.setPadding(dp(24), 0, dp(24), 0);
+        LinearLayout.LayoutParams resetMargin = new LinearLayout.LayoutParams(-2, -2);
+        resetMargin.setMargins(dp(16), dp(8), dp(16), dp(4));
+        upper.addView(reset, resetMargin);
+        section(top, "All apps");
+        EditText search = searchField("Search apps");
+        LinearLayout.LayoutParams searchMargin = fieldMargin();
+        searchMargin.setMargins(dp(12), dp(4), dp(12), dp(4));
+        top.addView(search, searchMargin);
+        page.addHeaderView(top, null, false);
+
+        BaseAdapter adapter = new BaseAdapter() {
+            @Override
+            public int getCount() {
+                return filtered.size();
+            }
+
+            @Override
+            public Object getItem(int position) {
+                return filtered.get(position);
+            }
+
+            @Override
+            public long getItemId(int position) {
+                return position;
+            }
+
+            @Override
+            public View getView(int position, View convert, ViewGroup parent) {
+                MixRow row = convert == null ? new MixRow(volumes, dragging) : (MixRow) convert.getTag();
+                Voice v = filtered.get(position);
+                row.bind(v, state(v.uid, v.work, v.pkg, playing, open), volumes.getOrDefault(v.uid, 100));
+                return row.view;
+            }
+        };
+        page.setAdapter(adapter);
+
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            filtered.clear();
+            for (Voice v : all) {
+                if (v.label.toLowerCase(Locale.ROOT).contains(q) || (v.pkg != null && v.pkg.toLowerCase(Locale.ROOT).contains(q))) {
+                    filtered.add(v);
+                }
+            }
+            adapter.notifyDataSetChanged();
+        };
+        // Searching hides the open apps above, so the matches sit right under the box, not under the keyboard.
+        search.addTextChangedListener(watcher(() -> {
+            upper.setVisibility(search.length() > 0 ? View.GONE : View.VISIBLE);
+            filter.run();
+        }));
+
+        // The "open now" part: playing apps first, then the rest of the open ones, most recent first.
+        Runnable drawOpen = () -> {
+            openBox.removeAllViews();
+            List<Integer> ids = new ArrayList<>(playing);
+            for (int uid : open) if (!ids.contains(uid) && launchable.contains(uid) && uid % 100000 >= 10000) ids.add(uid);
+            for (int uid : ids) {
+                MixRow row = new MixRow(volumes, dragging);
+                Voice v = voice(uid);
+                row.bind(v, state(uid, v.work, null, playing, open), volumes.getOrDefault(uid, 100));
+                openBox.addView(row.view);
+            }
+            empty.setVisibility(ids.isEmpty() ? View.VISIBLE : View.GONE);
+            reset.setVisibility(volumes.isEmpty() ? View.GONE : View.VISIBLE);
+            shown[0] = playing + "|" + open;
+        };
+
+        class Loop implements Runnable {
+            final int g;
+
+            Loop(int g) {
+                this.g = g;
+            }
+
+            @Override
+            public void run() {
+                if (g != gen[0] || !alive() || !page.isAttachedToWindow()) return;
+                main.postDelayed(this, 1500);
+                if (page.getWindowVisibility() != View.VISIBLE) return;
+                if (!masterDragging[0]) {
+                    masterBar.setProgress(audio.getStreamVolume(AudioManager.STREAM_MUSIC));
+                }
+                if (polling[0] || !Shell.ready()) return;
+                polling[0] = true;
+                reads.execute(() -> {
+                    Mixer.State state = Mixer.poll();
+                    // It died (Shizuku stopped, say): start it again once, so the volumes hold.
+                    String error = !state.alive && wasAlive[0] ? Mixer.apply(MainActivity.this, prefs) : null;
+                    main.post(() -> {
+                        polling[0] = false;
+                        if (g != gen[0]) return;
+                        wasAlive[0] = state.alive;
+                        if (error != null) {
+                            problem.setText(Tr.t(error));
+                            problem.setVisibility(View.VISIBLE);
+                        }
+                        if (state.alive && !dragging[0] && !(state.playing + "|" + state.open).equals(shown[0])) {
+                            playing.clear();
+                            playing.addAll(state.playing);
+                            open.clear();
+                            open.addAll(state.open);
+                            drawOpen.run();
+                            adapter.notifyDataSetChanged(); // "Playing now" and "Open" in the list below
+                        }
+                    });
+                });
+            }
+        }
+
+        // Runs whenever the page comes into view: reads what is saved, starts the helper, and watches it.
+        page.setTag((Runnable) () -> {
+            int g = ++gen[0];
+            volumes.clear();
+            volumes.putAll(Mixer.rules(prefs));
+            playing.clear();
+            open.clear();
+            drawOpen.run();
+            adapter.notifyDataSetChanged();
+            worker.execute(() -> {
+                List<Voice> found = mixerApps();
+                // Anything lowered earlier stays reachable, even an app that has no launcher icon any more.
+                Set<Integer> have = new HashSet<>();
+                for (Voice v : found) have.add(v.uid);
+                for (int uid : volumes.keySet()) if (have.add(uid)) found.add(voice(uid));
+                Collections.sort(found, (x, y) -> volumes.containsKey(x.uid) != volumes.containsKey(y.uid)
+                        ? (volumes.containsKey(x.uid) ? -1 : 1) : x.label.compareToIgnoreCase(y.label) != 0
+                        ? x.label.compareToIgnoreCase(y.label) : Boolean.compare(x.work, y.work));
+                main.post(() -> {
+                    if (g != gen[0]) return;
+                    all.clear();
+                    all.addAll(found);
+                    launchable.clear();
+                    for (Voice v : found) launchable.add(v.uid);
+                    filter.run();
+                });
+            });
+            if (!Shell.ready()) {
+                problem.setText(Tr.t("Start Shizuku first. It is what lets TinyKit change one app's volume."));
+                problem.setVisibility(View.VISIBLE);
+                return;
+            }
+            problem.setVisibility(View.GONE);
+            worker.execute(() -> {
+                String error = Mixer.apply(this, prefs);
+                main.post(() -> {
+                    if (g != gen[0]) return;
+                    wasAlive[0] = error == null;
+                    if (error != null) {
+                        problem.setText(Tr.t(error));
+                        problem.setVisibility(View.VISIBLE);
+                    } else {
+                        new Loop(g).run();
+                    }
+                });
+            });
+        });
+        push("Audio mixer", page);
+    }
+
+    private static String state(int uid, boolean work, String pkg, Set<Integer> playing, List<Integer> open) {
+        String s = (work ? Tr.t("Work profile") : "");
+        String what = playing.contains(uid) ? Tr.t("Playing now") : open.contains(uid) ? Tr.t("Open") : "";
+        if (!what.isEmpty()) s += (s.isEmpty() ? "" : " · ") + what;
+        return s.isEmpty() && pkg != null ? pkg : s;
+    }
+
+    /** Every app with a launcher icon, in this profile and in the work profile. */
+    private List<Voice> mixerApps() {
+        PackageManager pm = getPackageManager();
+        List<Voice> out = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        Intent launcher = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        for (android.content.pm.ResolveInfo r : pm.queryIntentActivities(launcher, 0)) {
+            ApplicationInfo info = r.activityInfo.applicationInfo;
+            if (info.packageName.equals(getPackageName()) || !seen.add(info.packageName)) continue;
+            Voice v = new Voice();
+            v.uid = info.uid;
+            v.pkg = info.packageName;
+            v.label = String.valueOf(info.loadLabel(pm));
+            out.add(v);
+        }
+        int work = Work.id(this);
+        if (work >= 0) {
+            for (Work.App a : Work.apps(this, work)) {
+                try {
+                    ApplicationInfo info = pm.getApplicationInfo(a.pkg, 0);
+                    Voice v = new Voice();
+                    v.uid = work * 100000 + info.uid % 100000;
+                    v.pkg = a.pkg;
+                    v.label = String.valueOf(info.loadLabel(pm));
+                    v.work = true;
+                    out.add(v);
+                } catch (PackageManager.NameNotFoundException e) {
+                    // only in the work profile: no label or icon to show
+                }
+            }
+        }
+        Collections.sort(out, (a, b) -> a.label.compareToIgnoreCase(b.label) != 0
+                ? a.label.compareToIgnoreCase(b.label) : Boolean.compare(a.work, b.work));
+        return out;
     }
 
     // ---- Clipboard guard ------------------------------------------------------------------
@@ -2975,33 +3389,50 @@ public class MainActivity extends Activity {
 
     // ---- Running apps -------------------------------------------------------------------
 
+    private static final String PREF_STOP_ASK = "stop_ask";
+
     private void openRunning() {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView summary = text("Loading…", 15, true);
         page.addView(summary);
-        TextView help = text("Tap an app to stop it. System processes can't be stopped.", 13, false);
+        TextView help = text("Tap an app to stop it. Hold one to pick several. System processes can't be stopped.", 13, false);
         setDim(help, 0.7f);
         page.addView(help);
+        CheckBox ask = new CheckBox(this);
+        ask.setText(Tr.t("Ask before stopping"));
+        ask.setChecked(prefs.getBoolean(PREF_STOP_ASK, true));
+        ask.setOnCheckedChangeListener((v, on) -> prefs.edit().putBoolean(PREF_STOP_ASK, on).apply());
+        page.addView(ask);
         ListView listView = new ListView(this);
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        Button stopSelected = primary(button("", null));
+        stopSelected.setVisibility(View.GONE);
+        LinearLayout.LayoutParams stopMargin = new LinearLayout.LayoutParams(-1, -2);
+        stopMargin.setMargins(0, dp(8), 0, dp(8));
+        page.addView(stopSelected, stopMargin);
         push("Running apps", page);
 
-        Adapter<Proc> adapter = new Adapter<>(false, (p, row) -> {
+        final List<Proc> procs = new ArrayList<>();
+        final Set<String> picked = new HashSet<>(); // packages chosen with a long press
+        Adapter<Proc> adapter = new Adapter<>(true, (p, row) -> {
             row.first.setText(Tr.t(p.label));
             row.second.setText(Tr.t(Formatter.formatShortFileSize(this, p.kb * 1024)
+                    + String.format(Locale.US, "  ·  %.1f%% CPU", p.cpu)
                     + (p.label.equals(p.name) ? "" : "  ·  " + p.name)));
+            row.check.setVisibility(picked.isEmpty() || p.pkg == null ? View.GONE : View.VISIBLE);
+            row.check.setChecked(p.pkg != null && picked.contains(p.pkg));
             showIcon(row, p.name.split(":")[0]);
         });
         listView.setAdapter(adapter);
-        final List<Proc> procs = new ArrayList<>();
         final int[] sort = {0};
         Runnable apply = () -> {
-            if (sort[0] == 1) Collections.sort(procs, (x, y) -> x.label.compareToIgnoreCase(y.label));
+            if (sort[0] == 2) Collections.sort(procs, (x, y) -> x.label.compareToIgnoreCase(y.label));
+            else if (sort[0] == 1) Collections.sort(procs, (x, y) -> Float.compare(y.cpu, x.cpu));
             else Collections.sort(procs, (x, y) -> Long.compare(y.kb, x.kb));
             adapter.set(procs);
         };
-        page.addView(sortBar(new String[]{"Memory", "Name"}, i -> {
+        page.addView(sortBar(new String[]{"Memory", "CPU", "Name"}, i -> {
             sort[0] = i;
             apply.run();
         }), 2);
@@ -3018,22 +3449,65 @@ public class MainActivity extends Activity {
                 apply.run();
             });
         });
+        // Stops the given packages one after the other, then reads the list again.
+        java.util.function.Consumer<List<String>> stop = pkgs -> worker.execute(() -> {
+            String error = null;
+            for (String pkg : pkgs) {
+                String e = error(Shell.run("am force-stop " + Shell.quote(pkg)));
+                if (e != null) error = e;
+            }
+            String failed = error;
+            main.post(() -> {
+                picked.clear();
+                stopSelected.setVisibility(View.GONE);
+                if (failed != null) toast(Tr.t(failed));
+                load[0].run();
+            });
+        });
+        Runnable showPicked = () -> {
+            stopSelected.setVisibility(picked.isEmpty() ? View.GONE : View.VISIBLE);
+            stopSelected.setText(Tr.t("Stop selected") + " (" + picked.size() + ")");
+            adapter.notifyDataSetChanged();
+        };
+        stopSelected.setOnClickListener(v -> {
+            List<String> pkgs = new ArrayList<>(picked);
+            if (!prefs.getBoolean(PREF_STOP_ASK, true)) {
+                stop.accept(pkgs);
+                return;
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle(Tr.t("Stop selected") + " (" + pkgs.size() + ")?")
+                    .setMessage(Tr.t("They close now and can start again when you open them or they're needed."))
+                    .setPositiveButton(Tr.t("Stop"), (d, w) -> stop.accept(pkgs))
+                    .setNegativeButton(Tr.t("Cancel"), null)
+                    .show();
+        });
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            Proc p = adapter.getItem(position);
+            if (p.pkg == null) return true;
+            if (!picked.remove(p.pkg)) picked.add(p.pkg);
+            showPicked.run();
+            return true;
+        });
         listView.setOnItemClickListener((parent, view, position, id) -> {
             Proc p = adapter.getItem(position);
             if (p.pkg == null) {
                 toast(Tr.t("This is a system process and can't be stopped."));
                 return;
             }
+            if (!picked.isEmpty()) { // choosing several: a tap adds or removes
+                if (!picked.remove(p.pkg)) picked.add(p.pkg);
+                showPicked.run();
+                return;
+            }
+            if (!prefs.getBoolean(PREF_STOP_ASK, true)) {
+                stop.accept(java.util.Collections.singletonList(p.pkg));
+                return;
+            }
             new AlertDialog.Builder(this)
                     .setTitle(Tr.t("Stop " + p.label + "?"))
                     .setMessage(Tr.t("It closes now and can start again when you open it or it's needed."))
-                    .setPositiveButton(Tr.t("Stop"), (d, w) -> worker.execute(() -> {
-                        String error = error(Shell.run("am force-stop " + Shell.quote(p.pkg)));
-                        main.post(() -> {
-                            if (error != null) toast(Tr.t(error));
-                            load[0].run();
-                        });
-                    }))
+                    .setPositiveButton(Tr.t("Stop"), (d, w) -> stop.accept(java.util.Collections.singletonList(p.pkg)))
                     .setNegativeButton(Tr.t("Cancel"), null)
                     .show();
         });
@@ -3042,7 +3516,17 @@ public class MainActivity extends Activity {
 
     private List<Proc> runningProcesses() {
         List<Proc> list = new ArrayList<>();
-        String out = Shell.run("dumpsys meminfo | sed -n '/Total PSS by process/,/^$/p'").out;
+        // CPU comes from top's second sample (the first only has averages since boot), read while meminfo runs.
+        String[] both = Shell.run("f=/data/local/tmp/tinykit-top; top -b -n 2 -d 1 -o PID,%CPU,ARGS >$f 2>/dev/null & "
+                + "dumpsys meminfo | sed -n '/Total PSS by process/,/^$/p'; wait; echo @@; cat $f; rm -f $f").out.split("@@", 2);
+        String out = both[0];
+        Map<String, Float> cpu = new HashMap<>();
+        if (both.length > 1) {
+            for (String line : both[1].split("\n")) {
+                Matcher c = CPUINFO.matcher(line);
+                if (c.find()) cpu.put(c.group(2), Float.parseFloat(c.group(1))); // the later sample wins
+            }
+        }
         PackageManager pm = getPackageManager();
         for (String line : out.split("\n")) {
             Matcher m = MEMINFO.matcher(line);
@@ -3050,6 +3534,8 @@ public class MainActivity extends Activity {
             Proc p = new Proc();
             p.kb = Long.parseLong(m.group(1).replace(",", ""));
             p.name = m.group(2);
+            if (p.name.equals("top")) continue; // the sampler started just above
+            p.cpu = cpu.getOrDefault(p.name, 0f);
             String pkg = p.name.split(":")[0];
             p.label = p.name;
             try {
@@ -4629,6 +5115,90 @@ public class MainActivity extends Activity {
             {"VIBRATE", "Vibrate"}};
 
     /** Lists installed apps and calls {@code onPick} with the one tapped. */
+    /** Every sensitive permission with how many apps hold it; a tap lists those apps. */
+    private void openPermissionTypes() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView help = text("Pick a permission to see which apps ask for it and which have it.", 14, false);
+        setDim(help, 0.8f);
+        page.addView(help);
+        TextView loading = text("Reading permissions…", 14, false);
+        page.addView(loading);
+        ListView listView = new ListView(this);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Permissions by type", page);
+        final Map<String, List<App>> byPermission = new HashMap<>();
+        Adapter<String[]> adapter = new Adapter<>(false, (op, row) -> {
+            List<App> apps = byPermission.get(op[2]);
+            int has = 0;
+            if (apps != null) for (App a : apps) if (a.checked) has++;
+            row.first.setText(Tr.t(op[1]));
+            row.second.setText(apps == null ? "" : has + " " + Tr.t("of") + " " + apps.size() + " " + Tr.t("apps have it"));
+        });
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String[] op = adapter.getItem(position);
+            List<App> apps = byPermission.get(op[2]);
+            if (apps != null) openPermissionApps(op[1], apps);
+        });
+        worker.execute(() -> {
+            PackageManager pm = getPackageManager();
+            for (PackageInfo info : pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)) {
+                if (info.requestedPermissions == null || info.packageName.equals(getPackageName())) continue;
+                for (int i = 0; i < info.requestedPermissions.length; i++) {
+                    for (String[] op : PERMISSION_OPS) {
+                        if (!op[2].equals(info.requestedPermissions[i])) continue;
+                        App a = new App();
+                        a.pkg = info.packageName;
+                        a.label = info.applicationInfo == null ? info.packageName
+                                : String.valueOf(info.applicationInfo.loadLabel(pm));
+                        a.checked = (info.requestedPermissionsFlags[i] & PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0;
+                        byPermission.computeIfAbsent(op[2], k -> new ArrayList<>()).add(a);
+                    }
+                }
+            }
+            List<String[]> shown = new ArrayList<>();
+            for (String[] op : PERMISSION_OPS) if (byPermission.containsKey(op[2])) shown.add(op);
+            main.post(() -> {
+                loading.setVisibility(View.GONE);
+                adapter.set(shown);
+            });
+        });
+    }
+
+    /** The apps that ask for one permission, the ones that have it first. A tap opens that app's permissions. */
+    private void openPermissionApps(String title, List<App> apps) {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        EditText search = searchField("Search apps");
+        page.addView(search, fieldMargin());
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push(title, page);
+        Adapter<App> adapter = new Adapter<>(false, (a, row) -> {
+            row.first.setText(a.label);
+            row.second.setText(a.pkg);
+            row.third.setText(Tr.t(a.checked ? "Allowed" : "Not allowed"));
+            row.third.setTextColor(a.checked ? stateColor("Real") : stateColor("Off"));
+            showIcon(row, a.pkg);
+        });
+        listView.setAdapter(adapter);
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            List<App> shown = new ArrayList<>();
+            for (App a : apps) {
+                if (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.toLowerCase(Locale.ROOT).contains(q)) shown.add(a);
+            }
+            Collections.sort(shown, (x, y) -> x.checked != y.checked ? (x.checked ? -1 : 1)
+                    : x.label.compareToIgnoreCase(y.label));
+            adapter.set(shown);
+        };
+        search.addTextChangedListener(watcher(filter));
+        listView.setOnItemClickListener((parent, view, position, id) -> openAppPage(adapter.getItem(position).pkg));
+        filter.run();
+    }
+
     private void openAppList(String title, String help, OnText onPick) {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
@@ -4734,14 +5304,15 @@ public class MainActivity extends Activity {
             main.post(() -> {
                 list.removeView(loading);
                 section(list, "Permissions");
-                boolean any = false;
+                List<java.util.function.Consumer<String>> setters = new ArrayList<>();
+                int allAt = list.getChildCount();
                 for (String[] op : PERMISSION_OPS) {
                     if (requested.contains(op[2]) || granted.contains(op[2])) {
-                        opRow(list, pkg, op, true, stateOf(true, granted.contains(op[2]), modes.get(op[0])));
-                        any = true;
+                        setters.add(opRow(list, pkg, op, true, stateOf(true, granted.contains(op[2]), modes.get(op[0]))));
                     }
                 }
-                if (!any) list.addView(note("This app requests no sensitive permissions."));
+                if (setters.isEmpty()) list.addView(note("This app requests no sensitive permissions."));
+                else list.addView(allRow(setters), allAt); // one tap for every permission shown below
                 section(list, "Hidden app-ops");
                 for (String[] op : HIDDEN_OPS) {
                     opRow(list, pkg, op, false, stateOf(false, false, modes.get(op[0])));
@@ -4751,7 +5322,8 @@ public class MainActivity extends Activity {
     }
 
     /** A permission with an inline Real / Fake / Off segmented control — one tap to change. */
-    private void opRow(LinearLayout list, String pkg, String[] op, boolean permission, String initial) {
+    private java.util.function.Consumer<String> opRow(LinearLayout list, String pkg, String[] op, boolean permission,
+                                                       String initial) {
         final String[] state = {initial};
         LinearLayout block = vertical();
         block.setPadding(dp(16), dp(10), dp(16), dp(6));
@@ -4763,31 +5335,32 @@ public class MainActivity extends Activity {
         final Runnable render = () -> {
             for (int i = 0; i < 3; i++) stylePill(pills[i], keys[i], keys[i].equals(state[0]));
         };
+        final java.util.function.Consumer<String> choose = target -> {
+            if (!Shell.ready()) {
+                toast(Tr.t("Start Shizuku and allow TinyKit first."));
+                return;
+            }
+            if (target.equals(state[0])) return;
+            state[0] = target;
+            render.run();
+            worker.execute(() -> {
+                String err = setOp(pkg, op, permission, target);
+                // Remembered (Real, Fake or Off) so Android can't quietly change it back.
+                if (err == null) FakePolicy.choose(prefs, pkg, op[0], permission ? op[2] : "", target);
+                String now = readState(pkg, op, permission);
+                main.post(() -> {
+                    state[0] = now;
+                    render.run();
+                    if (err != null) toast(Tr.t(err));
+                });
+            });
+        };
         for (int i = 0; i < 3; i++) {
             final String target = keys[i];
             TextView pill = text(target, 13, true);
             pill.setGravity(Gravity.CENTER);
             pill.setPadding(0, dp(9), 0, dp(9));
-            pill.setOnClickListener(v -> {
-                if (!Shell.ready()) {
-                    toast(Tr.t("Start Shizuku and allow TinyKit first."));
-                    return;
-                }
-                if (target.equals(state[0])) return;
-                state[0] = target;
-                render.run();
-                worker.execute(() -> {
-                    String err = setOp(pkg, op, permission, target);
-                    // Remembered (Real, Fake or Off) so Android can't quietly change it back.
-                    if (err == null) FakePolicy.choose(prefs, pkg, op[0], permission ? op[2] : "", target);
-                    String now = readState(pkg, op, permission);
-                    main.post(() -> {
-                        state[0] = now;
-                        render.run();
-                        if (err != null) toast(Tr.t(err));
-                    });
-                });
-            });
+            pill.setOnClickListener(v -> choose.accept(target));
             pills[i] = pill;
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
             lp.setMargins(i == 0 ? 0 : dp(4), 0, i == 2 ? 0 : dp(4), 0);
@@ -4796,6 +5369,32 @@ public class MainActivity extends Activity {
         block.addView(seg);
         render.run();
         list.addView(block);
+        return choose;
+    }
+
+    /** "All permissions": Real, Fake or Off applied to every permission row of the page in one tap. */
+    private View allRow(List<java.util.function.Consumer<String>> setters) {
+        LinearLayout block = vertical();
+        block.setPadding(dp(16), dp(10), dp(16), dp(6));
+        block.addView(text("All permissions", 16, true));
+        LinearLayout seg = new LinearLayout(this);
+        seg.setPadding(0, dp(8), 0, 0);
+        String[] keys = {"Real", "Fake", "Off"};
+        for (int i = 0; i < 3; i++) {
+            String target = keys[i];
+            TextView pill = text(target, 13, true);
+            pill.setGravity(Gravity.CENTER);
+            pill.setPadding(0, dp(9), 0, dp(9));
+            stylePill(pill, target, false);
+            pill.setOnClickListener(v -> {
+                for (java.util.function.Consumer<String> set : setters) set.accept(target);
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+            lp.setMargins(i == 0 ? 0 : dp(4), 0, i == 2 ? 0 : dp(4), 0);
+            seg.addView(pill, lp);
+        }
+        block.addView(seg);
+        return block;
     }
 
     private void stylePill(TextView pill, String key, boolean selected) {
@@ -6001,6 +6600,16 @@ public class MainActivity extends Activity {
         TextView help = text("Tap a network to see its password and a QR code to share it.", 13, false);
         setDim(help, 0.7f);
         page.addView(help);
+        LinearLayout buttons = new LinearLayout(this);
+        LinearLayout.LayoutParams half = new LinearLayout.LayoutParams(0, -2, 1f);
+        half.setMargins(0, dp(4), dp(8), dp(4));
+        Button export = button("Export", null);
+        Button importButton = button("Import", null);
+        buttons.addView(export, half);
+        LinearLayout.LayoutParams second = new LinearLayout.LayoutParams(0, -2, 1f);
+        second.setMargins(0, dp(4), 0, dp(4));
+        buttons.addView(importButton, second);
+        page.addView(buttons);
         EditText search = searchField("Search networks");
         page.addView(search, fieldMargin());
         TextView loading = text("Reading saved networks…", 14, false);
@@ -6025,9 +6634,11 @@ public class MainActivity extends Activity {
             adapter.set(shown);
         };
         search.addTextChangedListener(watcher(filter));
-        worker.execute(() -> {
+        Runnable[] reload = new Runnable[1];
+        reload[0] = () -> worker.execute(() -> {
             List<String[]> nets = readWifi();
             main.post(() -> {
+                all.clear();
                 all.addAll(nets);
                 filter.run();
                 loading.setVisibility(nets.isEmpty() ? View.VISIBLE : View.GONE);
@@ -6036,6 +6647,57 @@ public class MainActivity extends Activity {
                 }
             });
         });
+        reload[0].run();
+        export.setOnClickListener(v -> {
+            if (all.isEmpty()) {
+                toast(Tr.t("No saved networks, or this phone doesn't allow reading them."));
+                return;
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle(Tr.t("Export networks?"))
+                    .setMessage(Tr.t("Saves every network with its password as plain text in Download/TinyKit. "
+                            + "Anyone who gets the file can read the passwords, so delete it when you're done."))
+                    .setPositiveButton(Tr.t("Export"), (d, w) -> worker.execute(() -> {
+                        StringBuilder text = new StringBuilder();
+                        for (String[] n : all) text.append(n[0]).append('\t').append(n[1]).append('\t').append(n[2]).append('\n');
+                        String file = BACKUP_DIR + "/wifi-" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT)
+                                .format(new java.util.Date()) + ".txt";
+                        Shell.Result r = Shell.run("mkdir -p " + BACKUP_DIR + "; cat > " + Shell.quote(file),
+                                new java.io.ByteArrayInputStream(text.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                        main.post(() -> toast(r.ok() ? Tr.t("Saved to ") + file : Tr.t("Couldn't save the file.")));
+                    }))
+                    .setNegativeButton(Tr.t("Cancel"), null)
+                    .show();
+        });
+        importButton.setOnClickListener(v -> worker.execute(() -> {
+            List<String> files = new ArrayList<>();
+            for (String line : Shell.run("ls -1t " + BACKUP_DIR + "/wifi-*.txt 2>/dev/null").out.split("\n")) {
+                if (!line.trim().isEmpty()) files.add(line.trim());
+            }
+            main.post(() -> {
+                if (files.isEmpty()) {
+                    toast(Tr.t("No exported networks yet. Export first, or put a wifi-….txt file in Download/TinyKit."));
+                    return;
+                }
+                String[] names = new String[files.size()];
+                for (int i = 0; i < names.length; i++) names[i] = files.get(i).substring(files.get(i).lastIndexOf('/') + 1);
+                new AlertDialog.Builder(this)
+                        .setTitle(Tr.t("Import which file?"))
+                        .setItems(names, (d, which) -> worker.execute(() -> {
+                            String apk = Shell.run("pm path " + getPackageName() + " | head -1 | sed 's/^package://'").out.trim();
+                            Shell.Result r = Shell.run("CLASSPATH=" + Shell.quote(apk)
+                                    + " app_process /system/bin io.github.order52.tinykit.WifiDump add "
+                                    + Shell.quote(files.get(which)));
+                            main.post(() -> {
+                                toast(r.ok() ? Tr.t("Added ") + r.out.trim() + Tr.t(" networks that weren't saved yet.")
+                                        : Tr.t("This phone doesn't let TinyKit add networks."));
+                                reload[0].run();
+                            });
+                        }))
+                        .setNegativeButton(Tr.t("Cancel"), null)
+                        .show();
+            });
+        }));
     }
 
     /** Runs {@link WifiDump} as the shell user through Shizuku and parses its lines. */
@@ -6952,23 +7614,27 @@ public class MainActivity extends Activity {
 
     /** Shows an app's icon in a row, loaded off the main thread and cached as a small bitmap. */
     private void showIcon(Row row, String pkg) {
-        row.icon.setVisibility(View.VISIBLE);
-        row.icon.setTag(pkg);
+        showIcon(row.icon, pkg);
+    }
+
+    private void showIcon(ImageView icon, String pkg) {
+        icon.setVisibility(View.VISIBLE);
+        icon.setTag(pkg);
         Bitmap cached = iconCache.get(pkg);
         if (cached != null) {
-            row.icon.setImageBitmap(cached);
+            icon.setImageBitmap(cached);
             return;
         }
-        row.icon.setImageResource(android.R.drawable.sym_def_app_icon);
+        icon.setImageResource(android.R.drawable.sym_def_app_icon);
         thumbs.execute(() -> {
             // The row may have been recycled to another app while scrolling — skip the render for
             // one that's no longer on screen, so a fast scroll doesn't load hundreds of icons.
-            if (!pkg.equals(row.icon.getTag()) || iconCache.containsKey(pkg)) return;
+            if (!pkg.equals(icon.getTag()) || iconCache.containsKey(pkg)) return;
             Bitmap b = iconBitmap(pkg, dp(40));
             if (b == null) return;
             iconCache.put(pkg, b);
             main.post(() -> {
-                if (pkg.equals(row.icon.getTag())) row.icon.setImageBitmap(b);
+                if (pkg.equals(icon.getTag())) icon.setImageBitmap(b);
             });
         });
     }

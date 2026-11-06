@@ -1,0 +1,5 @@
+• Audio mixer: a volume slider for each app, the open ones on top and every app below, work profile included, plus a Quick Settings tile (Android 13+).
+• Light theme (Info tab) and Russian translation, thanks to tommynok.
+• Running apps: sort by CPU, pick several to stop, turn off the confirmation.
+• Permissions: set all at once, and see which apps have a permission.
+• Saved Wi-Fi: export and import.

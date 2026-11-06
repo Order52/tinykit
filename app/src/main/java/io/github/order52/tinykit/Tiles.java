@@ -224,6 +224,30 @@ public abstract class Tiles extends TileService {
         }
     }
 
+    /** Opens the audio mixer: a tap closes the panel and shows the mixer page. */
+    public static final class Mixer extends Tiles {
+        @Override
+        Object[] state() {
+            return state(false, "Volume per app");
+        }
+
+        @Override
+        void tap(boolean active) {
+        }
+
+        @Override
+        public void onClick() {
+            Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra(MainActivity.EXTRA_MIXER, true);
+            if (Build.VERSION.SDK_INT >= 34) {
+                startActivityAndCollapse(PendingIntent.getActivity(this, 0, open,
+                        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+            } else {
+                startActivityAndCollapse(open);
+            }
+        }
+    }
+
     /** Pauses and resumes the internet block without losing the lists (Android 14+). */
     public static final class Firewall extends Tiles {
         @Override
