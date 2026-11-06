@@ -409,12 +409,30 @@ Tap an app to choose:
 
 Android's audio system enforces both, so nothing runs in the background. ♻️
 
+### Deep sleep
+
+**System tab > Network & battery > Deep sleep** (needs Shizuku). Makes Android's Doze start sooner after the
+screen goes off and wake up less often, like [Comatose](https://github.com/tytydraco/Comatose), whose Light,
+Moderate, High and Extreme profiles it uses (BSD-2). Better than Comatose: it writes where each Android version
+actually reads the timings (the global `device_idle_constants` setting up to Android 11, the `device_idle`
+DeviceConfig from Android 12), then reads `dumpsys deviceidle` back and tells you whether **Android is using
+it**, with the current Doze state. **Deep sleep now** forces Doze (`dumpsys deviceidle force-idle`) until you use
+the phone again; **Wake up** ends it. A Quick Settings tile cycles the profiles, and TinyKit puts your profile back
+when Shizuku starts if Android lost it. **Apps that ignore deep sleep** opens *Keep apps alive*.
+
 ### Running apps
 
 Everything running, with its memory use (from `dumpsys meminfo`) and its CPU use (from `top`'s second
 sample), sorted by memory, CPU or name, and a used/total RAM summary. Tap an app to stop it
 (`am force-stop`), or hold one to pick several and **Stop selected**. **Ask before stopping**
 turns the confirmation off. Persistent system processes can't be stopped and are labelled as such.
+
+### Running services
+
+**Apps tab > Running services**: every service running now (from `dumpsys activity services`), each with its app,
+whether it is foreground, started or bound, and how long it has run; search, and a checkbox for system ones.
+Tap one to **stop the service** (`am stopservice`; the app may start it again), **stop the app**, or **block the
+service** (`pm disable` on that component: the app can't start it until you unblock it from the same page).
 
 ### Stop background activity
 

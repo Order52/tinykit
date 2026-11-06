@@ -224,6 +224,24 @@ public abstract class Tiles extends TileService {
         }
     }
 
+    /** Cycles deep sleep: Default, Light, Moderate, High, Extreme. */
+    public static final class DeepSleep extends Tiles {
+        @Override
+        Object[] state() {
+            if (!Shell.await()) return state(false, "Start Shizuku");
+            int p = prefs().getInt(Doze.PREF, 0);
+            return state(p > 0, Doze.NAMES[p]);
+        }
+
+        @Override
+        void tap(boolean active) {
+            if (!shizuku()) return;
+            int next = (prefs().getInt(Doze.PREF, 0) + 1) % Doze.NAMES.length;
+            String error = Doze.apply(this, next);
+            if (error != null) toast(error); else prefs().edit().putInt(Doze.PREF, next).apply();
+        }
+    }
+
     /** Opens the audio mixer: a tap closes the panel and shows the mixer page. */
     public static final class Mixer extends Tiles {
         @Override

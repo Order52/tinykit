@@ -42,7 +42,7 @@ public final class AdbService extends Service {
     private static final String CHANNEL = "shizuku_start";
     private static final int NOTIFICATION = 7;
     private static final String CONNECT = "_adb-tls-connect._tcp.", PAIRING = "_adb-tls-pairing._tcp.";
-    private static final String PREF_PAIRED = "adb_paired";
+    private static final String PREF_PAIRED = "adb_paired", PREF_PORT = "adb_port";
     /** Set once Termux lets TinyKit run commands: then Start goes through it. */
     static final String PREF_TERMUX = "termux_ready";
     private static final String TERMUX_SKIP = "skip";
@@ -64,7 +64,7 @@ public final class AdbService extends Service {
             + "if [ -n \"$l\" ]; then $l; else sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh; fi";
 
     private final LinkedBlockingQueue<String> codes = new LinkedBlockingQueue<>();
-    private volatile boolean running;
+    private volatile boolean running, silent;
     private SharedPreferences prefs;
 
     /** Wireless debugging exists from Android 11. */
@@ -79,7 +79,15 @@ public final class AdbService extends Service {
 
     /** Starts the start. Safe to call again while one is running. */
     static void begin(Context c) {
-        Intent start = new Intent(c, AdbService.class);
+        begin(c, false);
+    }
+
+    /**
+     * {@code auto}: started by TinyKit itself (after a restart, or when it opens), not by a tap. It then never asks the
+     * person for anything and keeps quiet if it can't: no pairing code, no "turn on" notifications, no failure notice.
+     */
+    static void begin(Context c, boolean auto) {
+        Intent start = new Intent(c, AdbService.class).putExtra("auto", auto);
         if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(start); else c.startService(start);
     }
 
@@ -100,6 +108,7 @@ public final class AdbService extends Service {
         }
         if (!running) {
             running = true;
+            silent = intent != null && intent.getBooleanExtra("auto", false);
             new Thread(this::flow, "adb-start").start();
         }
         return START_NOT_STICKY;
@@ -108,6 +117,10 @@ public final class AdbService extends Service {
     private void flow() {
         String result;
         try {
+            if (silent && !paired(this) && !prefs.getBoolean(PREF_TERMUX, false)) { // nothing known to work: stay out of the way
+                finish(null);
+                return;
+            }
             if (Termux.installed(this) && Termux.permitted(this) && prefs.getBoolean(PREF_TERMUX, false)) {
                 String viaTermux = termuxFlow();
                 if (!TERMUX_SKIP.equals(viaTermux)) {
@@ -125,8 +138,9 @@ public final class AdbService extends Service {
             }
             result = connectAndStart(adb, 4000);
             if (NEEDS_WIRELESS.equals(result) && enableWireless()) result = connectAndStart(adb, 12_000);
-            long end = System.currentTimeMillis() + 5 * 60_000L;
+            long end = System.currentTimeMillis() + (silent ? 90_000L : 5 * 60_000L); // Wi-Fi can be late after a restart
             while ((NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)) && System.currentTimeMillis() < end) {
+                if (silent && NEEDS_PAIRING.equals(result)) break; // never asks for a code on its own
                 if (NEEDS_WIRELESS.equals(result)) {
                     boolean developer = Settings.Global.getInt(getContentResolver(),
                             Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1;
@@ -215,6 +229,7 @@ public final class AdbService extends Service {
                 r = Termux.start(this, START, join(connect));
                 continue;
             }
+            if (silent) return TERMUX_SKIP;
             say("Enter the pairing code", "In Wireless debugging tap Pair device with pairing code, then type "
                     + "the six digits here.", true, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
             String code = codes.poll(2, TimeUnit.SECONDS);
@@ -303,6 +318,15 @@ public final class AdbService extends Service {
         // Off means off, even if the network still remembers the service.
         if (Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 0) return NEEDS_WIRELESS;
         long end = System.currentTimeMillis() + wait;
+        int last = prefs.getInt(PREF_PORT, 0);
+        if (last > 0 && prefs.getBoolean(PREF_PAIRED, false)) { // the port from the last time: usually still the one
+            try {
+                String out = adb.shell("127.0.0.1", last, START);
+                if (out.contains("exit with 0")) return null;
+            } catch (Exception e) {
+                // gone: look for the new one
+            }
+        }
         do {
             // The port changes each time Wireless debugging is switched on, and the network can still list the old
             // one: the ones that refuse are skipped, and the new one turns up in a moment.
@@ -311,7 +335,10 @@ public final class AdbService extends Service {
                 if (!prefs.getBoolean(PREF_PAIRED, false)) return NEEDS_PAIRING;
                 try {
                     String out = adb.shell("127.0.0.1", port, START);
-                    if (out.contains("exit with 0")) return null;
+                    if (out.contains("exit with 0")) {
+                        prefs.edit().putInt(PREF_PORT, port).apply();
+                        return null;
+                    }
                     String[] lines = out.split("\n");
                     return "Shizuku didn't start: " + (lines.length == 0 ? "" : lines[lines.length - 1]);
                 } catch (Adb.Failure f) {
@@ -435,6 +462,7 @@ public final class AdbService extends Service {
 
     /** Shows a step: with a field for the pairing code when {@code input}, opening {@code settings} when tapped. */
     private void say(String title, String text, boolean input, String settings) {
+        if (silent) return;
         getSystemService(NotificationManager.class).notify(NOTIFICATION, notification(title, text, input, settings));
     }
 
@@ -445,6 +473,11 @@ public final class AdbService extends Service {
         channel.setShowBadge(false);
         nm.createNotificationChannel(channel);
         Intent open = settings != null ? new Intent(settings) : new Intent(this, MainActivity.class);
+        if (Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS.equals(settings)) { // lands on the Wireless debugging switch
+            Bundle args = new Bundle();
+            args.putString(":settings:fragment_args_key", "toggle_adb_wireless");
+            open.putExtra(":settings:fragment_args_key", "toggle_adb_wireless").putExtra(":settings:show_fragment_args", args);
+        }
         PendingIntent tap = PendingIntent.getActivity(this, 0, open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder b = new Notification.Builder(this, CHANNEL)
@@ -472,7 +505,7 @@ public final class AdbService extends Service {
         stopForeground(STOP_FOREGROUND_REMOVE);
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.cancel(NOTIFICATION);
-        if (error != null) {
+        if (error != null && !silent) {
             Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             nm.notify(NOTIFICATION + 1, new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_tile_shizuku)
                     .setContentTitle(Tr.t("Shizuku didn't start")).setContentText(Tr.t(error))

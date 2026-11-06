@@ -116,7 +116,7 @@ Find it under **Apps → App permissions**.
 
 | Tool | What it does |
 | --- | --- |
-| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly. Stop closes Shizuku fully, so a Watchdog can't start it straight back up. Without the token, Start goes through Termux if you have it (TinyKit copies one command for you to paste in Termux once, which sets everything up; after that the script runs in the background), and otherwise uses TinyKit's own adb client, the same three ways shizuku-termux does but with nothing else installed: root, adb over the network if it is on, or Wireless debugging (Android 11+), where it pairs once with a code you type into a notification and after that one tap starts Shizuku, switching Wireless debugging on by itself. Without root, Android 10 and older need `adb tcpip 5555` from a computer once per restart: Android allows nothing else, and TinyKit says so. Works with the standard Shizuku app and its forks. |
+| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly. Stop closes Shizuku fully, so a Watchdog can't start it straight back up. Without the token, Start goes through Termux if you have it (TinyKit copies one command for you to paste in Termux once, which sets everything up; after that the script runs in the background), and otherwise uses TinyKit's own adb client, the same three ways shizuku-termux does but with nothing else installed: root, adb over the network if it is on, or Wireless debugging (Android 11+), where it pairs once with a code you type into a notification and after that one tap starts Shizuku, switching Wireless debugging on by itself. Once it has worked, **Start by itself** (on by default) starts Shizuku again after a restart and when you open TinyKit, quietly. Without root, Android 10 and older need `adb tcpip 5555` from a computer once per restart: Android allows nothing else, and TinyKit says so. Works with the standard Shizuku app and its forks. |
 | **Search** | Find any TinyKit setting or tool from the top of the home screen. |
 
 ### Quick Settings tiles
@@ -151,6 +151,8 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**, one at a time or all at once. **Permissions by type** shows which apps have a permission. [See above](#-fake-permissions). |
 | **Default apps** | Choose the launcher, browser, phone, SMS and assistant apps, and see which app opens each file type. |
 | **Work profile** | Makes a work profile in one tap (no setup screens, no extra app inside it) and manages it like Shelter, Island and Samsung's Secure Folder together: separate copies of apps, freeze one or all, **auto-freeze** chosen apps, a **PIN of its own** that locks it, **auto-lock** when the screen is off or after a restart, **pause** (switch or Quick Settings tile), **launcher shortcuts** that unfreeze and open an app, install APKs straight into it. |
+| **Deep sleep** | Makes the phone doze sooner after the screen goes off and wake up less often, with Comatose's Light, Moderate, High and Extreme profiles. Writes where your Android version reads them, checks Android is really using it, and can doze right now. A Quick Settings tile cycles the profiles. |
+| **Running services** | Lists every running service with its app and whether it is foreground, started or bound. Stop one, stop its app, or block it for good (and unblock it later). |
 | **Audio mixer** | A volume slider for each app, so you can turn YouTube down and leave your music up, with the phone's media volume at the top. Shows the apps open now, and every app below with search, **including apps in the work profile**. Volumes stick for each new video or song. Has a Quick Settings tile. Sliders on Android 13+ (or root Shizuku); before that, a mute switch per app. |
 | **Share menu pins** | Pins the apps you share to most in the top row of Android's share menu, so there is no scrolling to find them (Android 10+). |
 | **Hide apps** | Removes apps from the launcher, and they stop running until you restore them. |
@@ -166,7 +168,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Install options** | Allow downgrade, grant all permissions or allow test-only apps for the APK installer. |
 | **Installed with TinyKit** | The apps the installer put on, with a remove button. Stores nothing: read from Android's own records. |
 | **Install APK files** | Installs `.apk`, `.apks`, `.xapk` and `.apkm` files, including apps split into parts and game data. Streams the files, installs only the parts your phone needs. |
-| **More** | Running apps (sort by memory or CPU, stop one or several) · Stop background activity (full Restricted mode) · Keep apps alive · Back up an app as an APK |
+| **More** | Running apps (sort by memory or CPU, stop one or several) · Running services · Stop background activity (full Restricted mode) · Keep apps alive · Back up an app as an APK |
 
 ### System
 

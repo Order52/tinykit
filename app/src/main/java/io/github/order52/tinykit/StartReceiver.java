@@ -31,5 +31,20 @@ public final class StartReceiver extends BroadcastReceiver {
         }
         if (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) return;
         BackgroundService.sync(context);
+        // After a restart Shizuku is gone: start it again by itself, if it can be done with nobody there.
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+            android.content.SharedPreferences prefs = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
+            if (prefs.getBoolean(ShizukuControl.PREF_AUTO, true) && !Shell.running() && ShizukuControl.canRestart(context, prefs)) {
+                if (!ShizukuControl.intents(context, prefs)) {
+                    try {
+                        AdbService.begin(context, true);
+                    } catch (RuntimeException e) {
+                        android.util.Log.w("TinyKit", "auto start: " + e);
+                    }
+                } else {
+                    ShizukuControl.start(context, prefs);
+                }
+            }
+        }
     }
 }

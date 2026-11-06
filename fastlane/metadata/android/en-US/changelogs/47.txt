@@ -1,0 +1,3 @@
+• Deep sleep: Comatose's profiles (Light to Extreme) written where your Android reads them, checked back, plus Deep sleep now and a tile.
+• Running services: every running service, stop it, stop its app, or block it.
+• Start Shizuku by itself after a restart and when TinyKit opens, quietly; faster starts.

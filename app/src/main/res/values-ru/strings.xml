@@ -26,4 +26,5 @@
     <string name="tile_free_ram">Освободить память</string>
     <string name="tile_screen_record">Запись экрана</string>
     <string name="tile_mixer">Аудиомикшер</string>
+    <string name="tile_deep_sleep">Глубокий сон</string>
 </resources>

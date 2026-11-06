@@ -1231,3 +1231,49 @@ Couldn't reach Termux: 	Не удалось связаться с Termux:
 Termux refused.	Termux отказал.
 Termux returned no result.	Termux не вернул результата.
 Command copied. Paste it in Termux (hold, Paste) and press Enter.	Команда скопирована. Вставьте её в Termux (удерживайте, «Вставить») и нажмите Enter.
+Start by itself	Запускать самостоятельно
+After a restart, and when you open TinyKit, start Shizuku if that needs nobody (it has worked before, or the auth token is saved).	После перезагрузки и при открытии TinyKit запускать Shizuku, если для этого никто не нужен (раньше уже получалось или сохранён токен авторизации).
+Deep sleep	Глубокий сон
+Light	Лёгкий
+Moderate	Умеренный
+High	Высокий
+Extreme	Экстремальный
+Android is using it.	Android его использует.
+Android isn't using it yet.	Android пока его не использует.
+Android's own timing.	Собственные тайминги Android.
+Doze 10 minutes after the screen goes off. Doesn't change day-to-day use.	Doze через 10 минут после выключения экрана. Не меняет повседневное использование.
+Doze after a minute, wakes every 2 hours. Notifications arrive a little later.	Doze через минуту, просыпается каждые 2 часа. Уведомления приходят чуть позже.
+Doze after 30 seconds, wakes every 4 hours. Background work is delayed.	Doze через 30 секунд, просыпается каждые 4 часа. Фоновая работа откладывается.
+Doze as soon as the screen is off, wakes every 6 hours. The most battery saved, the most delayed.	Doze сразу после выключения экрана, просыпается каждые 6 часов. Максимум экономии и максимум задержек.
+Couldn't change deep sleep. Is Shizuku running?	Не удалось изменить глубокий сон. Shizuku запущен?
+Deep sleep now	Глубокий сон сейчас
+Puts the phone into Doze right now, until you use it again. Turn the screen off to see it work.	Переводит телефон в Doze прямо сейчас, пока вы им не воспользуетесь. Выключите экран, чтобы увидеть.
+Done. Doze is on.	Готово. Doze включён.
+Wake up	Разбудить
+Takes the phone out of deep sleep.	Выводит телефон из глубокого сна.
+Apps that ignore deep sleep	Приложения, игнорирующие глубокий сон
+Apps you keep alive (and the system's own) don't doze.	Приложения, которые вы оставляете живыми (и системные), не засыпают.
+Make the phone doze sooner after the screen goes off, and wake up less often, like Comatose. Pick a profile, or doze right now.	Телефон засыпает раньше после выключения экрана и просыпается реже, как в Comatose. Выберите профиль или усыпите сейчас.
+Running services	Запущенные службы
+Every service running now, with its app. Stop one, or block it for good.	Все запущенные сейчас службы с их приложениями. Остановите службу или заблокируйте её насовсем.
+Tap a service to stop it, stop its app, or block it. Stopping can be undone by the app; blocking can't, until you unblock it.	Нажмите на службу, чтобы остановить её, остановить приложение или заблокировать. Приложение может запустить остановленную службу снова; заблокированную — нет, пока вы не разблокируете.
+Search services	Поиск служб
+Show system services	Показывать системные службы
+service running	служба запущена
+services running	служб запущено
+Foreground	Передний план
+Started	Запущена
+Bound	Привязана
+Stop service	Остановить службу
+Stop app	Остановить приложение
+Block service	Заблокировать службу
+Block this service?	Заблокировать эту службу?
+The app can't start it any more, and may stop working properly. You can unblock it from this page.	Приложение больше не сможет её запускать и может работать неправильно. Разблокировать можно на этой странице.
+Block	Заблокировать
+Blocked.	Заблокировано.
+Couldn't block it.	Не удалось заблокировать.
+Blocked services	Заблокированные службы
+Tap one to unblock it	Нажмите, чтобы разблокировать
+Unblocked.	Разблокировано.
+Couldn't unblock it.	Не удалось разблокировать.
+That service didn't stop. It may be bound by another app.	Эта служба не остановилась. Возможно, к ней привязано другое приложение.

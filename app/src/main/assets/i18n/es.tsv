@@ -1228,3 +1228,49 @@ Couldn't reach Termux: 	No se pudo contactar con Termux:
 Termux refused.	Termux lo rechazó.
 Termux returned no result.	Termux no devolvió ningún resultado.
 Command copied. Paste it in Termux (hold, Paste) and press Enter.	Comando copiado. Pégalo en Termux (mantén pulsado, Pegar) y pulsa Enter.
+Start by itself	Iniciar solo
+After a restart, and when you open TinyKit, start Shizuku if that needs nobody (it has worked before, or the auth token is saved).	Después de reiniciar y al abrir TinyKit, inicia Shizuku si no hace falta nadie (ya funcionó antes, o el token de autenticación está guardado).
+Deep sleep	Sueño profundo
+Light	Ligero
+Moderate	Moderado
+High	Alto
+Extreme	Extremo
+Android is using it.	Android lo está usando.
+Android isn't using it yet.	Android aún no lo usa.
+Android's own timing.	Los tiempos propios de Android.
+Doze 10 minutes after the screen goes off. Doesn't change day-to-day use.	Doze 10 minutos después de apagar la pantalla. No cambia el uso diario.
+Doze after a minute, wakes every 2 hours. Notifications arrive a little later.	Doze tras un minuto, despierta cada 2 horas. Las notificaciones llegan algo más tarde.
+Doze after 30 seconds, wakes every 4 hours. Background work is delayed.	Doze tras 30 segundos, despierta cada 4 horas. El trabajo en segundo plano se retrasa.
+Doze as soon as the screen is off, wakes every 6 hours. The most battery saved, the most delayed.	Doze en cuanto se apaga la pantalla, despierta cada 6 horas. El máximo ahorro, el máximo retraso.
+Couldn't change deep sleep. Is Shizuku running?	No se pudo cambiar el sueño profundo. ¿Shizuku está en marcha?
+Deep sleep now	Sueño profundo ahora
+Puts the phone into Doze right now, until you use it again. Turn the screen off to see it work.	Pone el teléfono en Doze ahora mismo, hasta que lo uses de nuevo. Apaga la pantalla para verlo.
+Done. Doze is on.	Hecho. Doze activado.
+Wake up	Despertar
+Takes the phone out of deep sleep.	Saca el teléfono del sueño profundo.
+Apps that ignore deep sleep	Apps que ignoran el sueño profundo
+Apps you keep alive (and the system's own) don't doze.	Las apps que mantienes vivas (y las del sistema) no entran en Doze.
+Make the phone doze sooner after the screen goes off, and wake up less often, like Comatose. Pick a profile, or doze right now.	Haz que el teléfono entre antes en Doze tras apagar la pantalla y despierte menos, como Comatose. Elige un perfil, o entra en Doze ahora.
+Running services	Servicios en ejecución
+Every service running now, with its app. Stop one, or block it for good.	Todos los servicios en ejecución, con su app. Detén uno, o bloquéalo para siempre.
+Tap a service to stop it, stop its app, or block it. Stopping can be undone by the app; blocking can't, until you unblock it.	Toca un servicio para detenerlo, detener su app o bloquearlo. La app puede reiniciar un servicio detenido; un bloqueo no, hasta que lo desbloquees.
+Search services	Buscar servicios
+Show system services	Mostrar servicios del sistema
+service running	servicio en ejecución
+services running	servicios en ejecución
+Foreground	Primer plano
+Started	Iniciado
+Bound	Enlazado
+Stop service	Detener servicio
+Stop app	Detener app
+Block service	Bloquear servicio
+Block this service?	¿Bloquear este servicio?
+The app can't start it any more, and may stop working properly. You can unblock it from this page.	La app ya no podrá iniciarlo y puede dejar de funcionar bien. Puedes desbloquearlo desde esta página.
+Block	Bloquear
+Blocked.	Bloqueado.
+Couldn't block it.	No se pudo bloquear.
+Blocked services	Servicios bloqueados
+Tap one to unblock it	Toca uno para desbloquearlo
+Unblocked.	Desbloqueado.
+Couldn't unblock it.	No se pudo desbloquear.
+That service didn't stop. It may be bound by another app.	Ese servicio no se detuvo. Puede estar enlazado por otra app.

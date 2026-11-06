@@ -268,7 +268,8 @@ public class MainActivity extends Activity {
     private Button shizukuButton;
     private Button startButton;
     private Button stopButton;
-    private boolean starting, stopping, askedNotifications, termuxChecked, askedTermux, askedTermuxSetup, termuxResume;
+    private boolean starting, stopping, askedNotifications, termuxChecked, askedTermux, askedTermuxSetup, termuxResume,
+            autoStartPending;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
@@ -344,6 +345,7 @@ public class MainActivity extends Activity {
         Shizuku.addBinderDeadListener(binderDead);
         Shizuku.addRequestPermissionResultListener(permissionResult);
         // Not on rotation or other re-creations: only when TinyKit is actually opened.
+        autoStartPending = savedInstanceState == null;
         if (savedInstanceState == null) {
             Runnable startup = () -> {
                 if (!showWhatsNew(this::startupUpdateCheck)) startupUpdateCheck();
@@ -500,6 +502,17 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (autoStartPending) {
+            autoStartPending = false;
+            // Shizuku's connection can take a moment to arrive when TinyKit has just started: look again before starting it.
+            main.postDelayed(() -> {
+                if (alive() && !starting && !Shell.running() && prefs.getBoolean(ShizukuControl.PREF_AUTO, true)
+                        && ShizukuControl.canRestart(this, prefs)) {
+                    if (ShizukuControl.intents(this, prefs)) ShizukuControl.start(this, prefs);
+                    else AdbService.begin(this, true);
+                }
+            }, 2500);
+        }
         if (termuxResume) { // back from Termux, which has read its settings again
             termuxResume = false;
             termuxChecked = false;
@@ -1028,6 +1041,16 @@ public class MainActivity extends Activity {
         setDim(help, 0.6f);
         help.setPadding(dp(16), dp(8), dp(16), 0);
         list.addView(help);
+        Switch autoStart = new Switch(this);
+        autoStart.setChecked(prefs.getBoolean(ShizukuControl.PREF_AUTO, true));
+        autoStart.setClickable(false);
+        autoStart.setFocusable(false);
+        row(list, "Start by itself", "After a restart, and when you open TinyKit, start Shizuku if that needs nobody "
+                + "(it has worked before, or the auth token is saved).", autoStart, () -> {
+            boolean on = !autoStart.isChecked();
+            autoStart.setChecked(on);
+            prefs.edit().putBoolean(ShizukuControl.PREF_AUTO, on).apply();
+        }, false);
 
         section(list, "Quick Settings");
         row(list, "Shizuku tile", "Turn Shizuku on and off from the quick panel with one tap.",
@@ -1343,6 +1366,8 @@ public class MainActivity extends Activity {
                 "Let apps play audio together, or mute an app.", this::openMixedAudio);
 
         section(list, "Running & background");
+        link(list, "Running services", "Every service running now, with its app. Stop one, or block it for good.",
+                this::openServices);
         link(list, "Running apps", "Memory use of everything running. Stop any app.", this::openRunning);
         link(list, "Stop background activity",
                 "Pick apps that can't run or wake the phone in the background.", this::openBackground);
@@ -1408,6 +1433,8 @@ public class MainActivity extends Activity {
         });
 
         section(list, "Network & battery");
+        link(list, "Deep sleep", "Make the phone doze sooner after the screen goes off, and wake up less often, "
+                + "like Comatose. Pick a profile, or doze right now.", this::openDoze);
         toggle(list, "Free hotspot",
                 "Hotspot uses your normal data connection, so carriers that block it can't (works on many carriers).",
                 s -> "0".equals(s.get("tether_dun_required")),
@@ -1638,6 +1665,193 @@ public class MainActivity extends Activity {
                     }
                     return found;
                 });
+    }
+
+    // ---- Deep sleep -----------------------------------------------------------------------------
+
+    private void openDoze() {
+        LinearLayout list = vertical();
+        TextView status = note("Reading…");
+        list.addView(status);
+        section(list, "Profile");
+        final int[] chosen = {prefs.getInt(Doze.PREF, 0)};
+        final TextView[] marks = new TextView[Doze.NAMES.length];
+        Runnable[] refresh = new Runnable[1];
+        refresh[0] = () -> worker.execute(() -> {
+            Doze.Status now = Doze.read();
+            main.post(() -> {
+                String text = Tr.t("Profile") + ": " + Tr.t(Doze.NAMES[chosen[0]]);
+                if (chosen[0] > 0) text += " · " + Tr.t(now.matches(chosen[0]) ? "Android is using it." : "Android isn't using it yet.");
+                status.setText(text + (now.state.isEmpty() ? "" : "\n" + now.state));
+            });
+        });
+        for (int i = 0; i < Doze.NAMES.length; i++) {
+            final int profile = i;
+            marks[i] = text("✓", 18, true);
+            marks[i].setTextColor(attrColor(android.R.attr.colorAccent));
+            marks[i].setVisibility(i == chosen[0] ? View.VISIBLE : View.INVISIBLE);
+            row(list, Doze.NAMES[i], Doze.SUMMARY[i], marks[i], () -> worker.execute(() -> {
+                String error = Doze.apply(this, profile);
+                main.post(() -> {
+                    if (error != null) {
+                        toast(Tr.t(error));
+                        return;
+                    }
+                    chosen[0] = profile;
+                    prefs.edit().putInt(Doze.PREF, profile).apply();
+                    for (int k = 0; k < marks.length; k++) marks[k].setVisibility(k == profile ? View.VISIBLE : View.INVISIBLE);
+                    main.postDelayed(refresh[0], 800);
+                });
+            }), true);
+        }
+        section(list, "Now");
+        action(list, "Deep sleep now", "Puts the phone into Doze right now, until you use it again. Turn the screen off "
+                + "to see it work.", () -> {
+            String error = Doze.force(true);
+            main.post(refresh[0]);
+            return error == null ? "Done. Doze is on." : error;
+        });
+        action(list, "Wake up", "Takes the phone out of deep sleep.", () -> {
+            String error = Doze.force(false);
+            main.post(refresh[0]);
+            return error == null ? "Done." : error;
+        });
+        link(list, "Apps that ignore deep sleep", "Apps you keep alive (and the system's own) don't doze.",
+                this::openKeepAlive);
+        push("Deep sleep", scroll(list));
+        refresh[0].run();
+    }
+
+    // ---- Running services -----------------------------------------------------------------------
+
+    private static final String PREF_BLOCKED = "svc_blocked";
+
+    private void openServices() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), 0);
+        TextView summary = text("Reading…", 15, true);
+        page.addView(summary);
+        TextView help = text("Tap a service to stop it, stop its app, or block it. Stopping can be undone by the app; "
+                + "blocking can't, until you unblock it.", 13, false);
+        setDim(help, 0.7f);
+        page.addView(help);
+        EditText search = searchField("Search services");
+        page.addView(search, fieldMargin());
+        CheckBox system = new CheckBox(this);
+        system.setText(Tr.t("Show system services"));
+        page.addView(system);
+        Button blockedButton = button("", v -> showBlocked());
+        page.addView(blockedButton);
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        push("Running services", page);
+
+        List<Services.Service> all = new ArrayList<>();
+        Set<String> systemApps = new HashSet<>();
+        Adapter<Services.Service> adapter = new Adapter<>(false, (sv, row) -> {
+            row.first.setText(label(sv.pkg) + (sv.user != 0 ? " (" + Tr.t("Work profile") + ")" : ""));
+            row.second.setText(sv.shortName());
+            row.third.setText((sv.foreground ? Tr.t("Foreground") + " · " : "") + (sv.started ? Tr.t("Started") + " · " : "")
+                    + (sv.bound ? Tr.t("Bound") + " · " : "") + sv.age);
+            row.third.setTextColor(sv.foreground ? attrColor(android.R.attr.colorAccent) : row.second.getCurrentTextColor());
+            showIcon(row, sv.pkg);
+        });
+        listView.setAdapter(adapter);
+        Runnable filter = () -> {
+            String q = search.getText().toString().toLowerCase(Locale.ROOT);
+            List<Services.Service> shown = new ArrayList<>();
+            for (Services.Service sv : all) {
+                if (!system.isChecked() && systemApps.contains(sv.pkg)) continue;
+                if (q.isEmpty() || sv.cls.toLowerCase(Locale.ROOT).contains(q) || sv.pkg.toLowerCase(Locale.ROOT).contains(q)
+                        || label(sv.pkg).toLowerCase(Locale.ROOT).contains(q)) shown.add(sv);
+            }
+            adapter.set(shown);
+            summary.setText(shown.size() + " " + Tr.t(shown.size() == 1 ? "service running" : "services running"));
+        };
+        search.addTextChangedListener(watcher(filter));
+        system.setOnCheckedChangeListener((v, on) -> filter.run());
+        Runnable[] load = new Runnable[1];
+        load[0] = () -> worker.execute(() -> {
+            List<Services.Service> found = Services.running();
+            for (App a : installedApps()) if (a.system) systemApps.add(a.pkg);
+            main.post(() -> {
+                all.clear();
+                all.addAll(found);
+                int blocked = prefs.getStringSet(PREF_BLOCKED, new HashSet<>()).size();
+                blockedButton.setVisibility(blocked == 0 ? View.GONE : View.VISIBLE);
+                blockedButton.setText(Tr.t("Blocked services") + " (" + blocked + ")");
+                filter.run();
+            });
+        });
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            Services.Service sv = adapter.getItem(position);
+            new AlertDialog.Builder(this)
+                    .setTitle(label(sv.pkg))
+                    .setMessage(sv.cls)
+                    .setItems(Tr.all(new String[]{"Stop service", "Stop app", "Block service"}), (d, which) -> {
+                        if (which == 2) {
+                            new AlertDialog.Builder(this)
+                                    .setTitle(Tr.t("Block this service?"))
+                                    .setMessage(Tr.t("The app can't start it any more, and may stop working properly. "
+                                            + "You can unblock it from this page."))
+                                    .setPositiveButton(Tr.t("Block"), (x, y) -> worker.execute(() -> {
+                                        boolean ok = Services.block(sv, true);
+                                        if (ok) {
+                                            Set<String> set = new HashSet<>(prefs.getStringSet(PREF_BLOCKED, new HashSet<>()));
+                                            set.add(sv.user + "|" + sv.component());
+                                            prefs.edit().putStringSet(PREF_BLOCKED, set).apply();
+                                            Services.stop(sv);
+                                        }
+                                        main.post(() -> {
+                                            toast(Tr.t(ok ? "Blocked." : "Couldn't block it."));
+                                            load[0].run();
+                                        });
+                                    }))
+                                    .setNegativeButton(Tr.t("Cancel"), null)
+                                    .show();
+                            return;
+                        }
+                        worker.execute(() -> {
+                            String error = which == 0 ? Services.stop(sv)
+                                    : error(Shell.run("am force-stop --user " + sv.user + " " + Shell.quote(sv.pkg)));
+                            main.post(() -> {
+                                toast(Tr.t(error == null ? "Done." : error));
+                                load[0].run();
+                            });
+                        });
+                    })
+                    .setNegativeButton(Tr.t("Cancel"), null)
+                    .show();
+        });
+        load[0].run();
+    }
+
+    /** The services blocked here, each one to be switched back on with a tap. */
+    private void showBlocked() {
+        List<String> items = new ArrayList<>(prefs.getStringSet(PREF_BLOCKED, new HashSet<>()));
+        Collections.sort(items);
+        String[] names = new String[items.size()];
+        for (int i = 0; i < names.length; i++) names[i] = items.get(i).substring(items.get(i).indexOf('|') + 1);
+        new AlertDialog.Builder(this)
+                .setTitle(Tr.t("Tap one to unblock it"))
+                .setItems(names, (d, which) -> worker.execute(() -> {
+                    String item = items.get(which);
+                    Services.Service sv = new Services.Service();
+                    sv.user = Integer.parseInt(item.substring(0, item.indexOf('|')));
+                    String component = item.substring(item.indexOf('|') + 1);
+                    sv.pkg = component.substring(0, component.indexOf('/'));
+                    sv.cls = component.substring(component.indexOf('/') + 1);
+                    boolean ok = Services.block(sv, false);
+                    if (ok) {
+                        Set<String> set = new HashSet<>(prefs.getStringSet(PREF_BLOCKED, new HashSet<>()));
+                        set.remove(item);
+                        prefs.edit().putStringSet(PREF_BLOCKED, set).apply();
+                    }
+                    main.post(() -> toast(Tr.t(ok ? "Unblocked." : "Couldn't unblock it.")));
+                }))
+                .setNegativeButton(Tr.t("Close"), null)
+                .show();
     }
 
     // ---- Audio mixer ------------------------------------------------------------------------
