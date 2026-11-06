@@ -137,7 +137,8 @@ public final class ShareTo extends Activity {
             finish();
             return;
         }
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle(Tr.t("Share with"))
+        new AlertDialog.Builder(this, getSharedPreferences("tinykit", MODE_PRIVATE).getBoolean("light_theme", false)
+                ? android.R.style.Theme_DeviceDefault_Light_Dialog_Alert : android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle(Tr.t("Share with"))
                 .setItems(labels.toArray(new String[0]), (d, which) -> forward(shown.get(which)))
                 .setOnCancelListener(d -> finish()).show();
     }

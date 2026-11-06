@@ -775,7 +775,7 @@ public class MainActivity extends Activity {
         tokenText.setText(Tr.t(token().isEmpty()
                 ? "Not set. Tap to paste it from Shizuku's settings."
                 : "Set. Start and Stop go straight to Shizuku."));
-        for (View row : shizukuRows) row.setAlpha(ready ? 1f : (lightTheme ? 1f : 0.4f));
+        for (View row : shizukuRows) row.setAlpha(ready ? 1f : (lightTheme ? 0.45f : 0.4f));
         for (View label : shizukuLabels) label.setVisibility(ready ? View.GONE : View.VISIBLE);
         if (ready) {
             loadSettings();
@@ -6528,7 +6528,7 @@ public class MainActivity extends Activity {
             row.setEnabled(false);
             view.setEnabled(false);
             shizukuRows.remove(row);
-            row.setAlpha(lightTheme ? 0.85f : 0.4f);
+            row.setAlpha(lightTheme ? 0.45f : 0.4f);
             sub.setText(Tr.t(summary + "  ·  Not on this phone"));
         } else {
             view.setChecked(state);
@@ -7207,7 +7207,7 @@ public class MainActivity extends Activity {
         TextView view = text(label, 22, false);
         view.setGravity(Gravity.CENTER);
         view.setEnabled(enabled);
-        view.setAlpha(enabled ? (lightTheme ? 1f : 0.9f) : (lightTheme ? 0.6f : 0.2f));
+        view.setAlpha(enabled ? (lightTheme ? 1f : 0.9f) : (lightTheme ? 0.3f : 0.2f));
         view.setBackgroundResource(attrResource(android.R.attr.selectableItemBackgroundBorderless));
         if (enabled) view.setOnClickListener(v -> onClick.run());
         view.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(40)));
@@ -7714,8 +7714,15 @@ public class MainActivity extends Activity {
 
     private void setDim(TextView view, float darkAlpha) {
         if (view == null) return;
-        view.setAlpha(lightTheme ? 1f : darkAlpha);
-        if (lightTheme) view.setTextColor(0xFF111111);
+        // On light, a grey from near-black (the lower the alpha, the lighter), so secondary text reads as
+        // secondary and still passes contrast (about 6:1 at 0.6, 9:1 at 0.7).
+        view.setAlpha(1f);
+        if (lightTheme) {
+            int grey = Math.round(230 * (1 - darkAlpha));
+            view.setTextColor(0xFF000000 | grey << 16 | grey << 8 | grey);
+        } else {
+            view.setAlpha(darkAlpha);
+        }
     }
 
     private Button button(String label, View.OnClickListener listener) {

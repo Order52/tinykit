@@ -1,0 +1,1 @@
+• Light theme: secondary text is grey, unavailable tools are dimmed, switches and checkboxes use the accent, and the share dialog follows the theme.
