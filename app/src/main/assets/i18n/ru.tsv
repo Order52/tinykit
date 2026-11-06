@@ -1149,7 +1149,6 @@ Share with	Поделиться с помощью
 That app can't take this.	Это приложение не может принять эти данные.
 Dimmed tools need Shizuku. Start it on the first tab.	Затемнённые инструменты требуют Shizuku. Запустите его на первой вкладке.
 Create work profile?	Создать рабочий профиль?
-This adds a second, separate space to your phone. Your own apps and data stay as they are. You can remove it later.	Это создаст отдельное второе пространство на вашем телефоне. Ваши приложения и данные останутся неизменными. Вы сможете удалить его позже.
 Create	Создать
 Light theme	Светлая тема
 Use a light background instead of OLED black.	Использовать светлый фон вместо глубокого чёрного для OLED.
@@ -1277,3 +1276,18 @@ Tap one to unblock it	Нажмите, чтобы разблокировать
 Unblocked.	Разблокировано.
 Couldn't unblock it.	Не удалось разблокировать.
 That service didn't stop. It may be bound by another app.	Эта служба не остановилась. Возможно, к ней привязано другое приложение.
+Secure folder	Защищённая папка
+Open Secure folder	Открыть защищённую папку
+Your work apps behind the phone's lock screen, like Samsung's Secure Folder.	Ваши рабочие приложения за экраном блокировки, как «Защищённая папка» Samsung.
+Secure folder icon	Значок защищённой папки
+Show it on the home screen and in the app list.	Показывать на главном экране и в списке приложений.
+Ask for my lock screen first	Сначала запрашивать блокировку экрана
+Opening the Secure folder needs your PIN, pattern or fingerprint, and it locks again when you leave it.	Для открытия нужен PIN, графический ключ или отпечаток; при выходе папка снова блокируется.
+Hide work apps from the launcher	Скрыть рабочие приложения из лаунчера
+Freezes them, and again whenever the screen has been off, so they only show in the Secure folder. A tap there brings one back.	Замораживает их (и снова после выключения экрана), поэтому они видны только в защищённой папке. Нажатие там возвращает приложение.
+Add apps	Добавить приложения
+Freeze (hide from the launcher)	Заморозить (скрыть из лаунчера)
+Unlocked	Разблокирована
+Start Shizuku first (open TinyKit).	Сначала запустите Shizuku (откройте TinyKit).
+There is no work profile yet. Add apps in TinyKit.	Рабочего профиля пока нет. Добавьте приложения в TinyKit.
+This adds a second, separate space to your phone. Your own apps and data stay as they are. You can remove it later.\n\nSecure folder: like Samsung's. Its own icon opens the apps behind your lock screen, and they stay out of the launcher.\n\nWork profile: the plain Android one. Its apps show in the launcher with a badge.	Это добавляет отдельное пространство на телефоне. Ваши приложения и данные не меняются. Позже его можно удалить.\n\nЗащищённая папка: как у Samsung. Отдельный значок открывает приложения за экраном блокировки, в лаунчере их нет.\n\nРабочий профиль: обычный профиль Android. Его приложения видны в лаунчере со значком.

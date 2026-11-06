@@ -1,0 +1,2 @@
+• Secure folder: a Samsung-style front door to the work profile, with its own icon, your lock screen first, and the work apps hidden from the launcher.
+• Creating a work profile asks which you want: Secure folder or the plain work profile.

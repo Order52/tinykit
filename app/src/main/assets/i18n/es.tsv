@@ -1145,7 +1145,6 @@ Share with	Compartir con
 That app can't take this.	Esa app no puede recibir esto.
 Dimmed tools need Shizuku. Start it on the first tab.	Las herramientas atenuadas necesitan Shizuku. Inícialo en la primera pestaña.
 Create work profile?	¿Crear perfil de trabajo?
-This adds a second, separate space to your phone. Your own apps and data stay as they are. You can remove it later.	Esto añade un espacio aparte en tu teléfono. Tus apps y datos no cambian. Puedes quitarlo después.
 Create	Crear
 Light theme	Tema claro
 Use a light background instead of OLED black.	Usa un fondo claro en lugar del negro OLED.
@@ -1274,3 +1273,18 @@ Tap one to unblock it	Toca uno para desbloquearlo
 Unblocked.	Desbloqueado.
 Couldn't unblock it.	No se pudo desbloquear.
 That service didn't stop. It may be bound by another app.	Ese servicio no se detuvo. Puede estar enlazado por otra app.
+Secure folder	Carpeta segura
+Open Secure folder	Abrir la carpeta segura
+Your work apps behind the phone's lock screen, like Samsung's Secure Folder.	Tus apps de trabajo tras el bloqueo de pantalla, como la Carpeta segura de Samsung.
+Secure folder icon	Icono de la carpeta segura
+Show it on the home screen and in the app list.	Mostrarlo en la pantalla de inicio y en la lista de apps.
+Ask for my lock screen first	Pedir primero mi bloqueo de pantalla
+Opening the Secure folder needs your PIN, pattern or fingerprint, and it locks again when you leave it.	Abrir la carpeta segura pide tu PIN, patrón o huella, y se vuelve a bloquear al salir.
+Hide work apps from the launcher	Ocultar las apps de trabajo del launcher
+Freezes them, and again whenever the screen has been off, so they only show in the Secure folder. A tap there brings one back.	Las congela, y otra vez cada vez que la pantalla ha estado apagada, así solo aparecen en la carpeta segura. Un toque ahí trae una de vuelta.
+Add apps	Añadir apps
+Freeze (hide from the launcher)	Congelar (ocultar del launcher)
+Unlocked	Desbloqueada
+Start Shizuku first (open TinyKit).	Inicia Shizuku primero (abre TinyKit).
+There is no work profile yet. Add apps in TinyKit.	Aún no hay perfil de trabajo. Añade apps en TinyKit.
+This adds a second, separate space to your phone. Your own apps and data stay as they are. You can remove it later.\n\nSecure folder: like Samsung's. Its own icon opens the apps behind your lock screen, and they stay out of the launcher.\n\nWork profile: the plain Android one. Its apps show in the launcher with a badge.	Esto añade un espacio aparte en tu teléfono. Tus apps y datos no cambian. Puedes quitarlo después.\n\nCarpeta segura: como la de Samsung. Su propio icono abre las apps tras tu bloqueo de pantalla, y no aparecen en el launcher.\n\nPerfil de trabajo: el normal de Android. Sus apps aparecen en el launcher con una insignia.

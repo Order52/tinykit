@@ -123,6 +123,8 @@ public class MainActivity extends Activity {
     static final String EXTRA_TAB = "tab";
     /** Set by the Audio mixer tile: open the mixer page. */
     static final String EXTRA_MIXER = "mixer";
+    /** Set by the Secure folder: open the work profile page. */
+    static final String EXTRA_WORK = "work";
     private static final int REQUEST_SHIZUKU = 1;
     private static final String SHIZUKU_PKG = "moe.shizuku.privileged.api";
     // thedjchi's fork adds a Watchdog that restarts Shizuku when Android kills it.
@@ -329,6 +331,10 @@ public class MainActivity extends Activity {
         // main loop, and any of them is built on the spot if it is needed sooner (a tap, the search).
         buildTab(0); // Shizuku's status views are updated whenever its binder comes or goes
         selectTab(tab);
+        if (getIntent().getBooleanExtra(EXTRA_WORK, false)) {
+            getIntent().removeExtra(EXTRA_WORK);
+            main.post(this::openWork);
+        }
         if (getIntent().getBooleanExtra(EXTRA_MIXER, false)) {
             getIntent().removeExtra(EXTRA_MIXER); // so turning the phone doesn't open it again
             if (Mixer.supported()) main.post(this::openMixer);
@@ -533,6 +539,10 @@ public class MainActivity extends Activity {
         }
         if (intent.hasExtra(EXTRA_TAB)) {
             selectTab(Math.max(0, Math.min(intent.getIntExtra(EXTRA_TAB, 0), TAB_NAMES.length - 1)));
+        }
+        if (intent.getBooleanExtra(EXTRA_WORK, false)) {
+            selectTab(2);
+            openWork();
         }
         if (intent.getBooleanExtra(EXTRA_MIXER, false) && Mixer.supported()) {
             selectTab(2); // the Apps tab, so Back from the mixer lands where the row is
@@ -5825,20 +5835,31 @@ public class MainActivity extends Activity {
             row(body, "Create work profile", "Takes a few seconds.", null, () -> new AlertDialog.Builder(this)
                     .setTitle(Tr.t("Create work profile?"))
                     .setMessage(Tr.t("This adds a second, separate space to your phone. Your own apps and data "
-                            + "stay as they are. You can remove it later."))
-                    .setPositiveButton(Tr.t("Create"), (d, w) -> {
-                        toast(Tr.t("Creating…"));
-                        worker.execute(() -> {
-                            String error = Work.create(this);
-                            main.post(() -> {
-                                if (error != null) workMessage(error);
-                                again.run();
-                            });
-                        });
-                    })
+                            + "stay as they are. You can remove it later.\n\nSecure folder: like Samsung's. Its own "
+                            + "icon opens the apps behind your lock screen, and they stay out of the launcher.\n\n"
+                            + "Work profile: the plain Android one. Its apps show in the launcher with a badge."))
+                    .setPositiveButton(Tr.t("Secure folder"), (d, w) -> createWork(true, again))
+                    .setNeutralButton(Tr.t("Work profile"), (d, w) -> createWork(false, again))
                     .setNegativeButton(android.R.string.cancel, null)
                     .show(), true);
+            SecureFolder.icon(this, false); // no profile: no icon
             return;
+        }
+        SecureFolder.icon(this, prefs.getBoolean(SecureFolder.PREF_ICON, true));
+        if (prefs.getBoolean(SecureFolder.PREF_HIDE, false)) {
+            // Hiding is on: any app that isn't frozen yet (the profile's own, once they have arrived) is frozen now.
+            List<String> todo = new ArrayList<>();
+            for (Work.App a : apps) if (!a.frozen) todo.add(a.pkg);
+            if (!todo.isEmpty()) {
+                Set<String> auto = Work.auto(prefs);
+                auto.addAll(todo);
+                prefs.edit().putStringSet(Work.PREF_AUTO, auto).apply();
+                worker.execute(() -> {
+                    Work.freezeAll(id, todo, true);
+                    BackgroundService.sync(this);
+                    main.post(again);
+                });
+            }
         }
         int frozen = 0;
         for (Work.App a : apps) if (a.frozen) frozen++;
@@ -5848,6 +5869,29 @@ public class MainActivity extends Activity {
         status.setTextColor(attrColor(android.R.attr.colorAccent));
         status.setPadding(dp(16), dp(16), dp(16), dp(4));
         body.addView(status);
+        section(body, "Secure folder");
+        row(body, "Open Secure folder", "Your work apps behind the phone's lock screen, like Samsung's Secure Folder.",
+                arrow(), () -> startActivity(new Intent(this, SecureFolder.class)), false);
+        prefRow(body, "Secure folder icon", "Show it on the home screen and in the app list.", SecureFolder.PREF_ICON, true,
+                on -> SecureFolder.icon(this, on));
+        prefRow(body, "Ask for my lock screen first", "Opening the Secure folder needs your PIN, pattern or fingerprint, "
+                + "and it locks again when you leave it.", SecureFolder.PREF_LOCK, true, on -> { });
+        prefRow(body, "Hide work apps from the launcher", "Freezes them, and again whenever the screen has been off, so "
+                + "they only show in the Secure folder. A tap there brings one back.", SecureFolder.PREF_HIDE, false, on -> {
+            List<String> every = new ArrayList<>();
+            for (Work.App a : apps) every.add(a.pkg);
+            Set<String> auto = Work.auto(prefs);
+            if (on) auto.addAll(every); else auto.removeAll(every);
+            prefs.edit().putStringSet(Work.PREF_AUTO, auto).apply();
+            worker.execute(() -> {
+                List<String> todo = new ArrayList<>();
+                for (Work.App a : apps) if (a.frozen != on) todo.add(a.pkg);
+                Work.freezeAll(id, todo, on);
+                if (on && !BackgroundService.on(prefs)) BackgroundService.setEnabled(this, prefs, true);
+                else BackgroundService.sync(this);
+                main.post(again);
+            });
+        });
         if (state == Work.LOCKED) {
             row(body, "Unlock work profile", "The work profile is locked. Enter its PIN to use its apps.", arrow(),
                     () -> askPin("Unlock work profile", null, pin -> worker.execute(() -> {
@@ -5888,6 +5932,14 @@ public class MainActivity extends Activity {
                         (pkg, on) -> {
                             String error = on ? Work.add(id, pkg) : Work.delete(id, pkg);
                             if (error == null && !on) forgetAutoFreeze(pkg);
+                            if (error == null && on && prefs.getBoolean(SecureFolder.PREF_HIDE, false)) {
+                                // Hiding is on: the new app is frozen too, and stays so when the screen is off.
+                                Set<String> auto = Work.auto(prefs);
+                                auto.add(pkg);
+                                prefs.edit().putStringSet(Work.PREF_AUTO, auto).apply();
+                                Work.freeze(id, pkg, true);
+                                BackgroundService.sync(this);
+                            }
                             return error;
                         }));
         link(body, "Work apps", "Open, freeze, add a launcher shortcut to, or remove the apps in the work profile.",
@@ -6068,6 +6120,39 @@ public class MainActivity extends Activity {
                 done.run();
             });
         });
+    }
+
+    /** Makes the profile, set up as a Samsung-style Secure folder or as the plain work profile (the switches can change later). */
+    private void createWork(boolean secure, Runnable again) {
+        toast(Tr.t("Creating…"));
+        prefs.edit().putBoolean(SecureFolder.PREF_ICON, secure).putBoolean(SecureFolder.PREF_LOCK, secure)
+                .putBoolean(SecureFolder.PREF_HIDE, secure).apply();
+        worker.execute(() -> {
+            String error = Work.create(this);
+            // Hiding the apps relies on auto-freeze, which needs "Run in the background".
+            boolean enabled = error == null && secure && !BackgroundService.on(prefs);
+            if (enabled) BackgroundService.setEnabled(this, prefs, true);
+            main.post(() -> {
+                if (error != null) workMessage(error);
+                else if (enabled) toast(Tr.t("Run in the background is on now. Auto-freeze and auto-lock need it."));
+                again.run();
+            });
+        });
+    }
+
+    /** A switch row for a yes/no TinyKit setting; {@code changed} runs after it flips. */
+    private void prefRow(LinearLayout list, String title, String summary, String key, boolean def,
+                         java.util.function.Consumer<Boolean> changed) {
+        Switch view = new Switch(this);
+        view.setChecked(prefs.getBoolean(key, def));
+        view.setClickable(false);
+        view.setFocusable(false);
+        row(list, title, summary, view, () -> {
+            boolean on = !view.isChecked();
+            view.setChecked(on);
+            prefs.edit().putBoolean(key, on).apply();
+            changed.accept(on);
+        }, false);
     }
 
     /** An app (or, with null, every app) that left the work profile no longer needs freezing by itself. */

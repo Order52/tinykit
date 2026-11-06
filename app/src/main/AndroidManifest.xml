@@ -158,6 +158,20 @@
         <service android:name=".Tiles$Mixer" android:exported="true" android:icon="@drawable/ic_nav_system" android:label="@string/tile_mixer" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
+        <!-- The Secure folder icon: the work apps behind the phone's lock screen. Enabled only while a work profile exists. -->
+        <activity
+            android:name=".SecureFolder"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_secure_folder"
+            android:label="@string/secure_folder"
+            android:taskAffinity="io.github.order52.tinykit.secure">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- What a pinned work-app shortcut starts: no screen, it unfreezes and opens the app. -->
         <activity
             android:name=".WorkOpen"

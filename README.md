@@ -154,6 +154,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Deep sleep** | Makes the phone doze sooner after the screen goes off and wake up less often, with Comatose's Light, Moderate, High and Extreme profiles. Writes where your Android version reads them, checks Android is really using it, and can doze right now. A Quick Settings tile cycles the profiles. |
 | **Running services** | Lists every running service with its app and whether it is foreground, started or bound. Stop one, stop its app, or block it for good (and unblock it later). |
 | **Audio mixer** | A volume slider for each app, so you can turn YouTube down and leave your music up, with the phone's media volume at the top. Shows the apps open now, and every app below with search, **including apps in the work profile**. Volumes stick for each new video or song. Has a Quick Settings tile. Sliders on Android 13+ (or root Shizuku); before that, a mute switch per app. |
+| **Secure folder** | A Samsung-style front door to the work profile: its own launcher icon that opens the work apps behind your lock screen, hides them from the launcher when you want, and locks again when you leave. |
 | **Share menu pins** | Pins the apps you share to most in the top row of Android's share menu, so there is no scrolling to find them (Android 10+). |
 | **Hide apps** | Removes apps from the launcher, and they stop running until you restore them. |
 | **Unused apps** | Lists apps by how long since you last used them. |

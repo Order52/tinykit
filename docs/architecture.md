@@ -78,6 +78,7 @@ tinykit/
 │       │   ├── Bloat.java          Safety ratings for the Debloater
 │       │   ├── Work.java           Work profile: create, add apps, freeze, pause, auto-freeze, shortcuts (pm commands)
 │       │   ├── WorkOpen.java       No-screen activity a work-app shortcut starts: unfreeze and open
+│       │   ├── SecureFolder.java   Secure folder icon: work apps behind the lock screen, grid, open and freeze
 │       │   ├── Doze.java           Deep sleep: Comatose's profiles written where each Android reads them, read back and verified
 │       │   ├── Services.java       Running services from dumpsys activity services, stop and block
 │       │   ├── Mixer.java          Audio mixer: app_process helper that scales each app's players, plus its settings and start-up

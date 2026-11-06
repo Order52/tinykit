@@ -27,4 +27,5 @@
     <string name="tile_screen_record">Screen record</string>
     <string name="tile_mixer">Audio mixer</string>
     <string name="tile_deep_sleep">Deep sleep</string>
+    <string name="secure_folder">Secure folder</string>
 </resources>

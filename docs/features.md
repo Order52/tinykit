@@ -361,6 +361,21 @@ as it goes. Running it takes about 45 MB, so TinyKit only keeps it for as long a
 app that plays through its own audio engine instead of Android's players (some games) can't be scaled.
 Other Shizuku mixers (VolumeManager, Volume++) use the same call and also need Android 13.
 
+#### Secure folder (the work profile, Samsung-style)
+
+When you create the profile TinyKit asks which you want: **Secure folder** (set up as below: its own icon, lock screen first,
+apps hidden from the launcher) or the plain **Work profile** (no icon, apps visible with a badge). Every choice is a switch
+that can be changed later.
+
+**Work profile > Secure folder**. A **Secure folder icon** (its own launcher entry, shown while a work profile
+exists) opens the work apps behind your phone's lock screen (PIN, pattern or fingerprint, asked again each time
+you leave it), as a grid; a tap unfreezes an app and opens it in the profile, a long press freezes or unfreezes it.
+**Hide work apps from the launcher** freezes them all, and again whenever the screen has been off (auto-freeze),
+so they only show in the Secure folder. **Lock** pauses the profile. Not possible without a device owner or
+Samsung's system access, so not here: keeping the clipboard or sharing between the two profiles apart, and moving
+files between them (Shizuku's shell can't reach the other profile's storage; use Android's file picker, which
+has a Work tab).
+
 ### Share menu pins
 
 Pin the apps you share to most, so they sit in the top row of Android's share menu and you don't
