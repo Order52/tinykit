@@ -29,12 +29,28 @@ final class Tr {
     private static volatile String[] starts = new String[0];
     private static volatile String[] ends = new String[0];
 
+    private static String getLanguage(Context c) {
+        if (c != null) {
+            try {
+                android.content.res.Configuration cfg = c.getResources().getConfiguration();
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    android.os.LocaleList list = cfg.getLocales();
+                    if (list != null && !list.isEmpty()) return list.get(0).getLanguage();
+                } else if (cfg.locale != null) {
+                    return cfg.locale.getLanguage();
+                }
+            } catch (RuntimeException ignored) {
+            }
+        }
+        return Locale.getDefault().getLanguage();
+    }
+
     private Tr() {
     }
 
     /** Loads the translation for the phone's language, if there is one. Safe to call again. */
     static void init(Context c) {
-        String language = Locale.getDefault().getLanguage();
+        String language = getLanguage(c);
         try (InputStream in = c.getAssets().open("i18n/" + language + ".tsv")) {
             load(new InputStreamReader(in, StandardCharsets.UTF_8));
         } catch (java.io.IOException | RuntimeException none) {

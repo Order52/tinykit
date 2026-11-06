@@ -297,6 +297,7 @@ public class MainActivity extends Activity {
     @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag") // flag exists from Android 13
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Tr.init(this);
         prefs = getSharedPreferences("tinykit", MODE_PRIVATE);
         // Warm the installed-apps cache (loading labels is the slow part) so every per-app list,
         // picker and log opens instantly. Runs off the worker queue to not delay the first tap.
@@ -596,7 +597,8 @@ public class MainActivity extends Activity {
             TextView label = text(TAB_NAMES[i], 12, false);
             label.setGravity(Gravity.CENTER);
             label.setSingleLine(true);
-            label.setPadding(dp(2), dp(4), dp(2), 0);
+            label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            label.setPadding(dp(1), dp(4), dp(1), 0);
             label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             tabs[i] = label;
             tab.addView(label, new LinearLayout.LayoutParams(-1, -2));
@@ -1927,7 +1929,7 @@ public class MainActivity extends Activity {
         Adapter<Pkg> adapter = new Adapter<>(true, (p, row) -> {
             row.first.setText(Tr.t(p.label));
             row.second.setText(Tr.t(p.pkg));
-            row.third.setText(Tr.t(Bloat.LEVELS[p.level] + " · " + p.note));
+            row.third.setText(Tr.t(Bloat.LEVELS[p.level]) + " · " + Tr.t(p.note));
             row.third.setTextColor(LEVEL_COLORS[p.level]);
             row.check.setChecked(p.checked);
             row.check.setVisibility(p.locked ? View.INVISIBLE : View.VISIBLE);
@@ -1995,7 +1997,7 @@ public class MainActivity extends Activity {
             Pkg p = adapter.getItem(position);
             new AlertDialog.Builder(this)
                     .setTitle(Tr.t(p.label))
-                    .setMessage(Tr.t(Bloat.LEVELS[p.level] + ": " + Bloat.MEANING[p.level] + "\n\n" + p.note
+                    .setMessage(Tr.t(Bloat.LEVELS[p.level]) + ": " + Tr.t(Bloat.MEANING[p.level]) + "\n\n" + Tr.t(p.note)
                             + "\n\n" + p.pkg + (versionName(p.pkg).isEmpty() ? "" : "\nVersion " + versionName(p.pkg))))
                     .setPositiveButton(Tr.t("OK"), null)
                     .show();
@@ -2299,10 +2301,10 @@ public class MainActivity extends Activity {
         StringBuilder on = new StringBuilder();
         String[] short_ = {"Allow downgrade", "Grant all permissions", "Test-only apps"};
         for (int i = 0; i < INSTALL_OPTION_BITS.length; i++) {
-            if ((options & INSTALL_OPTION_BITS[i]) != 0) on.append(on.length() > 0 ? ", " : "").append(short_[i]);
+            if ((options & INSTALL_OPTION_BITS[i]) != 0) on.append(on.length() > 0 ? ", " : "").append(Tr.t(short_[i]));
         }
-        return on.length() == 0 ? "Normal install. Tap to allow downgrades or grant permissions."
-                : "On: " + on + ".";
+        return on.length() == 0 ? Tr.t("Normal install. Tap to allow downgrades or grant permissions.")
+                : Tr.t("On: ") + on + ".";
     }
 
     private void chooseInstallOptions(TextView summary) {
@@ -2952,8 +2954,8 @@ public class MainActivity extends Activity {
             ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
             ((ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mem);
             main.post(() -> {
-                summary.setText(Tr.t("Memory: " + Formatter.formatShortFileSize(this, mem.totalMem - mem.availMem)
-                        + " used of " + Formatter.formatShortFileSize(this, mem.totalMem)));
+                summary.setText(Tr.t("Memory: ") + Formatter.formatShortFileSize(this, mem.totalMem - mem.availMem)
+                        + " " + Tr.t("used of") + " " + Formatter.formatShortFileSize(this, mem.totalMem));
                 procs.clear();
                 procs.addAll(found);
                 apply.run();
@@ -6732,7 +6734,9 @@ public class MainActivity extends Activity {
         final int[] sel = {0};
         TextView chip = text("", 13, true);
         chip.setGravity(Gravity.CENTER);
-        chip.setPadding(dp(16), dp(8), dp(16), dp(8));
+        chip.setSingleLine(true);
+        chip.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        chip.setPadding(dp(12), dp(6), dp(12), dp(6));
         chip.setTextColor(attrColor(android.R.attr.colorAccent));
         GradientDrawable shape = new GradientDrawable();
         shape.setCornerRadius(dp(22));
@@ -6742,15 +6746,15 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-2, -2);
         margin.setMargins(0, 0, dp(8), 0);
         chip.setLayoutParams(margin);
-        Runnable render = () -> chip.setText(Tr.t(icon + title + ": " + options[sel[0]]));
+        Runnable render = () -> chip.setText((icon.isEmpty() ? "" : icon) + Tr.t(title) + ": " + Tr.t(options[sel[0]]));
         chip.setOnClickListener(v -> {
             String[] items = new String[options.length];
             for (int i = 0; i < options.length; i++) {
-                items[i] = (i == sel[0] ? "●  " : "○  ") + options[i];
+                items[i] = (i == sel[0] ? "●  " : "○  ") + Tr.t(options[i]);
             }
             new AlertDialog.Builder(this)
                     .setTitle(Tr.t(title))
-                    .setItems(Tr.all(items), (d, which) -> {
+                    .setItems(items, (d, which) -> {
                         sel[0] = which;
                         render.run();
                         onSelect.run(which);
