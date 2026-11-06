@@ -48,6 +48,19 @@ public final class SecureFolder extends Activity {
     private boolean unlocked;
     private int profile = -1;
 
+    static final String PREF_MODE = "work_mode", PREF_EXISTS = "work_exists";
+
+    /** Which look the person chose when making the profile (or since): the Samsung-style one, or the plain work profile. */
+    static boolean secure(SharedPreferences p) {
+        String mode = p.getString(PREF_MODE, null);
+        return mode != null ? mode.equals("secure") : p.getBoolean(PREF_ICON, false);
+    }
+
+    /** The icon is there only in the Secure folder look, with a work profile, unless switched off. Cheap: call it any time. */
+    static void sync(Context c, SharedPreferences p) {
+        icon(c, secure(p) && p.getBoolean(PREF_ICON, true) && p.getBoolean(PREF_EXISTS, false));
+    }
+
     /** Shows or hides the home screen icon (it exists only while there is a work profile and the person wants it). */
     static void icon(Context c, boolean on) {
         c.getPackageManager().setComponentEnabledSetting(new ComponentName(c, SecureFolder.class),

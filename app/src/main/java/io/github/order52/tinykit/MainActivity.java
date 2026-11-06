@@ -311,6 +311,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         Tr.init(this);
         applySystemBarColors();
+        SecureFolder.sync(this, prefs); // the Secure folder icon, if that is the look chosen (not only once the page is opened)
         // Warm the installed-apps cache (loading labels is the slow part) so every per-app list,
         // picker and log opens instantly. Runs off the worker queue to not delay the first tap.
         thumbs.execute(this::installedApps);
@@ -613,8 +614,7 @@ public class MainActivity extends Activity {
         Shizuku.removeBinderReceivedListener(binderReceived);
         Shizuku.removeBinderDeadListener(binderDead);
         Shizuku.removeRequestPermissionResultListener(permissionResult);
-        main.removeCallbacks(startTimeout);
-        main.removeCallbacks(stopTimeout);
+        main.removeCallbacksAndMessages(null);
         worker.shutdown();
         thumbs.shutdownNow();
         super.onDestroy();
@@ -780,6 +780,7 @@ public class MainActivity extends Activity {
     // ---- Shizuku --------------------------------------------------------------------
 
     private void refreshShizuku() {
+        if (!alive() || worker.isShutdown()) return; // a callback that arrives after the screen is gone
         boolean installed = Shell.installed(getPackageManager());
         boolean running = Shell.running();
         boolean ready = Shell.ready();
@@ -906,6 +907,7 @@ public class MainActivity extends Activity {
 
     /** Asks Shizuku for its connection (a call into its app, so off the main thread), then runs {@code after} on the main thread. */
     private void nudged(Runnable after) {
+        if (worker.isShutdown()) return;
         worker.execute(() -> {
             Shell.nudge(this);
             main.post(after);
@@ -5906,11 +5908,14 @@ public class MainActivity extends Activity {
                     + "they stay out of the launcher.", arrow(), () -> confirmCreate(true, again), true);
             row(body, "Work profile", "The plain Android one: its apps show in the launcher with a badge.", arrow(),
                     () -> confirmCreate(false, again), true);
-            SecureFolder.icon(this, false); // no profile: no icon
+            prefs.edit().putBoolean(SecureFolder.PREF_EXISTS, false).apply();
+            SecureFolder.sync(this, prefs); // no profile: no icon
             return;
         }
-        SecureFolder.icon(this, prefs.getBoolean(SecureFolder.PREF_ICON, true));
-        if (prefs.getBoolean(SecureFolder.PREF_HIDE, false)) {
+        final boolean secure = SecureFolder.secure(prefs);
+        prefs.edit().putBoolean(SecureFolder.PREF_EXISTS, true).apply();
+        SecureFolder.sync(this, prefs);
+        if (secure && prefs.getBoolean(SecureFolder.PREF_HIDE, false)) {
             // Hiding is on: any app that isn't frozen yet (the profile's own, once they have arrived) is frozen now.
             List<String> todo = new ArrayList<>();
             for (Work.App a : apps) if (!a.frozen) todo.add(a.pkg);
@@ -5933,14 +5938,16 @@ public class MainActivity extends Activity {
         status.setTextColor(attrColor(android.R.attr.colorAccent));
         status.setPadding(dp(16), dp(16), dp(16), dp(4));
         body.addView(status);
-        section(body, "Secure folder");
-        row(body, "Open Secure folder", "Your work apps behind the phone's lock screen, like Samsung's Secure Folder.",
+        row(body, "Style", Tr.t(secure ? "Secure folder" : "Work profile") + " · " + Tr.t("Tap to change."), arrow(),
+                () -> chooseStyle(id, apps, again), false);
+        if (secure) section(body, "Secure folder");
+        if (secure) row(body, "Open Secure folder", "Your work apps behind the phone's lock screen, like Samsung's Secure Folder.",
                 arrow(), () -> startActivity(new Intent(this, SecureFolder.class)), false);
-        prefRow(body, "Secure folder icon", "Show it on the home screen and in the app list.", SecureFolder.PREF_ICON, true,
-                on -> SecureFolder.icon(this, on));
-        prefRow(body, "Ask for my lock screen first", "Opening the Secure folder needs your PIN, pattern or fingerprint, "
+        if (secure) prefRow(body, "Secure folder icon", "Show it on the home screen and in the app list.", SecureFolder.PREF_ICON, true,
+                on -> SecureFolder.sync(this, prefs));
+        if (secure) prefRow(body, "Ask for my lock screen first", "Opening the Secure folder needs your PIN, pattern or fingerprint, "
                 + "and it locks again when you leave it.", SecureFolder.PREF_LOCK, true, on -> { });
-        prefRow(body, "Hide work apps from the launcher", "Freezes them, and again whenever the screen has been off, so "
+        if (secure) prefRow(body, "Hide work apps from the launcher", "Freezes them, and again whenever the screen has been off, so "
                 + "they only show in the Secure folder. A tap there brings one back.", SecureFolder.PREF_HIDE, false, on -> {
             List<String> every = new ArrayList<>();
             for (Work.App a : apps) every.add(a.pkg);
@@ -6186,6 +6193,43 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** Remembers the look: the Secure folder one (icon, lock first, apps hidden) or the plain work profile (none of those). */
+    private void applyStyle(boolean secure) {
+        prefs.edit().putString(SecureFolder.PREF_MODE, secure ? "secure" : "plain")
+                .putBoolean(SecureFolder.PREF_ICON, secure).putBoolean(SecureFolder.PREF_LOCK, secure)
+                .putBoolean(SecureFolder.PREF_HIDE, secure).apply();
+        SecureFolder.sync(this, prefs);
+    }
+
+    /** Switches an existing profile between the two looks; going plain brings the hidden apps back. */
+    private void chooseStyle(int id, List<Work.App> apps, Runnable again) {
+        boolean now = SecureFolder.secure(prefs);
+        new AlertDialog.Builder(this)
+                .setTitle(Tr.t("Style"))
+                .setSingleChoiceItems(Tr.all(new String[]{"Secure folder", "Work profile"}), now ? 0 : 1, (d, which) -> {
+                    d.dismiss();
+                    boolean secure = which == 0;
+                    if (secure == now) return;
+                    applyStyle(secure);
+                    if (!secure) {
+                        Set<String> auto = Work.auto(prefs);
+                        List<String> back = new ArrayList<>();
+                        for (Work.App a : apps) if (a.frozen && auto.contains(a.pkg)) back.add(a.pkg);
+                        auto.clear();
+                        prefs.edit().putStringSet(Work.PREF_AUTO, auto).apply();
+                        worker.execute(() -> {
+                            Work.freezeAll(id, back, false);
+                            BackgroundService.sync(this);
+                            main.post(again);
+                        });
+                    } else {
+                        again.run();
+                    }
+                })
+                .setNegativeButton(Tr.t("Cancel"), null)
+                .show();
+    }
+
     /** One short question before making it; the choice itself was the row that was tapped. */
     private void confirmCreate(boolean secure, Runnable again) {
         new AlertDialog.Builder(this)
@@ -6200,16 +6244,17 @@ public class MainActivity extends Activity {
     /** Makes the profile, set up as a Samsung-style Secure folder or as the plain work profile (the switches can change later). */
     private void createWork(boolean secure, Runnable again) {
         toast(Tr.t("Creating…"));
-        prefs.edit().putBoolean(SecureFolder.PREF_ICON, secure).putBoolean(SecureFolder.PREF_LOCK, secure)
-                .putBoolean(SecureFolder.PREF_HIDE, secure).apply();
+        applyStyle(secure);
         worker.execute(() -> {
             String error = Work.create(this);
             // Hiding the apps relies on auto-freeze, which needs "Run in the background".
             boolean enabled = error == null && secure && !BackgroundService.on(prefs);
             if (enabled) BackgroundService.setEnabled(this, prefs, true);
+            if (error == null) prefs.edit().putBoolean(SecureFolder.PREF_EXISTS, true).apply();
             main.post(() -> {
                 if (error != null) workMessage(error);
                 else if (enabled) toast(Tr.t("Run in the background is on now. Auto-freeze and auto-lock need it."));
+                SecureFolder.sync(this, prefs); // the icon is there at once, before the page is opened again
                 again.run();
             });
         });

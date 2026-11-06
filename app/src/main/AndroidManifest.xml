@@ -164,7 +164,8 @@
             android:name=".SecureFolder"
             android:enabled="false"
             android:exported="true"
-            android:icon="@drawable/ic_secure_folder"
+            android:icon="@mipmap/ic_secure_folder"
+            android:roundIcon="@mipmap/ic_secure_folder"
             android:label="@string/secure_folder"
             android:taskAffinity="io.github.order52.tinykit.secure">
             <intent-filter>

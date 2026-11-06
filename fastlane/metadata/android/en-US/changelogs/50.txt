@@ -1,0 +1,3 @@
+• Fixed a crash when closing TinyKit while Shizuku was connecting.
+• Work profile: choosing "Work profile" no longer shows anything Secure folder, and Secure folder shows only its own look. Switch any time with the new Style row.
+• The Secure folder icon is now a proper adaptive icon and is set up when TinyKit starts.
