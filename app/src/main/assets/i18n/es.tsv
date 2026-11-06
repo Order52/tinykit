@@ -1288,3 +1288,10 @@ Unlocked	Desbloqueada
 Start Shizuku first (open TinyKit).	Inicia Shizuku primero (abre TinyKit).
 There is no work profile yet. Add apps in TinyKit.	Aún no hay perfil de trabajo. Añade apps en TinyKit.
 This adds a second, separate space to your phone. Your own apps and data stay as they are. You can remove it later.\n\nSecure folder: like Samsung's. Its own icon opens the apps behind your lock screen, and they stay out of the launcher.\n\nWork profile: the plain Android one. Its apps show in the launcher with a badge.	Esto añade un espacio aparte en tu teléfono. Tus apps y datos no cambian. Puedes quitarlo después.\n\nCarpeta segura: como la de Samsung. Su propio icono abre las apps tras tu bloqueo de pantalla, y no aparecen en el launcher.\n\nPerfil de trabajo: el normal de Android. Sus apps aparecen en el launcher con una insignia.
+A second, separate space for apps, with their own accounts and data. Android allows one. Pick how you want it:	Un espacio aparte para apps, con sus propias cuentas y datos. Android permite uno. Elige cómo lo quieres:
+Like Samsung's: its own icon opens your work apps behind the lock screen, and they stay out of the launcher.	Como el de Samsung: su propio icono abre tus apps de trabajo tras el bloqueo de pantalla, y no aparecen en el launcher.
+The plain Android one: its apps show in the launcher with a badge.	El normal de Android: sus apps aparecen en el launcher con una insignia.
+Create a Secure folder?	¿Crear una carpeta segura?
+Create a work profile?	¿Crear un perfil de trabajo?
+This adds a separate space to your phone. Your own apps and data stay as they are. You can remove it later.	Esto añade un espacio aparte en tu teléfono. Tus apps y datos no cambian. Puedes quitarlo después.
+Keeping apps at the volume you set	Manteniendo las apps al volumen que elegiste

@@ -42,6 +42,7 @@ public class ShizukuTile extends TileService {
     public void onStartListening() {
         // Shizuku's binder arrives a moment after the process starts.
         WORKER.execute(() -> {
+            Shell.nudge(getApplicationContext());
             for (int i = 0; i < 10 && !Shell.running(); i++) android.os.SystemClock.sleep(100);
             main.post(this::update);
         });

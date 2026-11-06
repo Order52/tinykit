@@ -325,12 +325,27 @@ public class MainActivity extends Activity {
         setContentView(root);
         if (lightTheme && Build.VERSION.SDK_INT >= 29) root.setForceDarkAllowed(false); // see AppTheme_Light
         tabRoots = new View[TAB_NAMES.length];
-        int tab = Math.max(0, Math.min(getIntent().getIntExtra(EXTRA_TAB, prefs.getInt("tab", 0)),
-                TAB_NAMES.length - 1));
+        int tab = Math.max(0, Math.min(savedInstanceState != null ? savedInstanceState.getInt("tab", prefs.getInt("tab", 0))
+                : getIntent().getIntExtra(EXTRA_TAB, prefs.getInt("tab", 0)), TAB_NAMES.length - 1));
         // Only the tab on screen is built before the first frame; the others follow, one per turn of the
         // main loop, and any of them is built on the spot if it is needed sooner (a tap, the search).
         buildTab(0); // Shizuku's status views are updated whenever its binder comes or goes
         selectTab(tab);
+        if (savedInstanceState != null && savedInstanceState.getInt("scrollY", 0) > 0) {
+            ScrollView sv = scrollOf(pages.get(pages.size() - 1));
+            int y = savedInstanceState.getInt("scrollY");
+            if (sv != null) { // back to the same spot as soon as the list has its height
+                sv.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+                    @Override
+                    public boolean onPreDraw() {
+                        if (sv.getChildAt(0) == null || sv.getChildAt(0).getHeight() < y) return true;
+                        sv.getViewTreeObserver().removeOnPreDrawListener(this);
+                        sv.scrollTo(0, y);
+                        return true;
+                    }
+                });
+            }
+        }
         if (getIntent().getBooleanExtra(EXTRA_WORK, false)) {
             getIntent().removeExtra(EXTRA_WORK);
             main.post(this::openWork);
@@ -508,6 +523,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        nudged(this::refreshShizuku); // Shizuku may have started while TinyKit was away
         if (autoStartPending) {
             autoStartPending = false;
             // Shizuku's connection can take a moment to arrive when TinyKit has just started: look again before starting it.
@@ -525,6 +541,27 @@ public class MainActivity extends Activity {
             main.postDelayed(this::startShizuku, 500);
         }
         refreshShizuku();
+    }
+
+    /** The tab's scroll position goes with the activity when the theme changes, so the screen comes back where it was. */
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        ScrollView sv = pages.isEmpty() ? null : scrollOf(pages.get(pages.size() - 1));
+        if (sv != null) out.putInt("scrollY", sv.getScrollY());
+        out.putInt("tab", prefs.getInt("tab", 0));
+        out.putInt("depth", pages.size());
+    }
+
+    private static ScrollView scrollOf(View v) {
+        if (v instanceof ScrollView) return (ScrollView) v;
+        if (v instanceof ViewGroup) {
+            for (int i = 0; i < ((ViewGroup) v).getChildCount(); i++) {
+                ScrollView found = scrollOf(((ViewGroup) v).getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     /** Opened again from the background notification: go to the tab it asks for. */
@@ -867,8 +904,32 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** Asks Shizuku for its connection (a call into its app, so off the main thread), then runs {@code after} on the main thread. */
+    private void nudged(Runnable after) {
+        worker.execute(() -> {
+            Shell.nudge(this);
+            main.post(after);
+        });
+    }
+
+    /** While a start is under way, asks Shizuku for its connection every second, so the card never lags behind. */
+    private void watchBinder() {
+        main.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!alive() || !starting) return;
+                nudged(MainActivity.this::refreshShizuku); // off the main thread: it is a call into Shizuku's app
+                main.postDelayed(this, 1000);
+            }
+        }, 1000);
+    }
+
     private void startShizuku() {
         if (starting) return;
+        if (Shell.running()) { // already up: starting it again would only restart it
+            refreshShizuku();
+            return;
+        }
         if (!ShizukuControl.intents(this, prefs)) {
             if (Termux.installed(this) && !termuxChecked) {
                 prepareTermux();
@@ -889,9 +950,20 @@ public class MainActivity extends Activity {
         }
         starting = true;
         refreshShizuku();
-        AdbService.onFinish = message -> main.postDelayed(() -> {
-            if (starting && !Shell.running()) startFinished(message); // it ended and Shizuku isn't there
-        }, 4000);
+        AdbService.onFinish = message -> main.post(() -> {
+            if (!starting) return;
+            nudged(() -> {
+                if (!starting) return;
+                if (message == null || Shell.running()) { // it is up: the card follows by itself, and at once
+                    starting = false;
+                    main.removeCallbacks(startTimeout);
+                    refreshShizuku();
+                } else {
+                    startFinished(message);
+                }
+            });
+        });
+        watchBinder();
         // Shizuku's own start intent takes a couple of seconds. TinyKit's own start can wait for pairing, which
         // it asks for in a notification, so it is given minutes; it reports a failure in a notification itself.
         main.postDelayed(startTimeout, ShizukuControl.intents(this, prefs) ? 15_000L
@@ -1504,7 +1576,8 @@ public class MainActivity extends Activity {
             boolean on = !lightThemeSwitch.isChecked();
             lightThemeSwitch.setChecked(on);
             prefs.edit().putBoolean("light_theme", on).apply();
-            recreate();
+            recreate(); // same tab, same scroll position (see onSaveInstanceState)
+            overridePendingTransition(0, 0); // no slide: the colours just change
         }, false);
         // The one switch for everything TinyKit may keep running. Off: it never runs by itself.
         Switch backgroundSwitch = new Switch(this);
@@ -5827,21 +5900,12 @@ public class MainActivity extends Activity {
             return;
         }
         if (id < 0) {
-            body.addView(note("A work profile is a second, separate space on this phone. Apps you add to it are "
-                    + "copies with their own accounts, data and notifications. Freeze them, or let them freeze by "
-                    + "themselves, so they don't run at all. Give it its own PIN and it locks like Samsung's Secure "
-                    + "Folder. Android allows one. TinyKit makes it by itself: no setup screens and no extra app "
-                    + "inside it."));
-            row(body, "Create work profile", "Takes a few seconds.", null, () -> new AlertDialog.Builder(this)
-                    .setTitle(Tr.t("Create work profile?"))
-                    .setMessage(Tr.t("This adds a second, separate space to your phone. Your own apps and data "
-                            + "stay as they are. You can remove it later.\n\nSecure folder: like Samsung's. Its own "
-                            + "icon opens the apps behind your lock screen, and they stay out of the launcher.\n\n"
-                            + "Work profile: the plain Android one. Its apps show in the launcher with a badge."))
-                    .setPositiveButton(Tr.t("Secure folder"), (d, w) -> createWork(true, again))
-                    .setNeutralButton(Tr.t("Work profile"), (d, w) -> createWork(false, again))
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show(), true);
+            body.addView(note("A second, separate space for apps, with their own accounts and data. Android allows one. "
+                    + "Pick how you want it:"));
+            row(body, "Secure folder", "Like Samsung's: its own icon opens your work apps behind the lock screen, and "
+                    + "they stay out of the launcher.", arrow(), () -> confirmCreate(true, again), true);
+            row(body, "Work profile", "The plain Android one: its apps show in the launcher with a badge.", arrow(),
+                    () -> confirmCreate(false, again), true);
             SecureFolder.icon(this, false); // no profile: no icon
             return;
         }
@@ -6120,6 +6184,17 @@ public class MainActivity extends Activity {
                 done.run();
             });
         });
+    }
+
+    /** One short question before making it; the choice itself was the row that was tapped. */
+    private void confirmCreate(boolean secure, Runnable again) {
+        new AlertDialog.Builder(this)
+                .setTitle(Tr.t(secure ? "Create a Secure folder?" : "Create a work profile?"))
+                .setMessage(Tr.t("This adds a separate space to your phone. Your own apps and data stay as they are. "
+                        + "You can remove it later."))
+                .setPositiveButton(Tr.t("Create"), (d, w) -> createWork(secure, again))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /** Makes the profile, set up as a Samsung-style Secure folder or as the plain work profile (the switches can change later). */

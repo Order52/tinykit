@@ -64,7 +64,8 @@ public final class AdbService extends Service {
             + "if [ -n \"$l\" ]; then $l; else sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh; fi";
 
     private final LinkedBlockingQueue<String> codes = new LinkedBlockingQueue<>();
-    private volatile boolean running, silent;
+    private volatile boolean running, silent, skipped;
+    private static final String PREF_METHOD = "start_method";
     private SharedPreferences prefs;
 
     /** Wireless debugging exists from Android 11. */
@@ -117,13 +118,36 @@ public final class AdbService extends Service {
     private void flow() {
         String result;
         try {
+            // Already up (TinyKit may only be late hearing of it): leave it alone, a start would restart it.
+            Shell.nudge(this);
+            if (Shell.running()) {
+                skipped = true;
+                finish(null);
+                return;
+            }
+            // The way that worked last time, first and quickly: a start usually takes a second or two.
+            String last = prefs.getString(PREF_METHOD, "");
+            if ("wireless".equals(last) && paired(this) && supported()) {
+                Adb quickAdb = new Adb(getFilesDir());
+                if (connectAndStart(quickAdb, 2500) == null) {
+                    finish(null);
+                    return;
+                }
+            } else if (("root".equals(last) || "tcp".equals(last))) {
+                if (quickStart(new Adb(getFilesDir())) == null) {
+                    finish(null);
+                    return;
+                }
+            }
             if (silent && !paired(this) && !prefs.getBoolean(PREF_TERMUX, false)) { // nothing known to work: stay out of the way
+                skipped = true;
                 finish(null);
                 return;
             }
             if (Termux.installed(this) && Termux.permitted(this) && prefs.getBoolean(PREF_TERMUX, false)) {
                 String viaTermux = termuxFlow();
                 if (!TERMUX_SKIP.equals(viaTermux)) {
+                    if (viaTermux == null) prefs.edit().putString(PREF_METHOD, "termux").apply();
                     finish(viaTermux);
                     return;
                 }
@@ -273,14 +297,14 @@ public final class AdbService extends Service {
     private String quickStart(Adb adb) {
         String rooted = root();
         if (rooted != null && rooted.contains("exit with 0")) {
-            prefs.edit().putBoolean(PREF_PAIRED, true).apply();
+            prefs.edit().putBoolean(PREF_PAIRED, true).putString(PREF_METHOD, "root").apply();
             return null;
         }
         try {
             say("Starting Shizuku…", "If the phone asks to allow USB debugging, choose Allow (Always allow).", false, null);
             String out = adb.shell("127.0.0.1", 5555, START, true);
             if (out.contains("exit with 0")) {
-                prefs.edit().putBoolean(PREF_PAIRED, true).apply();
+                prefs.edit().putBoolean(PREF_PAIRED, true).putString(PREF_METHOD, "tcp").apply();
                 return null;
             }
             String[] lines = out.split("\n");
@@ -322,7 +346,10 @@ public final class AdbService extends Service {
         if (last > 0 && prefs.getBoolean(PREF_PAIRED, false)) { // the port from the last time: usually still the one
             try {
                 String out = adb.shell("127.0.0.1", last, START);
-                if (out.contains("exit with 0")) return null;
+                if (out.contains("exit with 0")) {
+                    prefs.edit().putString(PREF_METHOD, "wireless").apply();
+                    return null;
+                }
             } catch (Exception e) {
                 // gone: look for the new one
             }
@@ -336,7 +363,7 @@ public final class AdbService extends Service {
                 try {
                     String out = adb.shell("127.0.0.1", port, START);
                     if (out.contains("exit with 0")) {
-                        prefs.edit().putInt(PREF_PORT, port).apply();
+                        prefs.edit().putInt(PREF_PORT, port).putString(PREF_METHOD, "wireless").apply();
                         return null;
                     }
                     String[] lines = out.split("\n");
@@ -500,8 +527,22 @@ public final class AdbService extends Service {
     static volatile java.util.function.Consumer<String> onFinish;
 
     private void finish(String error) {
+        if (error == null && !skipped) {
+            // Started: wait for TinyKit to be connected to it, so "Starting…" ends when Shizuku is really usable.
+            for (int i = 0; i < 80 && !Shell.running(); i++) { // up to 20 s, looking every quarter second
+                Shell.nudge(this);
+                try {
+                    Thread.sleep(250);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            if (!Shell.running()) error = "Shizuku was started, but TinyKit couldn't connect to it. Open the Shizuku app "
+                    + "and make sure TinyKit is allowed.";
+        }
         java.util.function.Consumer<String> listener = onFinish;
-        if (listener != null) listener.accept(error == null ? "Shizuku didn't start. Tap Start again, or open the Shizuku app." : error);
+        if (listener != null) listener.accept(error); // null: it is up
         stopForeground(STOP_FOREGROUND_REMOVE);
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.cancel(NOTIFICATION);

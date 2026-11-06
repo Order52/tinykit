@@ -339,10 +339,15 @@ apps and the waits; the profile and its apps are read back from Android each tim
 ### Audio mixer
 
 A volume slider for each app, so one app can be quieter than another. **Apps tab > Audio mixer**
-(Android 8 or newer, needs Shizuku). On Android 13 and newer, and wherever Shizuku runs as root, every app
-gets a volume slider. Before Android 13 the adb user can't see which app is playing or turn it down, so there
-each app has a **mute** switch instead (the same app-op as *Mixed audio*, which Android keeps by itself) and
-the playing apps can't be marked; the open apps still are.
+(Android 8 or newer, needs Shizuku). Every app gets a real volume slider. On Android 13 and newer, and wherever
+Shizuku runs as root, a small helper scales the app's players. Before Android 13 the adb user can't, so TinyKit
+puts an **audio effect** on the audio session of each lowered app instead (a gain from `DynamicsProcessing` on
+Android 9+, an equaliser pulled down on Android 8, up to about 15 dB), found from `dumpsys audio` and the mixer's
+track table. Android lets any app attach an effect to any session. These effects live in TinyKit, so a small
+notification shows while any app is lowered, and it ends by itself afterwards. The playing apps can't be
+marked on those versions; the open ones still are. If a phone has no usable effect, each app has a **mute** switch
+(the same app-op as *Mixed audio*). Tried on Android 11 and 14 emulators: the effect attaches to another app's
+session; how much quieter it sounds depends on the phone's audio effects, which I couldn't measure.
 At the top is the phone's media volume. **Open now** lists the apps playing right now first, then
 the other open apps (the recent-apps list), and **All apps** lists every app with a launcher icon
 with a search box. Apps in the work profile are in both lists, marked **Work profile**, with

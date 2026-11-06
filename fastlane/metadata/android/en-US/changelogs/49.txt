@@ -1,0 +1,4 @@
+• Audio mixer: real volume sliders on Android 8 to 12 too, using an audio effect on each lowered app (a small notification shows while any is lowered).
+• Creating a work profile: two plain choices, Secure folder or Work profile.
+• Light theme switches live and keeps your place.
+• Start Shizuku: faster, never restarts a running Shizuku, and TinyKit connects to it sooner.

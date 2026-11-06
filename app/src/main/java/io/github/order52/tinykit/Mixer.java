@@ -170,6 +170,8 @@ public final class Mixer {
     }
 
     private static Boolean scalable;
+    /** Volume goes through audio effects ({@link MixerFx}), not the helper: Android 12 and older. */
+    static boolean fx;
 
     /**
      * Whether Shizuku may turn one app's volume down, not just mute it: Android 13 and newer, or Shizuku
@@ -183,8 +185,9 @@ public final class Mixer {
                     + " app_process /system/bin io.github.order52.tinykit.Mixer probe");
             if (!r.ok() && r.out.trim().isEmpty()) return false; // Shizuku isn't ready: ask again next time
             scalable = r.out.contains("OK");
+            if (!scalable) fx = MixerFx.works(c); // no helper: try an effect on each app's audio session
         }
-        return scalable;
+        return scalable || fx;
     }
 
     /** Mutes or unmutes one app (in one profile) with the app-op that the Mixed audio page uses. */
@@ -260,6 +263,7 @@ public final class Mixer {
         } catch (NumberFormatException e) {
             state.alive = false;
         }
+        if (fx) state.alive = true; // nothing to keep alive here: the effects service has its own life
         return state;
     }
 
@@ -283,6 +287,10 @@ public final class Mixer {
      */
     static String apply(Context c, SharedPreferences p) {
         if (!scaling(c)) return null; // muting is an app-op the system keeps: nothing to run
+        if (fx) {
+            if (lowered(rules(p))) MixerFx.begin(c);
+            return null;
+        }
         StringBuilder text = new StringBuilder();
         for (Map.Entry<Integer, Integer> e : rules(p).entrySet()) {
             text.append(e.getKey()).append(' ').append(e.getValue()).append('\n');

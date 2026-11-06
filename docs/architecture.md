@@ -81,6 +81,7 @@ tinykit/
 │       │   ├── SecureFolder.java   Secure folder icon: work apps behind the lock screen, grid, open and freeze
 │       │   ├── Doze.java           Deep sleep: Comatose's profiles written where each Android reads them, read back and verified
 │       │   ├── Services.java       Running services from dumpsys activity services, stop and block
+│       │   ├── MixerFx.java        Mixer volume on Android 12 and older: audio effects on the lowered apps' sessions
 │       │   ├── Mixer.java          Audio mixer: app_process helper that scales each app's players, plus its settings and start-up
 │       │   ├── ShareTo.java        Share menu pins: sharing shortcuts, hands what is shared to the pinned app
 │       │   ├── ApkInstaller.java   Installs .apk, .apks, .xapk and .apkm through pm, streaming

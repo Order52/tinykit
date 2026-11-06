@@ -1291,3 +1291,10 @@ Unlocked	Разблокирована
 Start Shizuku first (open TinyKit).	Сначала запустите Shizuku (откройте TinyKit).
 There is no work profile yet. Add apps in TinyKit.	Рабочего профиля пока нет. Добавьте приложения в TinyKit.
 This adds a second, separate space to your phone. Your own apps and data stay as they are. You can remove it later.\n\nSecure folder: like Samsung's. Its own icon opens the apps behind your lock screen, and they stay out of the launcher.\n\nWork profile: the plain Android one. Its apps show in the launcher with a badge.	Это добавляет отдельное пространство на телефоне. Ваши приложения и данные не меняются. Позже его можно удалить.\n\nЗащищённая папка: как у Samsung. Отдельный значок открывает приложения за экраном блокировки, в лаунчере их нет.\n\nРабочий профиль: обычный профиль Android. Его приложения видны в лаунчере со значком.
+A second, separate space for apps, with their own accounts and data. Android allows one. Pick how you want it:	Отдельное пространство для приложений со своими аккаунтами и данными. Android разрешает одно. Выберите вариант:
+Like Samsung's: its own icon opens your work apps behind the lock screen, and they stay out of the launcher.	Как у Samsung: отдельный значок открывает рабочие приложения за экраном блокировки, в лаунчере их нет.
+The plain Android one: its apps show in the launcher with a badge.	Обычный профиль Android: его приложения видны в лаунчере со значком.
+Create a Secure folder?	Создать защищённую папку?
+Create a work profile?	Создать рабочий профиль?
+This adds a separate space to your phone. Your own apps and data stay as they are. You can remove it later.	Это добавляет отдельное пространство на телефоне. Ваши приложения и данные не меняются. Позже его можно удалить.
+Keeping apps at the volume you set	Приложения остаются на заданной громкости

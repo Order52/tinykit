@@ -15,6 +15,7 @@
     <!-- Network info page reads the active connection's addresses and Wi-Fi state. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Start Shizuku through Termux, which Android asks the user to allow. -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
@@ -222,6 +223,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Listens for newly installed apps to block their internet access, watches which app is open to hide developer options from the apps the user chose, and freezes the work-profile apps the user chose when the screen has been off for a while" />
+        </service>
+
+        <!-- The mixer's volume on Android 12 and older: audio effects on the lowered apps' sessions, while any is lowered. -->
+        <service
+            android:name=".MixerFx"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Holds the audio effects that turn the chosen apps down, while the user has lowered any app in the audio mixer" />
         </service>
 
         <!-- Starts Shizuku with TinyKit's own adb client over Wireless debugging, only while a start is under way. -->

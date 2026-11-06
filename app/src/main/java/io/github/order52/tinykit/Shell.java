@@ -66,6 +66,19 @@ final class Shell {
      * usable. Tiles run when the quick panel opens, which can be before the binder arrives, so they
      * call this off the main thread instead of giving up straight away.
      */
+    /**
+     * Asks Shizuku's app for its connection. Shizuku sends it to TinyKit by itself when it starts, but the
+     * message can arrive late or not at all (TinyKit frozen in the background, or opened a moment before), and then
+     * TinyKit says it isn't running though it is. Safe to call any time: it does nothing when Shizuku isn't there.
+     */
+    static void nudge(android.content.Context c) {
+        try {
+            if (!running()) rikka.shizuku.ShizukuProvider.requestBinderForNonProviderProcess(c);
+        } catch (Throwable ignored) {
+            // no Shizuku, or it isn't running
+        }
+    }
+
     static boolean await() {
         for (int i = 0; i < 20 && !ready(); i++) android.os.SystemClock.sleep(100);
         return ready();
