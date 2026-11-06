@@ -166,13 +166,28 @@
             android:exported="true"
             android:icon="@mipmap/ic_secure_folder"
             android:roundIcon="@mipmap/ic_secure_folder"
-            android:label="@string/secure_folder"
+            android:label="@string/tiny_folder"
             android:taskAffinity="io.github.order52.tinykit.secure">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The plain work profile's folder: the same grid of work apps, with no lock. Enabled only in that look, with a work profile. -->
+        <activity-alias
+            android:name=".WorkFolder"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_work_folder"
+            android:roundIcon="@mipmap/ic_work_folder"
+            android:label="@string/tiny_folder"
+            android:targetActivity=".SecureFolder">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- What a pinned work-app shortcut starts: no screen, it unfreezes and opens the app. -->
         <activity

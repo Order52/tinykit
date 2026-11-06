@@ -326,7 +326,14 @@ Builds:
     gradle:
       - yes
 
+  - versionName: 1.22.5
+    versionCode: 54
+    commit: v1.22.5
+    subdir: app
+    gradle:
+      - yes
+
 AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
-CurrentVersion: 1.22.4
-CurrentVersionCode: 53
+CurrentVersion: 1.22.5
+CurrentVersionCode: 54

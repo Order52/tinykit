@@ -5974,6 +5974,17 @@ public class MainActivity extends Activity {
         body.addView(status);
         row(body, "Style", Tr.t(secure ? "Secure folder" : "Work profile") + " · " + Tr.t("Tap to change."), arrow(),
                 () -> chooseStyle(id, apps, again), false);
+        if (!secure) {
+            section(body, "Work folder");
+            row(body, "Open Work folder", "Your work apps in one place, with no lock.", arrow(),
+                    () -> startActivity(new Intent().setClassName(getPackageName(), getPackageName() + ".WorkFolder")), false);
+            if (Build.VERSION.SDK_INT >= 26) row(body, "Add to home screen", "Some launchers don't show a new icon by themselves. "
+                    + "This asks yours to add it.", arrow(), () -> {
+                String why = SecureFolder.pin(this, true);
+                if (why != null) toast(Tr.t(why));
+            }, false);
+            row(body, "Lock", lockText(), arrow(), () -> chooseFolderLock(again), false);
+        }
         if (secure) section(body, "Secure folder");
         if (secure) row(body, "Open Secure folder", "Your work apps behind the phone's lock screen, like Samsung's Secure Folder.",
                 arrow(), () -> startActivity(new Intent(this, SecureFolder.class)), false);
@@ -5984,8 +5995,7 @@ public class MainActivity extends Activity {
         }, false);
         if (secure) prefRow(body, "Secure folder icon", "Show it on the home screen and in the app list.", SecureFolder.PREF_ICON, true,
                 on -> SecureFolder.sync(this, prefs));
-        if (secure) prefRow(body, "Ask for my lock screen first", "Opening the Secure folder needs your PIN, pattern or fingerprint, "
-                + "and it locks again when you leave it.", SecureFolder.PREF_LOCK, true, on -> { });
+        if (secure) row(body, "Lock", lockText(), arrow(), () -> chooseFolderLock(again), false);
         if (secure) prefRow(body, "Hide work apps from the launcher", "Freezes them, and again whenever the screen has been off, so "
                 + "they only show in the Secure folder. A tap there brings one back.", SecureFolder.PREF_HIDE, false, on -> {
             List<String> every = new ArrayList<>();
@@ -6041,6 +6051,11 @@ public class MainActivity extends Activity {
                         },
                         (pkg, on) -> {
                             String error = on ? Work.add(id, pkg) : Work.delete(id, pkg);
+                            if (error == null) { // the TinyFolder shows what was put in the profile, not the apps it starts with
+                                Set<String> mine = new HashSet<>(prefs.getStringSet(SecureFolder.PREF_ADDED, new HashSet<>()));
+                                if (on) mine.add(pkg); else mine.remove(pkg);
+                                prefs.edit().putStringSet(SecureFolder.PREF_ADDED, mine).apply();
+                            }
                             if (error == null && !on) forgetAutoFreeze(pkg);
                             if (error == null && on && prefs.getBoolean(SecureFolder.PREF_HIDE, false)) {
                                 // Hiding is on: the new app is frozen too, and stays so when the screen is off.
@@ -6240,6 +6255,85 @@ public class MainActivity extends Activity {
         SecureFolder.sync(this, prefs);
     }
 
+    private String lockText() {
+        String mode = SecureFolder.lockMode(prefs);
+        return Tr.t("password".equals(mode) ? "TinyFolder password" : "device".equals(mode) ? "Phone lock screen" : "Off")
+                + " · " + Tr.t("Tap to change.");
+    }
+
+    private EditText passwordBox(String hint) {
+        EditText box = new EditText(this);
+        box.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        box.setHint(Tr.t(hint));
+        if (Build.VERSION.SDK_INT >= 26) box.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO); // no "save this password?" from a password manager
+        return box;
+    }
+
+    /** How the folder is locked: nothing, the phone's lock screen, or a password of its own (changing it needs the old one). */
+    private void chooseFolderLock(Runnable again) {
+        String now = SecureFolder.lockMode(prefs);
+        String[] modes = {"off", "device", "password"};
+        int at = now.equals("password") ? 2 : now.equals("device") ? 1 : 0;
+        new AlertDialog.Builder(this).setTitle(Tr.t("Lock"))
+                .setSingleChoiceItems(Tr.all(new String[]{"Off", "Phone lock screen", "TinyFolder password"}), at, (d, which) -> {
+                    d.dismiss();
+                    String mode = modes[which];
+                    if (mode.equals("device") && !((android.app.KeyguardManager) getSystemService(KEYGUARD_SERVICE)).isDeviceSecure()) {
+                        toast(Tr.t("Set a screen lock in Android first."));
+                        return;
+                    }
+                    Runnable apply = () -> {
+                        if (mode.equals("password")) {
+                            askNewPassword(again);
+                        } else {
+                            prefs.edit().putString(SecureFolder.PREF_LOCK_MODE, mode).remove(SecureFolder.PREF_PASSWORD).apply();
+                            again.run();
+                        }
+                    };
+                    if (now.equals("password") && SecureFolder.hasPassword(prefs)) { // leaving or changing a password needs it
+                        EditText current = passwordBox("Current password");
+                        LinearLayout box = vertical();
+                        box.setPadding(dp(24), dp(8), dp(24), 0);
+                        box.addView(current);
+                        new AlertDialog.Builder(this).setTitle(Tr.t("Lock")).setView(box)
+                                .setPositiveButton(Tr.t("OK"), (dd, w) -> {
+                                    if (SecureFolder.checkPassword(prefs, current.getText().toString())) apply.run();
+                                    else toast(Tr.t("Wrong password."));
+                                })
+                                .setNegativeButton(Tr.t("Cancel"), null).show();
+                    } else {
+                        apply.run();
+                    }
+                })
+                .setNegativeButton(Tr.t("Cancel"), null).show();
+    }
+
+    private void askNewPassword(Runnable again) {
+        EditText first = passwordBox("New password (at least 4 characters)");
+        EditText second = passwordBox("Repeat the new password");
+        LinearLayout box = vertical();
+        box.setPadding(dp(24), dp(8), dp(24), 0);
+        box.addView(text("Only the folder is locked by this: the apps in the work profile can still be opened from the "
+                + "launcher while they aren't hidden. If you forget it, the phone's lock screen opens the folder.", 14, false));
+        box.addView(first);
+        box.addView(second);
+        new AlertDialog.Builder(this).setTitle(Tr.t("TinyFolder password")).setView(box)
+                .setPositiveButton(Tr.t("Save"), (d, w) -> {
+                    String one = first.getText().toString();
+                    if (one.length() < 4) {
+                        toast(Tr.t("New password (at least 4 characters)"));
+                    } else if (!one.equals(second.getText().toString())) {
+                        toast(Tr.t("The passwords don't match."));
+                    } else {
+                        SecureFolder.setPassword(prefs, one);
+                        prefs.edit().putString(SecureFolder.PREF_LOCK_MODE, "password").apply();
+                        toast(Tr.t("Password saved."));
+                        again.run();
+                    }
+                })
+                .setNegativeButton(Tr.t("Cancel"), null).show();
+    }
+
     /** Switches an existing profile between the two looks; going plain brings the hidden apps back. */
     private void chooseStyle(int id, List<Work.App> apps, Runnable again) {
         boolean now = SecureFolder.secure(prefs);
@@ -6294,7 +6388,7 @@ public class MainActivity extends Activity {
             if (enabled) BackgroundService.setEnabled(this, prefs, true);
             if (error == null) prefs.edit().putBoolean(SecureFolder.PREF_EXISTS, true).apply();
             main.post(() -> {
-                if (error == null && secure && Build.VERSION.SDK_INT >= 26) SecureFolder.pin(this); // the launcher may not add the icon itself
+                if (error == null && Build.VERSION.SDK_INT >= 26) SecureFolder.pin(this, !secure); // the launcher may not add the icon itself
                 if (error != null) workMessage(error);
                 else if (enabled) toast(Tr.t("Run in the background is on now. Auto-freeze and auto-lock need it."));
                 SecureFolder.sync(this, prefs); // the icon is there at once, before the page is opened again

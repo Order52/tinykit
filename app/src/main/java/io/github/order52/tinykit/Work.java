@@ -330,16 +330,13 @@ final class Work {
                 }
             }
         }
-        // Only the disabled packages that have an icon are checked one by one (a work profile can list
-        // hundreds of default-disabled system packages, and most were never switched off by the user).
-        StringBuilder check = new StringBuilder();
-        for (String pkg : disabled) {
-            if (launch.containsKey(pkg) || own.containsKey(pkg)) {
-                check.append("dumpsys package ").append(Shell.quote(pkg)).append(" | grep -q -E \"^ +User ").append(id)
-                        .append(": .*enabled=3\" && echo \"package:").append(pkg).append("\"; ");
-            }
-        }
-        List<String> frozen = check.length() == 0 ? new ArrayList<>() : packages(run(check.toString(), 30_000).out);
+        // Which of the disabled ones were switched off by the user (enabled=3), not default-disabled: one pass over
+        // the package service's own list, not a dumpsys per package (which took seconds with many frozen).
+        boolean any = false;
+        for (String pkg : disabled) if (launch.containsKey(pkg) || own.containsKey(pkg)) any = true;
+        List<String> frozen = !any ? new ArrayList<>() : packages(run("dumpsys package packages | awk -v u=" + id
+                + " '/^  Package \\[/ {p=$2; gsub(/[\\[\\]]/,\"\",p)} $1==\"User\" && $2==u\":\" && /enabled=3/ "
+                + "{print \"package:\" p}'", 30_000).out);
         List<App> apps = build(launch, frozen);
         for (Map.Entry<String, String> e : own.entrySet()) {
             if (!launch.containsKey(e.getKey())) apps.add(new App(e.getKey(), e.getValue(), frozen.contains(e.getKey())));

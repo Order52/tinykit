@@ -1,0 +1,4 @@
+• TinyFolder: the Secure folder and the plain work profile's folder are both called TinyFolder, and open much faster (the last list shows at once, loaded while the lock screen is up).
+• Lock is optional: off, the phone's lock screen, or TinyFolder's own password.
+• It shows only what you put in the work profile, with Add apps. Hold an app and drag it to reorder.
+• Plain work profile gets a Work folder with no lock.

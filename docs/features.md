@@ -374,7 +374,7 @@ that can be changed later.
 
 **Work profile > Secure folder**. A **Secure folder icon** (its own launcher entry, shown while a work profile
 exists) opens the work apps behind your phone's lock screen (PIN, pattern or fingerprint, asked again each time
-you leave it), as a grid. Launchers with no app drawer (Huawei's, for one) don't add a new icon by themselves: **Add to home screen** asks the launcher to, and TinyKit asks once when it creates the Secure folder; a tap unfreezes an app and opens it in the profile, a long press freezes or unfreezes it.
+you leave it), as a grid. Launchers with no app drawer (Huawei's, for one) don't add a new icon by themselves: **Add to home screen** asks the launcher to, and TinyKit asks once when it creates the Secure folder; a tap unfreezes an app and opens it in the profile. Holding an app picks it up to drag it to a new place (the order is kept); letting go without moving opens its menu (freeze or unfreeze). The grid shows only what was put in the work profile, not the phone's own apps it starts with, and **Add apps** is at the bottom. Both looks are called **TinyFolder** on the home screen. **Lock** is off, the phone's lock screen, or TinyFolder's own password (kept only as a salted hash; if it is forgotten the phone's lock screen opens the folder). It opens at once from the last list it saw and refreshes in the background.
 **Hide work apps from the launcher** freezes them all, and again whenever the screen has been off (auto-freeze),
 so they only show in the Secure folder. **Lock** pauses the profile. Not possible without a device owner or
 Samsung's system access, so not here: keeping the clipboard or sharing between the two profiles apart, and moving

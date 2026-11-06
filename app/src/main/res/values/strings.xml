@@ -28,4 +28,6 @@
     <string name="tile_mixer">Audio mixer</string>
     <string name="tile_deep_sleep">Deep sleep</string>
     <string name="secure_folder">Secure folder</string>
+    <string name="work_folder">Work</string>
+    <string name="tiny_folder">TinyFolder</string>
 </resources>

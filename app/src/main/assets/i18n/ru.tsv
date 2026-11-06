@@ -1308,3 +1308,23 @@ Add to home screen	Добавить на главный экран
 Some launchers don't show a new icon by themselves. This asks yours to add it.	Некоторые лаунчеры сами не показывают новый значок. Это просит ваш добавить его.
 Secure folder is off. Touch and hold this icon, then Remove.	Защищённая папка выключена. Нажмите и удерживайте значок, затем «Удалить».
 The old Secure folder icon is still on your home screen: touch and hold it, then Remove.	Старый значок защищённой папки всё ещё на главном экране: нажмите и удерживайте его, затем «Удалить».
+Work	Работа
+Work folder	Рабочая папка
+Open Work folder	Открыть рабочую папку
+Your work apps in one place, with no lock.	Рабочие приложения в одном месте, без блокировки.
+The work folder is off. Touch and hold this icon, then Remove.	Рабочая папка выключена. Нажмите и удерживайте значок, затем «Удалить».
+TinyFolder	TinyFolder
+Phone lock screen	Экран блокировки телефона
+TinyFolder password	Пароль TinyFolder
+Password	Пароль
+Wrong password.	Неверный пароль.
+Try again in a few seconds.	Повторите через несколько секунд.
+Current password	Текущий пароль
+New password (at least 4 characters)	Новый пароль (не менее 4 символов)
+Repeat the new password	Повторите новый пароль
+The passwords don't match.	Пароли не совпадают.
+Password saved.	Пароль сохранён.
+Set a screen lock in Android first.	Сначала настройте блокировку экрана в Android.
+Use phone lock screen	Использовать экран блокировки
+Only the folder is locked by this: the apps in the work profile can still be opened from the launcher while they aren't hidden. If you forget it, the phone's lock screen opens the folder.	Этим блокируется только папка: приложения рабочего профиля можно открыть из лаунчера, пока они не скрыты. Если забудете пароль, папку откроет экран блокировки телефона.
+Nothing here yet. Tap Add apps.	Пока ничего нет. Нажмите «Добавить приложения».
