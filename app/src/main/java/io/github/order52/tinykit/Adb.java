@@ -59,9 +59,17 @@ final class Adb {
             this(message, false);
         }
 
+        /** Nothing listens at that port at all. */
+        final boolean closed;
+
         Failure(String message, boolean unpaired) {
+            this(message, unpaired, false);
+        }
+
+        Failure(String message, boolean unpaired, boolean closed) {
             super(message);
             this.unpaired = unpaired;
+            this.closed = closed;
         }
     }
 
@@ -175,10 +183,19 @@ final class Adb {
 
     /** Runs one shell command as the adb user and returns what it printed. Throws {@link Failure} if the phone doesn't trust this key. */
     String shell(String host, int port, String command) throws Exception {
+        return shell(host, port, command, false);
+    }
+
+    /**
+     * As above. {@code legacy} is adb over plain TCP (a phone with "adb tcpip" on, before Wireless debugging
+     * existed): the phone checks a signature instead, and the first time asks the person on screen to allow this key.
+     */
+    String shell(String host, int port, String command, boolean legacy) throws Exception {
         boolean[] upgraded = {false}, connected = {false};
         try (Socket plain = new Socket()) {
             plain.connect(new InetSocketAddress(host, port), 1500);
-            plain.setSoTimeout(30_000);
+            plain.setSoTimeout(4000); // something that isn't adb never answers
+
             InputStream in = plain.getInputStream();
             OutputStream out = plain.getOutputStream();
             write(out, A_CNXN, 0x01000001, 1024 * 1024, "host::\0".getBytes(StandardCharsets.US_ASCII));
@@ -194,9 +211,19 @@ final class Adb {
                 out = ssl.getOutputStream();
                 m = read(in);
             }
+            if (m.command == A_AUTH && legacy) {
+                write(out, A_AUTH, 2, 0, sign(m.data));
+                m = read(in);
+                if (m.command == A_AUTH) { // not known yet: offer the key, and wait while the phone asks
+                    plain.setSoTimeout(120_000); // the person has to tap Allow
+                    write(out, A_AUTH, 3, 0, (adbKey() + " tinykit@android\0").getBytes(StandardCharsets.US_ASCII));
+                    m = read(in);
+                }
+            }
             if (m.command == A_AUTH) throw new Failure("This phone doesn't know TinyKit yet. Pair it again.", true);
             if (m.command != A_CNXN) throw new Failure("Wireless debugging didn't answer.");
             connected[0] = true;
+            plain.setSoTimeout(30_000);
             write(out, A_OPEN, 1, 0, ("shell:" + command + "\0").getBytes(StandardCharsets.UTF_8));
             ByteArrayOutputStream result = new ByteArrayOutputStream();
             while ((m = read(in)).command != A_CLSE) {
@@ -207,11 +234,22 @@ final class Adb {
             }
             if (tls != null) tls.close();
             return result.toString("UTF-8").replace("\r", "").trim();
+        } catch (java.net.ConnectException e) {
+            throw new Failure("Nothing is listening for adb on this phone.", false, true);
         } catch (java.io.IOException e) {
             // Dropped after the secure channel was asked for: that is how the phone refuses a key it doesn't know.
             android.util.Log.w("TinyKit", "adb shell: " + e + " upgraded=" + upgraded[0] + " connected=" + connected[0]);
             throw new Failure("Couldn't talk to Wireless debugging.", upgraded[0] && !connected[0]);
         }
+    }
+
+    /** What adb wants for the first kind of login: the token signed with the key, as a SHA-1 PKCS#1 signature. */
+    byte[] sign(byte[] token) throws Exception {
+        byte[] sha1Prefix = {0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14};
+        Signature rsa = Signature.getInstance("NONEwithRSA");
+        rsa.initSign(key);
+        rsa.update(concat(sha1Prefix, token));
+        return rsa.sign();
     }
 
     private static final class Message {

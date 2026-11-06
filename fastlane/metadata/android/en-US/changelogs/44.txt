@@ -1,0 +1,2 @@
+• Start never just opens Shizuku any more. TinyKit starts it itself the way shizuku-termux does: root, adb over the network, or Wireless debugging (Android 11+), and says plainly when the phone allows none.
+• Finds Wireless debugging by scanning ports when discovery fails; lifts Android 12's background limit so Shizuku stays up.

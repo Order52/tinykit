@@ -10,9 +10,8 @@ import android.content.SharedPreferences;
  *
  * Start, best way first:
  * 1. Shizuku's own start intent with the auth token saved in TinyKit, on the Shizuku forks that have one.
- * 2. TinyKit's own adb client over Wireless debugging ({@link AdbService}), Android 11 and newer: it
- *    pairs once and after that needs nobody.
- * Otherwise the Shizuku app has to be opened to start it.
+ * 2. TinyKit's own adb client ({@link AdbService}): over Wireless debugging on Android 11 and newer (it pairs
+ *    once and after that needs nobody), or on older Android through root or adb over the network.
  *
  * Stop: the stop intent with the token, else through Shizuku itself: Shizuku's app is force-stopped first,
  * so a Watchdog can't start it straight back up, then its server is asked to end, and made to if it
@@ -43,9 +42,9 @@ final class ShizukuControl {
         return intents(c, p) || AdbService.paired(c);
     }
 
-    /** Whether {@link #start} can start it at all (the first start may ask for a pairing code). */
+    /** Whether {@link #start} can try: always (it explains what is missing if nothing works). */
     static boolean canStart(Context c, SharedPreferences p) {
-        return intents(c, p) || AdbService.supported();
+        return true;
     }
 
     /** Whether {@link #stop} has a way to stop Shizuku right now. */
@@ -80,7 +79,6 @@ final class ShizukuControl {
                 c.sendBroadcast(new Intent(SHIZUKU + ".START").setPackage(SHIZUKU).putExtra("auth", p.getString("auth", "")));
                 return true;
             }
-            if (!AdbService.supported()) return false;
             AdbService.begin(c);
             return true;
         } catch (RuntimeException e) {

@@ -1220,3 +1220,5 @@ Sound on	Sonido activado
 Couldn't change that app's sound.	No se pudo cambiar el sonido de esa app.
 This Android can only mute an app, not turn it down. Android 13 and newer can do both.	Este Android solo puede silenciar una app, no bajarla. Android 13 y posterior pueden hacer ambas cosas.
 Pick apps Android must never kill or delay, like Termux or messengers.	Elige las apps que Android nunca debe cerrar ni retrasar, como Termux o las de mensajería.
+This Android is older than 11, so it has no Wireless debugging, and this phone has neither root nor adb over the network switched on. On Android 10 and older one of those has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).	Este Android es anterior a 11, así que no tiene depuración inalámbrica, y este teléfono no tiene ni root ni adb por red activado. En Android 10 y anteriores hace falta una de las dos cosas: root, o adb tcpip 5555 desde un ordenador una vez (dura hasta que se reinicie el teléfono).
+If the phone asks to allow USB debugging, choose Allow (Always allow).	Si el teléfono pide permitir la depuración USB, elige Permitir (Permitir siempre).

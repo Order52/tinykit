@@ -11,14 +11,12 @@ every reboot.
 **Start does nothing, or says *"Shizuku didn't start"*.**
 - *With the auth token*: check that the token matches the one in Shizuku's settings, and that
   you're using a Shizuku build that supports start intents (thedjchi's fork).
-- *On Android 11+ with no token*: TinyKit starts Shizuku itself through Wireless debugging. Follow
-  its notification: *Turn on Developer options* or *Turn on Wireless debugging* (it needs Wi-Fi),
+- *With no token*: TinyKit starts Shizuku itself, through root, adb over the network or, on Android 11+,
+  Wireless debugging. On Android 10 and older without root or `adb tcpip 5555` it says so: Android
+  allows nothing else. On Android 11+ follow its notification: *Turn on Developer options* or *Turn on Wireless debugging* (it needs Wi-Fi),
   or *Enter the pairing code* the first time. If it says it couldn't talk to Wireless debugging,
   switch Wireless debugging off and on, then tap Start again. If you removed TinyKit under
   *Paired devices*, it asks for a new code.
-- *Start opens the Shizuku app*: that's expected on Android 10 and older with the standard Shizuku app.
-  Tap **Start** in Shizuku, then go back to TinyKit. See
-  [Getting started](getting-started.md#with-the-standard-shizuku-app).
 
 **Stop works, then Shizuku comes straight back.**
 That's the Watchdog in thedjchi's fork, with TinyKit older than 1.15.0. Update TinyKit: Stop

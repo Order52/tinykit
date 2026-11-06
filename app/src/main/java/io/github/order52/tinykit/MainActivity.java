@@ -267,7 +267,7 @@ public class MainActivity extends Activity {
     private Button shizukuButton;
     private Button startButton;
     private Button stopButton;
-    private boolean starting, stopping;
+    private boolean starting, stopping, askedNotifications;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
@@ -778,26 +778,24 @@ public class MainActivity extends Activity {
     /**
      * Starts Shizuku without a computer: through its start intent when an auth token is saved and the
      * installed Shizuku has one, otherwise with TinyKit's own adb client over Wireless debugging
-     * ({@link AdbService}, Android 11+), which asks for a pairing code once. On Android 10 and older the
-     * Shizuku app is opened to start it. TinyKit's binder listener refreshes this screen as soon as
+     * ({@link AdbService}): Wireless debugging on Android 11+ (it asks for a pairing code once), or root or adb
+     * over the network on older Android. TinyKit's binder listener refreshes this screen as soon as
      * Shizuku is running.
      */
     private void startShizuku() {
         if (starting) return;
         if (!ShizukuControl.intents(this, prefs)) {
-            if (!AdbService.supported() || !ShizukuControl.canStart(this, prefs)) {
-                openShizukuToStart(); // Android 10 and older have no Wireless debugging
-                return;
-            }
-            // The notification that asks for the pairing code needs to be allowed (Android 13+).
-            if (Build.VERSION.SDK_INT >= 33 && !AdbService.paired(this)
+            // The notification that asks for the pairing code needs to be allowed (Android 13+); asked once.
+            if (Build.VERSION.SDK_INT >= 33 && AdbService.supported() && !AdbService.paired(this) && !askedNotifications
                     && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                askedNotifications = true;
                 requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQUEST_NOTIFICATIONS);
                 return;
             }
         }
         if (!ShizukuControl.start(this, prefs)) {
-            openShizukuToStart();
+            shizukuProblem("Shizuku didn't start", "TinyKit couldn't start its Shizuku starter. Tap Start again, or "
+                    + "open the Shizuku app.");
             return;
         }
         starting = true;

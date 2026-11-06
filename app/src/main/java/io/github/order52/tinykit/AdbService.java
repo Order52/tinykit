@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -42,10 +43,21 @@ public final class AdbService extends Service {
     private static final int NOTIFICATION = 7;
     private static final String CONNECT = "_adb-tls-connect._tcp.", PAIRING = "_adb-tls-pairing._tcp.";
     private static final String PREF_PAIRED = "adb_paired";
-    private static final String NEEDS_WIRELESS = "wireless", NEEDS_PAIRING = "pairing";
-    /** Runs Shizuku's own starter the way its start script does, as the adb user. */
-    private static final String START = "d=$(pm path moe.shizuku.privileged.api | head -1 | sed 's/package://;s#/base.apk##'); "
-            + "$d/lib/$(ls $d/lib | head -1)/libshizuku.so";
+    private static final String NEEDS_WIRELESS = "wireless", NEEDS_PAIRING = "pairing", NEEDS_NOTHING = "nothing";
+    private static final String NOTHING_AVAILABLE = "This Android is older than 11, so it has no Wireless debugging, and "
+            + "this phone has neither root nor adb over the network switched on. On Android 10 and older one of those "
+            + "has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).";
+    /**
+     * Runs Shizuku's own starter as the adb or root user, the way Shizuku's start script does, after lifting the
+     * limit Android 12+ puts on background processes (which kills a Shizuku started this way within minutes).
+     */
+    static final String START = "if [ \"$(getprop ro.build.version.sdk)\" -ge 31 ]; then "
+            + "(device_config set_sync_disabled_for_tests persistent; "
+            + "device_config put activity_manager max_phantom_processes 2147483647; "
+            + "settings put global settings_enable_monitor_phantom_procs false) >/dev/null 2>&1; fi; "
+            + "d=$(pm path moe.shizuku.privileged.api | head -1 | sed 's/package://;s#/base.apk##'); "
+            + "l=$(ls $d/lib/*/libshizuku.so 2>/dev/null | head -1); "
+            + "if [ -n \"$l\" ]; then $l; else sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh; fi";
 
     private final LinkedBlockingQueue<String> codes = new LinkedBlockingQueue<>();
     private volatile boolean running;
@@ -56,9 +68,9 @@ public final class AdbService extends Service {
         return Build.VERSION.SDK_INT >= 30;
     }
 
-    /** Whether TinyKit has paired already, so a start needs nobody. */
+    /** Whether a start has worked before (paired with Wireless debugging, or root, or adb over the network), so it needs nobody. */
     static boolean paired(Context c) {
-        return supported() && c.getSharedPreferences("tinykit", MODE_PRIVATE).getBoolean(PREF_PAIRED, false);
+        return c.getSharedPreferences("tinykit", MODE_PRIVATE).getBoolean(PREF_PAIRED, false);
     }
 
     /** Starts the start. Safe to call again while one is running. */
@@ -93,6 +105,12 @@ public final class AdbService extends Service {
         String result;
         try {
             Adb adb = new Adb(getFilesDir());
+            // As shizuku-termux does, first what needs no pairing: root, then adb over the network if it is on.
+            String quick = quickStart(adb);
+            if (quick == null || !NEEDS_NOTHING.equals(quick) || !supported()) {
+                finish(quick == null ? null : NEEDS_NOTHING.equals(quick) ? NOTHING_AVAILABLE : quick);
+                return;
+            }
             result = connectAndStart(adb, 4000);
             if (NEEDS_WIRELESS.equals(result) && enableWireless()) result = connectAndStart(adb, 12_000);
             long end = System.currentTimeMillis() + 5 * 60_000L;
@@ -144,6 +162,50 @@ public final class AdbService extends Service {
         }
         finish(result == null ? null : NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)
                 ? "Wireless debugging wasn't set up in time. Tap Start to try again." : result);
+    }
+
+    /** Null when Shizuku is on its way, NEEDS_NOTHING when neither root nor adb over the network is there, else why not. */
+    private String quickStart(Adb adb) {
+        String rooted = root();
+        if (rooted != null && rooted.contains("exit with 0")) {
+            prefs.edit().putBoolean(PREF_PAIRED, true).apply();
+            return null;
+        }
+        try {
+            say("Starting Shizuku…", "If the phone asks to allow USB debugging, choose Allow (Always allow).", false, null);
+            String out = adb.shell("127.0.0.1", 5555, START, true);
+            if (out.contains("exit with 0")) {
+                prefs.edit().putBoolean(PREF_PAIRED, true).apply();
+                return null;
+            }
+            String[] lines = out.split("\n");
+            return "Shizuku didn't start: " + (lines.length == 0 ? "" : lines[lines.length - 1]);
+        } catch (Adb.Failure f) {
+            return f.closed ? NEEDS_NOTHING : f.getMessage();
+        } catch (Exception e) {
+            return "Couldn't start Shizuku: " + e.getMessage();
+        }
+    }
+
+    /** Runs the start command through su, if the phone has root and allows TinyKit. Null when there is no su. */
+    private String root() {
+        try {
+            Process p = new ProcessBuilder("su", "-c", START).redirectErrorStream(true).start();
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            Thread reader = new Thread(() -> {
+                try (java.io.InputStream in = p.getInputStream()) {
+                    byte[] buffer = new byte[1024];
+                    for (int n; (n = in.read(buffer)) > 0; ) out.write(buffer, 0, n);
+                } catch (java.io.IOException ignored) {
+                }
+            });
+            reader.start();
+            reader.join(20_000);
+            p.destroy();
+            return out.toString();
+        } catch (java.io.IOException | InterruptedException e) {
+            return null;
+        }
     }
 
     /** Null when Shizuku is on its way, else what is missing (see the two constants) or why it failed. */
@@ -231,7 +293,34 @@ public final class AdbService extends Service {
             } catch (RuntimeException ignored) {
             }
         }
+        if (ports.isEmpty() && waitMs >= 2500) ports.addAll(scan());
         return new ArrayList<>(ports);
+    }
+
+    /**
+     * Wireless debugging's ports are random, in 30000 to 49999. When the network's service discovery shows nothing
+     * (some phones block it), the ports that answer on this phone are found by asking each one.
+     */
+    private static Set<Integer> scan() {
+        Set<Integer> open = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(48);
+        for (int p = 30000; p < 50000; p++) {
+            final int port = p;
+            pool.execute(() -> {
+                try (Socket s = new Socket()) {
+                    s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 250);
+                    open.add(port);
+                } catch (java.io.IOException ignored) {
+                }
+            });
+        }
+        pool.shutdown();
+        try {
+            pool.awaitTermination(20, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return open;
     }
 
     @SuppressWarnings("deprecation")
