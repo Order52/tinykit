@@ -34,7 +34,7 @@ public final class StartReceiver extends BroadcastReceiver {
         // After a restart Shizuku is gone: start it again by itself, if it can be done with nobody there.
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
             android.content.SharedPreferences prefs = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
-            if (prefs.getBoolean(ShizukuControl.PREF_AUTO, true) && !Shell.running() && ShizukuControl.canRestart(context, prefs)) {
+            if (prefs.getBoolean(ShizukuControl.PREF_AUTO, false) && !Shell.running() && ShizukuControl.canRestart(context, prefs)) {
                 if (!ShizukuControl.intents(context, prefs)) {
                     try {
                         AdbService.begin(context, true);

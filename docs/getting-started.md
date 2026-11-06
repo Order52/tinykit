@@ -93,7 +93,7 @@ If Termux can't do it (not installed, not allowed, no working `adb` there), Tiny
 ### Automatic start
 
 Once a start has worked without anyone (TinyKit is paired, or root, or Termux is set up, or the auth token is saved),
-**Start by itself** (Shizuku tab, on by default) starts Shizuku again on its own after every restart and whenever
+**Start by itself** (Shizuku tab, off by default; switch it on) starts Shizuku again on its own after every restart and whenever
 you open TinyKit with Shizuku stopped. It runs quietly: it never asks for a pairing code or shows a "turn on"
 notice, and gives up after a minute and a half if Wi-Fi isn't there yet. Starts are fast too: TinyKit remembers
 Wireless debugging's port and tries it first. The notices that do appear open Developer options straight on the

@@ -1,0 +1,4 @@
+• Start Shizuku through Termux now works on phones with root or adb over the network but no Wireless debugging: success is read from the start command, not from Termux's own ps (which can't see Shizuku).
+• Start can be cancelled, shows what it is waiting for, and no longer gets stuck in "Starting…".
+• Start by itself is off until you switch it on.
+• The Secure folder icon comes back for work profiles made before the Secure folder / plain choice.

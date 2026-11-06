@@ -19,7 +19,7 @@ import android.content.SharedPreferences;
  */
 final class ShizukuControl {
     static final String SHIZUKU = "moe.shizuku.privileged.api";
-    /** "Start Shizuku by itself": after a restart and when TinyKit opens, whenever that needs nobody. On unless turned off. */
+    /** "Start Shizuku by itself": after a restart and when TinyKit opens, whenever that needs nobody. Off unless turned on. */
     static final String PREF_AUTO = "auto_start";
 
     /**

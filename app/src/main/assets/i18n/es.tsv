@@ -1297,3 +1297,7 @@ This adds a separate space to your phone. Your own apps and data stay as they ar
 Keeping apps at the volume you set	Manteniendo las apps al volumen que elegiste
 Style	Estilo
 Tap to change.	Toca para cambiar.
+Waiting for Wi-Fi	Esperando el Wi-Fi
+Turning Wireless debugging on. It needs Wi-Fi.	Activando la depuración inalámbrica. Necesita Wi-Fi.
+Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.	La depuración inalámbrica está activada pero necesita Wi-Fi. TinyKit sigue solo.
+No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging.	No se encontró ninguna forma de iniciar Shizuku. Este teléfono necesita root, adb por Wi-Fi (adb tcpip 5555 desde un ordenador, una vez tras cada reinicio) o depuración inalámbrica.

@@ -28,22 +28,24 @@ final class Termux {
     static final int STARTED = 0, NOT_CONNECTED = 3, PAIR_FAILED = 4, NO_ADB = 5;
 
     /**
-     * Start Shizuku, the way shizuku-termux does: already running? root? adb over the network (port 5555)?
-     * Wireless debugging (a port the network lists, or the ones TinyKit found)? Arguments: the start command,
-     * then "start" and the extra ports, or "pair" with a port and the pairing code.
+     * Start Shizuku, the way shizuku-termux does: root? adb over the network (port 5555)? Wireless debugging (a port the
+     * network lists, or the ones TinyKit found)? Arguments: the start command, then "start" and the extra ports, or
+     * "pair" with a port and the pairing code. Whether it worked is read from what the start command says (or
+     * from ps, run the same way the command was): Termux can't see other users' processes, so its own ps would
+     * always say Shizuku isn't running.
      */
-    private static final String SCRIPT = "export PATH=" + BIN + ":$PATH; START=\"$1\"; MODE=\"$2\"; "
-            + "running() { ps -A 2>/dev/null | grep -q '[s]hizuku_server'; }; "
+    private static final String SCRIPT = "export PATH=" + BIN + ":$PATH; START=\"$1\"; MODE=\"$2\"; F=\"${TMPDIR:-$HOME}/tinykit.out\"; "
             + "need_adb() { adb version >/dev/null 2>&1 && return 0; pkg install -y android-tools >/dev/null 2>&1; "
             + "adb version >/dev/null 2>&1; }; "
             + "if [ \"$MODE\" = pair ]; then need_adb || exit 5; adb start-server >/dev/null 2>&1; "
             + "adb pair \"localhost:$3\" \"$4\" 2>&1 | grep -qi 'success' && exit 0; exit 4; fi; "
-            + "running && exit 0; "
             + "if command -v su >/dev/null 2>&1 && [ \"$(su -c id -u 2>/dev/null)\" = 0 ]; then "
-            + "su -c \"$START\" >/dev/null 2>&1; sleep 1; running && exit 0; fi; "
+            + "su -c \"$START\" >\"$F\" 2>&1; grep -q 'exit with 0' \"$F\" && exit 0; sleep 1; "
+            + "su -c \"ps -A\" 2>/dev/null | grep -q '[s]hizuku_server' && exit 0; fi; "
             + "need_adb || exit 5; adb start-server >/dev/null 2>&1; "
             + "try() { adb connect \"$1\" 2>&1 | grep -qiE 'connected to|already connected' || return 1; "
-            + "adb -s \"$1\" shell \"$START\" >/dev/null 2>&1; sleep 1; running; }; "
+            + "adb -s \"$1\" shell \"$START\" >\"$F\" 2>&1; grep -q 'exit with 0' \"$F\" && return 0; sleep 1; "
+            + "adb -s \"$1\" shell \"ps -A\" 2>/dev/null | grep -q '[s]hizuku_server'; }; "
             + "try localhost:5555 && exit 0; "
             + "for p in $(adb mdns services 2>/dev/null | grep _adb-tls-connect | grep -oE '[0-9]+$'); do "
             + "try \"localhost:$p\" && exit 0; done; "
@@ -106,6 +108,7 @@ final class Termux {
                 return result;
             }
         } catch (RuntimeException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             result.error = "Couldn't reach Termux: " + e.getMessage();
             return result;
         } finally {

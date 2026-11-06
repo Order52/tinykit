@@ -1300,3 +1300,7 @@ This adds a separate space to your phone. Your own apps and data stay as they ar
 Keeping apps at the volume you set	Приложения остаются на заданной громкости
 Style	Стиль
 Tap to change.	Нажмите, чтобы изменить.
+Waiting for Wi-Fi	Ожидание Wi-Fi
+Turning Wireless debugging on. It needs Wi-Fi.	Включается отладка по Wi-Fi. Нужен Wi-Fi.
+Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.	Отладка по Wi-Fi включена, но нужен Wi-Fi. TinyKit продолжит сам.
+No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging.	Способ запуска Shizuku не найден. Нужен root, adb по Wi-Fi (adb tcpip 5555 с компьютера, один раз после каждой перезагрузки) или отладка по Wi-Fi.

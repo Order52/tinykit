@@ -53,12 +53,22 @@ public final class SecureFolder extends Activity {
     /** Which look the person chose when making the profile (or since): the Samsung-style one, or the plain work profile. */
     static boolean secure(SharedPreferences p) {
         String mode = p.getString(PREF_MODE, null);
-        return mode != null ? mode.equals("secure") : p.getBoolean(PREF_ICON, false);
+        // A profile made before the choice existed has no mode: it got the icon unless that was switched off.
+        return mode != null ? mode.equals("secure") : p.getBoolean(PREF_ICON, true);
+    }
+
+    /** Whether a work profile exists, asked of Android itself (no shell needed), else what was seen last. */
+    static boolean exists(Context c, SharedPreferences p) {
+        try {
+            return ((android.os.UserManager) c.getSystemService(Context.USER_SERVICE)).getUserProfiles().size() > 1;
+        } catch (RuntimeException e) {
+            return p.getBoolean(PREF_EXISTS, false);
+        }
     }
 
     /** The icon is there only in the Secure folder look, with a work profile, unless switched off. Cheap: call it any time. */
     static void sync(Context c, SharedPreferences p) {
-        icon(c, secure(p) && p.getBoolean(PREF_ICON, true) && p.getBoolean(PREF_EXISTS, false));
+        icon(c, secure(p) && p.getBoolean(PREF_ICON, true) && exists(c, p));
     }
 
     /** Shows or hides the home screen icon (it exists only while there is a work profile and the person wants it). */

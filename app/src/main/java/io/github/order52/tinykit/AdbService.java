@@ -64,7 +64,13 @@ public final class AdbService extends Service {
             + "if [ -n \"$l\" ]; then $l; else sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh; fi";
 
     private final LinkedBlockingQueue<String> codes = new LinkedBlockingQueue<>();
-    private volatile boolean running, silent, skipped;
+    private volatile boolean running, silent, skipped, cancelled;
+    private volatile Thread flowThread;
+    /** True from the moment a start is asked for until it ends, so the screen never waits on one that is over. */
+    static volatile boolean active;
+    /** What the start is doing now, for the Shizuku card; and why the last one failed, if it did. */
+    static volatile String step = "", lastError;
+    private static volatile AdbService instance;
     private static final String PREF_METHOD = "start_method";
     private SharedPreferences prefs;
 
@@ -89,7 +95,27 @@ public final class AdbService extends Service {
      */
     static void begin(Context c, boolean auto) {
         Intent start = new Intent(c, AdbService.class).putExtra("auto", auto);
-        if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(start); else c.startService(start);
+        active = true;
+        if (!auto || instance == null) {
+            step = "";
+            lastError = null;
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(start); else c.startService(start);
+        } catch (RuntimeException e) {
+            active = false;
+            throw e;
+        }
+    }
+
+    /** Ends a start that is under way (the person tapped Cancel). */
+    static void cancel() {
+        AdbService s = instance;
+        active = false;
+        if (s == null) return;
+        s.cancelled = true;
+        Thread t = s.flowThread;
+        if (t != null) t.interrupt();
     }
 
     @Override
@@ -107,10 +133,16 @@ public final class AdbService extends Service {
             if (code != null) codes.offer(code.toString().replaceAll("\\D", ""));
             return START_NOT_STICKY;
         }
+        boolean auto = intent != null && intent.getBooleanExtra("auto", false);
         if (!running) {
             running = true;
-            silent = intent != null && intent.getBooleanExtra("auto", false);
-            new Thread(this::flow, "adb-start").start();
+            cancelled = false;
+            silent = auto;
+            instance = this;
+            flowThread = new Thread(this::flow, "adb-start");
+            flowThread.start();
+        } else if (!auto && silent) {
+            silent = false; // a tap while the quiet start after a restart is under way: it may now ask for what it needs
         }
         return START_NOT_STICKY;
     }
@@ -163,16 +195,27 @@ public final class AdbService extends Service {
             result = connectAndStart(adb, 4000);
             if (NEEDS_WIRELESS.equals(result) && enableWireless()) result = connectAndStart(adb, 12_000);
             long end = System.currentTimeMillis() + (silent ? 90_000L : 5 * 60_000L); // Wi-Fi can be late after a restart
-            while ((NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)) && System.currentTimeMillis() < end) {
+            while ((NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)) && System.currentTimeMillis() < end
+                    && !cancelled) {
                 if (silent && NEEDS_PAIRING.equals(result)) break; // never asks for a code on its own
                 if (NEEDS_WIRELESS.equals(result)) {
-                    boolean developer = Settings.Global.getInt(getContentResolver(),
-                            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1;
-                    say(developer ? "Turn on Wireless debugging" : "Turn on Developer options",
-                            developer ? "Tap here, then switch on Wireless debugging. It needs Wi-Fi. TinyKit carries on by itself."
-                                    : "Tap here, then tap Build number 7 times. TinyKit carries on by itself.",
-                            false, developer ? Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS : Settings.ACTION_DEVICE_INFO_SETTINGS);
-                    result = connectAndStart(adb, 3000);
+                    boolean on = Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 1;
+                    if (!on && enableWireless()) { // Wi-Fi can be late after a restart, and Android turns it off again until then
+                        say("Waiting for Wi-Fi", "Turning Wireless debugging on. It needs Wi-Fi.", false, null);
+                        result = connectAndStart(adb, 8000);
+                    } else if (on) {
+                        say("Waiting for Wi-Fi", "Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.",
+                                false, null);
+                        result = connectAndStart(adb, 4000);
+                    } else {
+                        boolean developer = Settings.Global.getInt(getContentResolver(),
+                                Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1;
+                        say(developer ? "Turn on Wireless debugging" : "Turn on Developer options",
+                                developer ? "Tap here, then switch on Wireless debugging. It needs Wi-Fi. TinyKit carries on by itself."
+                                        : "Tap here, then tap Build number 7 times. TinyKit carries on by itself.",
+                                false, developer ? Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS : Settings.ACTION_DEVICE_INFO_SETTINGS);
+                        result = connectAndStart(adb, 3000);
+                    }
                 } else {
                     say("Enter the pairing code", "In Wireless debugging tap Pair device with pairing code, then type "
                             + "the six digits here.", true, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
@@ -212,7 +255,7 @@ public final class AdbService extends Service {
         }
         android.util.Log.i("TinyKit", "adb: flow ended with " + result);
         finish(result == null ? null : NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)
-                ? "Wireless debugging wasn't set up in time. Tap Start to try again." : result);
+                ? "No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging." : result);
     }
 
     /**
@@ -226,7 +269,7 @@ public final class AdbService extends Service {
         android.util.Log.i("TinyKit", "termux start: exit=" + r.exitCode + " error=" + r.error + " out=" + r.out);
         if (!r.ran()) return TERMUX_SKIP;
         long end = System.currentTimeMillis() + 5 * 60_000L;
-        while (r.exitCode == Termux.NOT_CONNECTED && System.currentTimeMillis() < end) {
+        while (r.exitCode == Termux.NOT_CONNECTED && System.currentTimeMillis() < end && !cancelled) {
             if (!supported()) return NOTHING_AVAILABLE;
             if (Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 0) {
                 if (enableWireless()) {
@@ -281,7 +324,7 @@ public final class AdbService extends Service {
             }
         }
         if (r.exitCode == 0) return null;
-        if (r.exitCode == Termux.NOT_CONNECTED) return "Wireless debugging wasn't set up in time. Tap Start to try again.";
+        if (r.exitCode == Termux.NOT_CONNECTED) return "No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging.";
         return TERMUX_SKIP;
     }
 
@@ -379,7 +422,7 @@ public final class AdbService extends Service {
                     return "Couldn't start Shizuku: " + e.getMessage();
                 }
             }
-        } while (System.currentTimeMillis() < end);
+        } while (System.currentTimeMillis() < end && !cancelled);
         return NEEDS_WIRELESS;
     }
 
@@ -426,10 +469,25 @@ public final class AdbService extends Service {
             public void onServiceLost(NsdServiceInfo info) {
             }
         };
+        // Some phones announce nothing: asking the ports themselves runs beside the lookup, and whichever answers first wins.
+        java.util.concurrent.FutureTask<Set<Integer>> scanning = new java.util.concurrent.FutureTask<>(AdbService::scan);
+        if (waitMs >= 2500) new Thread(scanning, "adb-scan").start();
         try {
             nsd.discoverServices(type, NsdManager.PROTOCOL_DNS_SD, listener);
-            if (found.await(waitMs, TimeUnit.MILLISECONDS)) Thread.sleep(700); // others may be a moment behind
-        } catch (RuntimeException | InterruptedException e) {
+            long until = System.currentTimeMillis() + waitMs;
+            while (System.currentTimeMillis() < until) {
+                if (found.await(100, TimeUnit.MILLISECONDS)) {
+                    Thread.sleep(700); // others may be a moment behind
+                    break;
+                }
+                if (scanning.isDone() && !scanFound(scanning).isEmpty()) { // the ports answered first
+                    Thread.sleep(300);
+                    break;
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // a cancel: whoever called goes on to stop
+        } catch (RuntimeException e) {
             // no discovery: treated as not found
         } finally {
             try {
@@ -437,8 +495,19 @@ public final class AdbService extends Service {
             } catch (RuntimeException ignored) {
             }
         }
-        if (ports.isEmpty() && waitMs >= 2500) ports.addAll(scan());
+        if (ports.isEmpty() && waitMs >= 2500) ports.addAll(scanFound(scanning));
         return new ArrayList<>(ports);
+    }
+
+    private static Set<Integer> scanFound(java.util.concurrent.FutureTask<Set<Integer>> scanning) {
+        try {
+            return scanning.get(25, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+            return java.util.Collections.emptySet();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return java.util.Collections.emptySet();
+        }
     }
 
     /**
@@ -489,6 +558,7 @@ public final class AdbService extends Service {
 
     /** Shows a step: with a field for the pairing code when {@code input}, opening {@code settings} when tapped. */
     private void say(String title, String text, boolean input, String settings) {
+        step = title;
         if (silent) return;
         getSystemService(NotificationManager.class).notify(NOTIFICATION, notification(title, text, input, settings));
     }
@@ -527,6 +597,11 @@ public final class AdbService extends Service {
     static volatile java.util.function.Consumer<String> onFinish;
 
     private void finish(String error) {
+        if (cancelled) {
+            error = null;
+            skipped = true;
+        }
+        Thread.interrupted();
         if (error == null && !skipped) {
             // Started: wait for TinyKit to be connected to it, so "Starting…" ends when Shizuku is really usable.
             for (int i = 0; i < 80 && !Shell.running(); i++) { // up to 20 s, looking every quarter second
@@ -541,6 +616,9 @@ public final class AdbService extends Service {
             if (!Shell.running()) error = "Shizuku was started, but TinyKit couldn't connect to it. Open the Shizuku app "
                     + "and make sure TinyKit is allowed.";
         }
+        lastError = error;
+        active = false;
+        instance = null;
         java.util.function.Consumer<String> listener = onFinish;
         if (listener != null) listener.accept(error); // null: it is up
         stopForeground(STOP_FOREGROUND_REMOVE);

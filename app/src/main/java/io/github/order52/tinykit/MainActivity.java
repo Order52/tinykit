@@ -271,7 +271,9 @@ public class MainActivity extends Activity {
     private Button startButton;
     private Button stopButton;
     private boolean starting, stopping, askedNotifications, termuxChecked, askedTermux, askedTermuxSetup, termuxResume,
-            autoStartPending;
+            autoStartPending, termuxProbe;
+    private long startedAt;
+    private static final String PREF_TERMUX_OFFERED = "termux_offered";
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
@@ -529,7 +531,7 @@ public class MainActivity extends Activity {
             autoStartPending = false;
             // Shizuku's connection can take a moment to arrive when TinyKit has just started: look again before starting it.
             main.postDelayed(() -> {
-                if (alive() && !starting && !Shell.running() && prefs.getBoolean(ShizukuControl.PREF_AUTO, true)
+                if (alive() && !starting && !Shell.running() && prefs.getBoolean(ShizukuControl.PREF_AUTO, false)
                         && ShizukuControl.canRestart(this, prefs)) {
                     if (ShizukuControl.intents(this, prefs)) ShizukuControl.start(this, prefs);
                     else AdbService.begin(this, true);
@@ -539,6 +541,7 @@ public class MainActivity extends Activity {
         if (termuxResume) { // back from Termux, which has read its settings again
             termuxResume = false;
             termuxChecked = false;
+            termuxProbe = true; // see whether Termux took the setting
             main.postDelayed(this::startShizuku, 500);
         }
         refreshShizuku();
@@ -572,6 +575,7 @@ public class MainActivity extends Activity {
         if (intent.getBooleanExtra("termux_done", false)) { // the pasted command finished
             termuxResume = false;
             termuxChecked = false;
+            termuxProbe = true;
             main.postDelayed(this::startShizuku, 500);
             return;
         }
@@ -812,11 +816,13 @@ public class MainActivity extends Activity {
             shizukuButton.setOnClickListener(v -> openApp(SHIZUKU_PKG));
         }
         if (installed && (starting || stopping)) {
-            shizukuText.setText(Tr.t(stopping ? "Stopping Shizuku…" : "Starting Shizuku…"));
+            String step = stopping ? "" : AdbService.step;
+            shizukuText.setText(Tr.t(stopping ? "Stopping Shizuku…" : "Starting Shizuku…")
+                    + (step.isEmpty() || step.startsWith("Starting") ? "" : "\n" + Tr.t(step)));
         }
         statusDot(stopping || starting ? 0xFFFFB74D : ready ? 0xFF66BB6A : running ? 0xFFFFB74D : 0xFFEF5350);
-        startButton.setEnabled(installed && !starting && !stopping && !running);
-        startButton.setText(Tr.t(starting ? "Starting…" : "Start"));
+        startButton.setEnabled(installed && !stopping && (starting || !running));
+        startButton.setText(Tr.t(starting ? "Cancel" : "Start"));
         stopButton.setEnabled(running && !stopping);
         stopButton.setText(Tr.t(stopping ? "Stopping…" : "Stop"));
         tokenText.setText(Tr.t(token().isEmpty()
@@ -868,6 +874,7 @@ public class MainActivity extends Activity {
                 requestPermissions(new String[]{Termux.PERMISSION}, REQUEST_RUN_COMMAND);
                 return;
             }
+            prefs.edit().putBoolean(PREF_TERMUX_OFFERED, true).apply(); // said no: not asked again on every tap
             termuxChecked = true; // not allowed: the other way
             startShizuku();
             return;
@@ -887,8 +894,9 @@ public class MainActivity extends Activity {
                     prefs.edit().putBoolean(AdbService.PREF_TERMUX, true).apply();
                     termuxChecked = true;
                     startShizuku();
-                } else if (r.allowMissing && !askedTermuxSetup) {
+                } else if (r.allowMissing && !askedTermuxSetup && !prefs.getBoolean(PREF_TERMUX_OFFERED, false)) {
                     askedTermuxSetup = true;
+                    prefs.edit().putBoolean(PREF_TERMUX_OFFERED, true).apply(); // Termux opens for this once, not on every tap
                     // The one command, copied: pasting it in Termux sets everything up and brings TinyKit back.
                     if (Termux.setUp(this)) {
                         termuxResume = true;
@@ -898,9 +906,11 @@ public class MainActivity extends Activity {
                         startShizuku();
                     }
                 } else {
+                    prefs.edit().putBoolean(PREF_TERMUX_OFFERED, true).apply();
                     termuxChecked = true; // Termux can't be used right now: the other way
                     startShizuku();
                 }
+                termuxProbe = false;
             });
         });
     }
@@ -920,10 +930,27 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 if (!alive() || !starting) return;
+                // TinyKit's own start has ended and said nothing we heard (it can end before the screen listens): don't wait on it.
+                if (!AdbService.active && !ShizukuControl.intents(MainActivity.this, prefs)
+                        && SystemClock.elapsedRealtime() - startedAt > 3000) {
+                    nudged(() -> {
+                        if (starting && !AdbService.active) startFinished(Shell.running() ? null : AdbService.lastError);
+                    });
+                    return;
+                }
                 nudged(MainActivity.this::refreshShizuku); // off the main thread: it is a call into Shizuku's app
                 main.postDelayed(this, 1000);
             }
         }, 1000);
+    }
+
+    /** Ends a start that is taking too long, so Start can be tried again. */
+    private void cancelStart() {
+        AdbService.onFinish = null;
+        AdbService.cancel();
+        main.removeCallbacks(startTimeout);
+        starting = false;
+        refreshShizuku();
     }
 
     private void startShizuku() {
@@ -933,7 +960,9 @@ public class MainActivity extends Activity {
             return;
         }
         if (!ShizukuControl.intents(this, prefs)) {
-            if (Termux.installed(this) && !termuxChecked) {
+            // Termux is offered once (its setup opens Termux), then used if it was set up, and left alone if not.
+            if (Termux.installed(this) && !termuxChecked && !prefs.getBoolean(AdbService.PREF_TERMUX, false)
+                    && (termuxProbe || !prefs.getBoolean(PREF_TERMUX_OFFERED, false))) {
                 prepareTermux();
                 return;
             }
@@ -951,6 +980,7 @@ public class MainActivity extends Activity {
             return;
         }
         starting = true;
+        startedAt = SystemClock.elapsedRealtime();
         refreshShizuku();
         AdbService.onFinish = message -> main.post(() -> {
             if (!starting) return;
@@ -1100,6 +1130,10 @@ public class MainActivity extends Activity {
         LinearLayout buttons = new LinearLayout(this);
         buttons.setPadding(0, dp(12), 0, 0);
         startButton = primary(button("Start", v -> {
+            if (starting) { // a start that takes too long can always be ended, and tried again
+                cancelStart();
+                return;
+            }
             termuxChecked = false; // a tap checks Termux again
             askedTermuxSetup = false;
             startShizuku();
@@ -1126,7 +1160,7 @@ public class MainActivity extends Activity {
         help.setPadding(dp(16), dp(8), dp(16), 0);
         list.addView(help);
         Switch autoStart = new Switch(this);
-        autoStart.setChecked(prefs.getBoolean(ShizukuControl.PREF_AUTO, true));
+        autoStart.setChecked(prefs.getBoolean(ShizukuControl.PREF_AUTO, false));
         autoStart.setClickable(false);
         autoStart.setFocusable(false);
         row(list, "Start by itself", "After a restart, and when you open TinyKit, start Shizuku if that needs nobody "
