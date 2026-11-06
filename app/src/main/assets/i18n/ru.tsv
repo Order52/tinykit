@@ -1,0 +1,1174 @@
+# TinyKit translation: Russian. Format: English<TAB>Russian. \n = new line, \t = tab.
+# Text around a fragment (spaces, newlines) is kept exactly. Untranslated lines stay in English.
+# Fix a translation by editing the right-hand side; keep the left-hand side exactly as it is.
+\n\nAndroid only lets the system pin a file-type default, so to set one, open a 	\n\nAndroid позволяет назначать приложение по умолчанию для типа файлов только системе, поэтому, чтобы задать его, откройте 
+\n\nCopied to Download/TinyKit/Recovered. The original stays in the bin.	\n\nСкопировано в Download/TinyKit/Recovered. Оригинал остался в корзине.
+\n\nRemoving it deletes the app and its data. TinyKit keeps no copy of the file, so an older version can't be put back.	\n\nЕго удаление стирает приложение и его данные. TinyKit не сохраняет копию файла, поэтому вернуть более старую версию будет нельзя.
+\n\nSome of these are marked Expert: other apps or features may depend on them.	\n\nНекоторые из них отмечены как «Экспертный»: от них могут зависеть другие приложения или функции.
+\n\nThese are declared inside 	\n\nОни объявлены внутри 
+\nLast crash:\n	\nПоследний сбой:\n
+\nRecent log:\n	\nНедавний журнал:\n
+\nThe internet block wasn't applied: 	\nБлокировка интернета не была применена: 
+\nThey come back as they were.	\nОни вернутся в прежнее состояние.
+\nVersion 	\nВерсия 
+  ·  Not on this phone	  ·  Нет на этом телефоне
+ (other profile)	 (другой профиль)
+ Checked apps have it.	 У отмеченных приложений он есть.
+ Couldn't turn off: 	 Не удалось отключить: 
+ Game data copied.	 Данные игры скопированы.
+ Game data couldn't be copied: 	 Не удалось скопировать данные игры: 
+ and others	 и другие
+ and others).	 и другие).
+ and others.	 и другие.
+ app is	 приложение
+ app.	 приложение.
+ app?	 приложение?
+ app	 приложение
+ apps are	 приложений
+ apps are still blocked; reset again.	 прил. всё ещё заблокированы; сбросьте снова.
+ apps.	 прил.
+ apps?	 прил.?
+ apps	 прил.
+ back.	 обратно.
+ blocked.	 заблокировано.
+ cached app	 приложение в кэше
+ choices to Download/TinyKit.	 параметров в папку Download/TinyKit.
+ choices.	 параметров.
+ couldn't be brought back.	 не удалось восстановить.
+ couldn't be kept Fake and 	 не удалось сохранить как фейковые, и 
+ couldn't be reset, so the saved list was kept to try again.	 не удалось сбросить, поэтому сохранённый список остался для повторной попытки.
+ file and choose "Always". TinyKit shows the current default above.	 файл и выберите «Всегда». Выше TinyKit показывает текущий выбор по умолчанию.
+ for you only and can be restored from Removed.	 только для вас, его можно восстановить из раздела «Удалённые».
+ free of 	 свободно из 
+ has no app inside.	 не содержит приложений.
+ in total	 всего
+ in your browser.	 в браузере.
+ is available.	 доступно.
+ is blocked from the internet.	 доступ в интернет заблокирован.
+ isn't an app file.	 не является файлом приложения.
+ memory free now	 свободной памяти сейчас
+ of cache	 кэша
+ or cut it off the internet.	 или отключить доступ в интернет.
+ permission choice	 разрешения
+ setting.	 настройки.
+ settings to Download/TinyKit.	 настроек в Download/TinyKit.
+ settings.	 настроек.
+ switched Off.	 переведено в Отключено.
+ system app (	 системное приложение (
+ system apps (	 системных приложений (
+ used of 	 занято из 
+" into your tiles.\n\n	" в ваши плитки.\n\n
+", or:\n\n1. Pull down the quick panel.\n2. Tap the edit (pencil) button.\n3. Drag "	", или:\n\n1. Опустите панель быстрых настроек.\n2. Нажмите кнопку редактирования (карандаш).\n3. Перетащите "
+"Blocked" stops the service; turn it back on here any time. TinyKit never touches your Huawei ID sign-in.	«Заблокировано» останавливает службу; включите её снова здесь в любое время. TinyKit никогда не затрагивает вход в Huawei ID.
+(no output)	(нет вывода)
+, which you didn't pick. Everything was put back.	, которые вы не выбирали. Всё возвращено в прежнее состояние.
+. Changing it would change them too, so TinyKit won't.	. Его изменение также изменит и их, поэтому TinyKit не станет этого делать.
+. It can't be removed.	. Его нельзя удалить.
+. TinyKit can't switch them off one by one (Android doesn't allow it from the shell).	. TinyKit не может отключить их по отдельности (Android не разрешает это из оболочки).
+. TinyKit put 	. TinyKit вернул 
+0.5× (faster)	0.5× (быстрее)
+2× (slower)	2× (медленнее)
+; TinyKit will try again.	; TinyKit попробует снова.
+A language for each app needs Android 13 or newer.	Выбор языка для каждого приложения требует Android 13 или новее.
+A newer version is already installed. Android won't install an older one over it. Turn on "Allow downgrade" in Install options, or uninstall the new one first (this deletes its data).	Уже установлена более новая версия. Android не устанавливает более старую поверх неё. Включите «Разрешить понижение версии» в параметрах установки или сначала удалите новую (это приведёт к удалению её данных).
+A system app not in TinyKit's list	Системное приложение не из списка TinyKit
+AC charger	Зарядка от сети
+About	О приложении
+Accept	Принять
+Access:	Доступ:
+Ad and analytics libraries found inside your apps, most first. This is what each app declares, not proof it uses them. Tap an app to see them	Библиотеки рекламы и аналитики, найденные в ваших приложениях (в порядке убывания). Это то, что декларирует каждое приложение, а не доказательство их использования. Нажмите на приложение, чтобы просмотреть их
+Ad-block DNS	DNS с блокировкой рекламы
+Ad-blocking DNS	DNS с блокировкой рекламы
+Add	Добавить
+Add  ·  	Добавить  ·  
+Add a home screen widget that does the same speed-up in one tap, without opening TinyKit.	Добавьте виджет на главный экран, который ускоряет работу в одно касание без открытия TinyKit.
+Add any of TinyKit's own Quick Settings tiles.	Добавьте любую из собственных плиток быстрых настроек TinyKit.
+Add the 	Добавить 
+Add the widget	Добавить виджет
+Addresses	Адреса
+Advanced	Продвинутый
+Advanced reboot	Расширенная перезагрузка
+Airplane mode	Режим полёта
+Alarm	Будильник
+All	Все
+All files access	Доступ ко всем файлам
+All sensors off	Все датчики отключены
+Allow	Разрешить
+Allow "Run commands in Termux environment" for TinyKit to start Shizuku.	Разрешите «Выполнение команд в среде Termux», чтобы TinyKit мог запустить Shizuku.
+Allow TinyKit in Shizuku first, or set the auth token.	Сначала разрешите доступ для TinyKit в Shizuku или задайте токен авторизации.
+Allow downgrade	Разрешить понижение версии
+Allow downgrade (install an older version over a newer one)	Разрешить понижение версии
+Allow list mode	Режим белого списка
+Allow test-only apps	Разрешить тестовые приложения
+Allowed apps	Разрешённые приложения
+Also 	Также 
+Also show apps I installed	Показывать также установленные мной приложения
+An app you installed	Установленное вами приложение
+Analytics & telemetry	Аналитика и телеметрия
+Android	Android
+Android 14+	Android 14+
+Android ID	Android ID
+Android ID, serial, MAC and build fingerprint.	Android ID, серийный номер, MAC-адрес и отпечаток сборки.
+Android had reset 	Android сбросил 
+Android needs this app. Removing it can stop the phone from starting.	Android необходимо это приложение. Его удаление может нарушить запуск телефона.
+Android refused	Android отклонил запрос
+Animation speed	Скорость анимации
+App language	Язык приложения
+App log	Журнал приложения
+App not installed	Приложение не установлено
+App permissions	Разрешения приложений
+Approximate location	Приблизительное местоположение
+Apps	Приложения
+Apps installed with TinyKit's installer, newest first. Tap one to open or remove it. This list is read from Android's own records, so TinyKit stores nothing.	Приложения, установленные через TinyKit (сначала новые). Нажмите на приложение, чтобы открыть или удалить его. Этот список считывается из записей Android, поэтому TinyKit ничего не хранит.
+Apps that can change brightness, ringtones and other settings.	Приложения, которые могут изменять яркость, мелодии звонка и другие настройки.
+Apps that can install other apps. Allow only your browser, file manager or app store.	Приложения, которые могут устанавливать другие приложения. Разрешайте доступ только браузеру, файловому менеджеру или магазину приложений.
+Apps that can open 	Приложения, которые могут открывать 
+Apps that can read and change every file on your phone.	Приложения, которые могут читать и изменять все файлы на телефоне.
+Apps that can see which apps you use and for how long.	Приложения, которые могут отслеживать, какими приложениями и как долго вы пользуетесь.
+Apps that can show things on top of other apps. Scammers abuse this, so keep it short.	Приложения, которые могут отображаться поверх других окон. Этим часто злоупотребляют мошенники, поэтому список должен быть минимальным.
+Apps the installer put on, newest first, with a remove button.	История установки пакетов (сначала новые) с возможностью удаления.
+Apps use 	Приложения используют 
+Apps you haven't opened in a long time	Приложения, которые вы давно не открывали
+Apps you haven't opened in a long time.	Приложения, которые вы давно не открывали.
+Apps: Shizuku isn't running, so nothing was changed.	Приложения: Shizuku не запущен, поэтому ничего не изменилось.
+Apps: brought back 	Приложения: восстановлено 
+Apps: nothing was hidden or removed.	Приложения: ничего не было скрыто или удалено.
+Ask every time	Спрашивать каждый раз
+Ask me right away next time	Спросить сразу в следующий раз
+Asks apps not to use the Google advertising ID for targeting.	Запрещает приложениям использовать рекламный идентификатор Google для таргетинга.
+Assistant	Ассистент
+Audio	Аудио
+Auth token	Токен авторизации
+Auto-rotate	Автоповорот
+Back up TinyKit setup	Резервная копия настроек TinyKit
+Back up app as APK	Резервная копия приложения в APK
+Back up settings now	Создать резервную копию настроек
+Background limits, clipboard guard and kept-alive apps (these are Android's own settings, so this also clears limits you set in Settings)	Ограничения работы в фоне, защита буфера обмена и фоновые процессы (это системные настройки Android, поэтому сбросятся и лимиты, заданные в Настройках)
+Backs up global, secure and system settings to Download/TinyKit. Restoring puts them back; some keys are read-only and are skipped.	Сохраняет глобальные, защищённые и системные настройки в Download/TinyKit. Восстановление возвращает их; параметры только для чтения пропускаются.
+Baseband	Прошивка модуля связи
+Battery	Батарея
+Battery & logs	Батарея и журналы
+Battery Saver	Энергосбережение
+Battery usage	Расход батареи
+Battery, memory, storage and system details.	Сведения о батарее, памяти, хранилище и системе.
+Block ads with Private DNS	Блокировка рекламы через персональный DNS
+Block ads with Private DNS.	Блокируйте рекламу через персональный DNS.
+Block every sensor (motion, mic, camera).	Блокировать все датчики (движение, микрофон, камера).
+Block everything except allowed apps?	Заблокировать всё, кроме разрешённых приложений?
+Block internet	Блокировка интернета
+Block internet per app	Блокировка интернета по приложениям
+Block new apps at once	Блокировать новые приложения сразу
+Block the mic and camera for every app.	Блокировать доступ к микрофону и камере всем приложениям.
+Blocked	Заблокировано
+Blocked apps	Заблокированные приложения
+Blocking	Блокировка
+Blocking an app's internet needs Android 14 or newer.	Блокировка интернета приложениям требует Android 14 или новее.
+Blocks ads and trackers in every app and browser (AdGuard Private DNS).	Блокирует рекламу и трекеры во всех приложениях и браузерах (персональный DNS AdGuard).
+Blocks every sensor for all apps — motion, microphone and camera — like the hidden developer "Sensors off" tile. Resets on reboot.	Блокирует все датчики для всех приложений — движение, микрофон и камеру — как скрытая плитка для разработчиков «Датчики отключены». Сбрасывается при перезагрузке.
+Bluetooth	Bluetooth
+Body sensors	Датчики нательного ношения
+Bootloader	Загрузчик
+Brand / model	Бренд / модель
+Browser	Браузер
+Build	Сборка
+Built in	Встроенное
+Caffeine	Кофеин
+Calendar	Календарь
+Call log	Список вызовов
+Camera	Камера
+Camera access	Доступ к камере
+Can't connect to the camera	Не удаётся подключиться к камере
+Cancel	Отмена
+Capacity	Ёмкость
+Cast	Трансляция
+Charge	Заряд
+Charge cycles	Циклы зарядки
+Charging	Заряжается
+Charging info	Информация о зарядке
+Check for updates	Проверить обновления
+Check for updates on start	Проверять обновления при запуске
+Check for updates?	Проверять обновления?
+Checked apps are disabled: they leave the launcher and stop running. Uncheck to bring one back. On this phone only disabling works to hide an app.	Отмеченные приложения отключаются: они исчезают из лаунчера и прекращают работу. Снимите отметку, чтобы вернуть их. На этом телефоне скрыть приложение можно только отключением.
+Checked apps are exempt from battery optimization and background limits, so Android doesn't kill them or delay their notifications.	Отмеченные приложения исключены из оптимизации батареи и фоновых ограничений, поэтому Android не будет закрывать их или задерживать уведомления.
+Checked apps are restricted like Settings > Battery > Restricted: no background work, alarms or wake-locks until you open them. Their notifications may arrive late, so leave messengers unchecked.	Отмеченные приложения ограничиваются, как в Настройки > Батарея > Ограничено: никакой фоновой работы, будильников или вейклоков до их открытия. Их уведомления могут приходить с задержкой, поэтому не отмечайте мессенджеры.
+Checked apps can't read what you copy, even when they're open. Android already stops apps from reading it in the background. Don't check your keyboard, or pasting suggestions stop working.	Отмеченные приложения не могут читать то, что вы копируете, даже когда они открыты. Android уже запрещает чтение в фоновом режиме. Не отмечайте клавиатуру, иначе перестанут работать подсказки при вставке.
+Checked apps can't use Wi-Fi or mobile data. It takes effect at once.	Отмеченные приложения не могут использовать Wi-Fi или мобильный интернет. Изменения вступают в силу немедленно.
+Checked apps may use Wi-Fi and mobile data. Every other app is blocked.	Отмеченные приложения могут использовать Wi-Fi и мобильный интернет. Доступ для всех остальных приложений блокируется.
+Checking…	Проверка…
+Choose apps	Выбрать приложения
+Choose apps to block in TinyKit first.	Сначала выберите приложения для блокировки в TinyKit.
+Clean & speed	Очистка и ускорение
+Clear	Очистить
+Clear all app caches	Очистить кэш всех приложений
+Clear caches	Очистить кэш
+Clipboard	Буфер обмена
+Clipboard guard	Защита буфера обмена
+Close	Закрыть
+Close app	Закрыть приложение
+Close the app on screen.	Закрывает приложение на экране.
+Closed 	Закрыто 
+Cold	Холодная
+Color correction	Коррекция цвета
+Color inversion	Инверсия цветов
+Compiles apps so they open faster. Runs in the background for about 10 minutes.	Компилирует приложения для более быстрого запуска. Выполняется в фоновом режиме около 10 минут.
+Computed drain	Расчётный расход
+Connection	Подключение
+Contacts	Контакты
+Copy it from Shizuku: Settings, where the start/stop intent parameters are listed.	Скопируйте его из Shizuku: Настройки, где указаны параметры intent для запуска/остановки.
+Copy password	Скопировать пароль
+Copying game data…	Копирование данных игры…
+Could not copy the APK.	Не удалось скопировать APK.
+Could not reach Termux. Open Termux once, then try again.	Не удалось связаться с Termux. Откройте Termux один раз и повторите попытку.
+Couldn't	Не удалось
+Couldn't change Shizuku.	Не удалось изменить состояние Shizuku.
+Couldn't change notification channels: 	Не удалось изменить каналы уведомлений: 
+Couldn't change the quick panel.	Не удалось изменить панель быстрых настроек.
+Couldn't change this. 	Не удалось изменить этот параметр. 
+Couldn't do that. 	Не удалось выполнить действие. 
+Couldn't do that. Check that Shizuku is running and allowed.	Не удалось выполнить действие. Убедитесь, что Shizuku запущен и доступ разрешён.
+Couldn't find 	Не удалось найти 
+Couldn't fix 	Не удалось исправить 
+Couldn't fully fix: 	Не удалось полностью исправить: 
+Couldn't measure storage. Start Shizuku so TinyKit can turn usage access on.	Не удалось определить размер хранилища. Запустите Shizuku, чтобы TinyKit мог включить доступ к статистике использования.
+Couldn't open app settings.	Не удалось открыть настройки приложения.
+Couldn't reach GitHub. Check your internet and try again.	Не удалось подключиться к GitHub. Проверьте подключение к интернету и повторите попытку.
+Couldn't reach the internet	Не удалось подключиться к интернету
+Couldn't read 	Не удалось прочитать 
+Couldn't read battery stats on this phone.	Не удалось прочитать статистику батареи на этом телефоне.
+Couldn't read the size of 	Не удалось определить размер 
+Couldn't read them: 	Не удалось прочитать их: 
+Couldn't read usage. Start Shizuku so TinyKit can turn it on.	Не удалось прочитать данные об использовании. Запустите Shizuku, чтобы TinyKit мог включить этот доступ.
+Couldn't repair 	Не удалось восстановить 
+Couldn't restore it.	Не удалось восстановить.
+Couldn't start recording. 	Не удалось начать запись. 
+Couldn't take a screenshot. 	Не удалось сделать снимок экрана. 
+Couldn't tell which app is in front.	Не удалось определить текущее приложение на переднем плане.
+Couldn't toggle sensors. 	Не удалось переключить датчики. 
+Couldn't turn off the camera/microphone privacy block. Open Settings > Privacy and turn Camera access and Microphone access on.	Не удалось отключить блокировку конфиденциальности камеры/микрофона. Откройте Настройки > Конфиденциальность и включите доступ к камере и микрофону.
+Crash log	Журнал сбоев
+Crash reports	Отчёты о сбоях
+Crash: 	Сбой: 
+Current	Ток
+Cycle 30 s to never.	Переключение от 30 с до «никогда».
+Dark theme	Тёмная тема
+Dark-theme apps that have no dark mode	Тёмная тема для приложений без ночного режима
+Dark-theme apps that have no dark mode.	Тёмная тема для приложений без ночного режима.
+Dark-themes apps that have no dark mode (Android's force-dark). Takes effect as each app is re-opened. Android forgets it at a restart; TinyKit puts it back once Shizuku is running.	Применяет тёмную тему к приложениям без тёмного режима (принудительный тёмный режим Android). Вступает в силу при повторном открытии каждого приложения. Android сбрасывает эту настройку при перезагрузке; TinyKit восстанавливает её после запуска Shizuku.
+Data Saver	Экономия трафика
+Date	Дата
+Dead	Неисправна
+Debloater	Деблоатер
+Default	По умолчанию
+Default apps	Приложения по умолчанию
+Deletes every app's cache, closes cached apps, frees and compacts memory and trims storage. Apps you're using stay open.	Очищает кэш всех приложений, закрывает процессы в кэше, освобождает и сжимает память и оптимизирует хранилище. Используемые в данный момент приложения остаются открытыми.
+Developer options	Для разработчиков
+Device	Устройство
+Device IDs	Идентификаторы устройства
+Device controls	Управление устройством
+Diagnostics & telemetry	Диагностика и телеметрия
+Dial *#06# to view	Наберите *#06# для просмотра
+Dim below the usual minimum.	Затемнение ниже обычного минимума.
+Disable HW overlays	Отключить аппаратные наложения
+Disables HiCloud sync services. Your Huawei ID sign-in stays.	Отключает службы синхронизации HiCloud. Вход в аккаунт Huawei ID сохраняется.
+Disables Huawei's background logging and reporting apps.	Отключает фоновые службы сбора журналов и отчётов Huawei.
+Discharging	Разряжается
+Display	Экран
+Do Not Disturb	Не беспокоить
+Do you want TinyKit to check for a new version each time you open it? It asks GitHub at most once an hour and shows a popup if there is one. Nothing else is sent. You can change this later in the Info tab.	Хотите, чтобы TinyKit проверял наличие новых версий при каждом запуске? Запрос к GitHub отправляется не чаще одного раза в час, и при наличии обновления показывается всплывающее окно. Никакие другие данные не передаются. Это можно изменить позже на вкладке «Инфо».
+Do you want to send the details so it can be fixed? This opens a ready-made GitHub issue with TinyKit's version, your phone model, your Android version and the error. You can read and change it first, and nothing is sent until you post it.	Хотите отправить подробности, чтобы мы могли это исправить? Будет открыта готовая форма issue на GitHub с версией TinyKit, моделью телефона, версией Android и описанием ошибки. Вы можете просмотреть и изменить данные перед отправкой; ничего не будет отправлено до вашей публикации.
+Don't keep mobile data running while connected to Wi-Fi. Saves battery.	Не поддерживать активную передачу мобильных данных при подключении к Wi-Fi. Экономит заряд батареи.
+Done.	Готово.
+Done: 	Готово: 
+Downlink	Скорость загрузки
+Download	Загрузки
+Draw over other apps	Поверх других приложений
+Draws everything with the GPU instead of the display's overlay layers (the same as the developer option). Android forgets it at a restart; TinyKit puts it back once Shizuku is running.	Отрисовывает всё с помощью GPU вместо слоёв наложения экрана (аналогично опции для разработчиков). Android сбрасывает эту настройку при перезагрузке; TinyKit восстанавливает её после запуска Shizuku.
+Edit quick panel	Изменить панель быстрых настроек
+Estimated drain since the last full charge, biggest first.	Расчётный расход с момента последней полной зарядки (в порядке убывания).
+Ethernet	Ethernet
+Every app can use the internet.	Все приложения могут использовать интернет.
+Every app that isn't on your allow list loses Wi-Fi and mobile data right away, including system apps like Google Play services. Pick the apps to allow next.	Все приложения не из белого списка сразу теряют доступ к Wi-Fi и мобильным данным, включая системные приложения, такие как сервисы Google Play. Далее выберите приложения для списка разрешённых.
+Every thermal sensor	Все датчики температуры
+Every thermal sensor the phone reports.	Все датчики температуры, о которых сообщает телефон.
+Every tile is already in your panel.	Все плитки уже добавлены на вашу панель.
+Excel sheet	Таблица Excel
+Expert	Экспертный
+Extra dim	Дополнительное затемнение
+Eye comfort	Защита зрения
+Failed	Сбой
+Failed.	Сбой.
+Failed: 	Сбой: 
+Failed: …	Сбой: …
+Failure	Сбой
+Fake	Фейковые
+Fake and Off permissions become not allowed, so Android asks the app again. Real ones stay allowed. Anything Fake changed on apps you never picked, like the camera, is repaired. A backup is saved to Download/TinyKit first.	Фейковые и отключённые разрешения перестают быть разрешёнными, поэтому Android снова запросит их у приложения. Настоящие остаются разрешёнными. Всё, что режим «Фейковые» изменил в приложениях, которые вы не выбирали (например, в камере), восстанавливается. Сначала резервная копия сохраняется в Download/TinyKit.
+File recycle bin	Корзина файлов
+File types	Типы файлов
+Files found in every recycle bin and trash, with thumbnails. Tap one to restore it to Download/TinyKit/Recovered. Largest first.	Файлы, найденные во всех корзинах, с миниатюрами. Нажмите на файл, чтобы восстановить его в Download/TinyKit/Recovered. Сначала самые большие.
+Find files in every recycle bin, with thumbnails, and restore them.	Поиск файлов во всех корзинах с миниатюрами и их восстановление.
+Fingerprint	Отпечаток пальца
+Finishing…	Завершение…
+Flashlight	Фонарик
+Font size	Размер шрифта
+Force dark	Принудительный тёмный режим
+Force dark on all apps	Принудительный тёмный режим во всех приложениях
+Foreground service	Служба переднего плана
+Free RAM	Освободить ОЗУ
+Free every app's cached space.	Очистить кэш всех приложений.
+Free hotspot	Бесплатная точка доступа
+Freed 	Освобождено 
+Frees the space used by every app's cache.	Освобождает место, занятое кэшем всех приложений.
+Frequency	Частота
+Full	Заряжен
+Gallery recycle bin	Корзина галереи
+Gateway	Шлюз
+Get Shizuku	Скачать Shizuku
+GitHub	GitHub
+Give any app its own language (Android 13+).	Назначение отдельного языка любому приложению (Android 13+).
+Good	Хорошее
+Google	Google
+Grant all permissions	Предоставить все разрешения
+Grant all permissions the app asks for	Предоставить все запрашиваемые разрешения
+Grayscale	Оттенки серого
+Grey out the whole screen.	Отображать весь экран в оттенках серого.
+HW overlays	Аппаратные наложения
+HW overlays off	Аппаратные наложения выключены
+Health	Состояние
+Hearing devices	Слуховые аппараты
+Held 	Удерживалось 
+HiCloud	HiCloud
+Hidden app-ops	Скрытые app-ops
+Hide apps	Скрыть приложения
+Hide apps from the launcher	Скрыть приложения из лаунчера
+Hide apps from the launcher by disabling them.	Скрыть приложения из лаунчера, отключив их.
+Hide dev options	Скрыть параметры разработчика
+Hide developer options	Скрыть параметры для разработчиков
+Hide developer options from apps.	Скрывать параметры разработчика от приложений.
+Hold and drag a tile to move it, or tap two tiles to swap them. Changes show in the quick panel right away.	Нажмите и перетащите плитку, чтобы переместить её, или коснитесь двух плиток, чтобы поменять их местами. Изменения сразу отобразятся на панели быстрых настроек.
+Hotspot	Точка доступа
+Hotspot uses your normal data connection, so carriers that block it can't (works on many carriers).	Точка доступа использует ваше обычное мобильное соединение, обходя блокировки операторов (работает со многими операторами).
+How long each app was on screen	Время работы каждого приложения на экране
+How long each app was on screen today, yesterday or in the last 7 days.	Время работы каждого приложения на экране сегодня, вчера или за последние 7 дней.
+How long each app was on your screen, and how often you opened it. Read from Android's usage history, so TinyKit measures nothing itself.	Сколько времени каждое приложение отображалось на экране и сколько раз вы его открывали. Данные считываются из истории использования Android, поэтому сам TinyKit ничего не измеряет.
+Huawei	Huawei
+Huawei Share	Huawei Share
+IP addresses, Wi-Fi, DNS	IP-адреса, Wi-Fi, DNS
+IP addresses, Wi-Fi, DNS and connection type.	IP-адреса, Wi-Fi, DNS и тип подключения.
+Identifiers	Идентификаторы
+If TinyKit crashes, offer to send the details next time. Nothing is sent unless you tap Send, and you post the issue yourself.	Предлагать отправку отчёта при следующем запуске в случае сбоя TinyKit. Ничего не отправляется без нажатия кнопки «Отправить», и вы сами публикуете issue.
+If the camera or microphone stopped working ("Can't connect to the camera", mic only works in calls) or an app you never changed broke, this fixes it.	Если камера или микрофон перестали работать («Не удаётся подключиться к камере», микрофон работает только во время вызовов) или сломалось приложение, которое вы не меняли, это исправит проблему.
+Images	Изображения
+Info	Инфо
+Install	Установить
+Install APK files	Установка APK-файлов
+Install .apk, .apks, .xapk and .apkm files, including apps split into several parts.	Установка файлов .apk, .apks, .xapk и .apkm, включая разделённые пакеты (split APK).
+Install Shizuku & Termux	Установить Shizuku и Termux
+Install Shizuku first.	Сначала установите Shizuku.
+Install failed.	Ошибка установки.
+Install failed: 	Ошибка установки: 
+Install options	Параметры установки
+Install unknown apps	Установка неизвестных приложений
+Install unknown apps, draw over apps, all files access and more, per app.	Установка неизвестных приложений, поверх других окон, доступ ко всем файлам и другое для каждого приложения.
+Installed 	Установлено 
+Installed (	Установлено (
+Installed apps	Установленные
+Installed with TinyKit	Установлено через TinyKit
+Installed.	Установлено.
+Installing	Установка
+Installing…	Установка…
+Interface	Интерфейс
+Internet	Интернет
+Internet block	Блокировка интернета
+Internet block: 	Блокировка интернета: 
+Internet block: every app can use the internet again.	Блокировка интернета: все приложения снова могут выходить в интернет.
+Internet block: nothing to reset on this Android.	Блокировка интернета: в этой версии Android нечего сбрасывать.
+Internet block: nothing to reset.	Блокировка интернета: нечего сбрасывать.
+Internet block: the lists were cleared, but Shizuku isn't running so Android's rules stay until you start it and reset again.	Блокировка интернета: списки очищены, но Shizuku не запущен, поэтому правила Android останутся в силе, пока вы не запустите Shizuku и не выполните сброс снова.
+It closes now and can start again when you open it or it's needed.	Приложение закроется и запустится повторно, когда вы его откроете или когда оно потребуется системе.
+Keep alive	Не закрывать
+Keep apps alive	Не закрывать приложения
+Keep device awake	Не выключать экран
+Keep the screen on for a while.	Экран остаётся включённым некоторое время.
+Kernel	Ядро
+Last 7 days	Последние 7 дней
+Last opened 	Открывалось 
+Later	Позже
+Later  ›	Позже  ›
+Launcher	Лаунчер
+Least used	Редко используемые
+Let apps play audio together, or mute an app.	Разрешить приложениям воспроизводить звук одновременно или заглушить приложение.
+Let apps play audio together, or mute an app. These are app-op changes; nothing runs in the background.	Разрешить приложениям воспроизводить звук одновременно или заглушить приложение. Это изменения app-op; в фоновом режиме ничего не работает.
+Let every app use the internet again and turn allow list mode off.	Снова разрешить всем приложениям доступ к интернету и отключить режим белого списка.
+Let every app use the internet for now and keep your lists. Also on the Internet block quick tile.	Временно разрешить всем приложениям доступ к интернету, сохранив списки. Также доступно на плитке быстрых настроек блокировки интернета.
+Let it play with others	Воспроизводить вместе с другими
+Limit ad personalisation	Ограничить персонализацию рекламы
+Limits: Shizuku isn't running, so nothing was changed.	Ограничения: Shizuku не запущен, поэтому ничего не изменилось.
+Limits: cleared 	Ограничения: очищено 
+Limits: nothing was set.	Ограничения: ничего не было настроено.
+Link speed	Скорость соединения
+Loading apps…	Загрузка приложений…
+Loading…	Загрузка…
+Location	Местоположение
+Longest-unused apps first. Tap one to open its settings.	Сначала приложения, которые не открывались дольше всего. Нажмите на приложение, чтобы открыть его настройки.
+Made by Ali Alakbar	Создатель: Ali Alakbar
+Made by Ali Alakbar\n\nSmall Android tweaks powered by Shizuku. Free and open source (MIT).\n\n	Создатель: Ali Alakbar\n\nНебольшие твики Android на базе Shizuku. Бесплатно и с открытым исходным кодом (MIT).\n\n
+Manage	Управление
+Markdown	Markdown
+Measuring…	Измерение…
+Memory	Память
+Memory & storage	Память и хранилище
+Memory use of everything running. Stop any app.	Использование памяти всеми запущенными процессами. Остановка любого приложения.
+Memory: 	Память: 
+Mic & camera off	Микрофон и камера выключены
+Mic and camera off	Микрофон и камера выключены
+Microphone	Микрофон
+Microphone access	Доступ к микрофону
+Mixed audio	Смешанный звук
+Mobile data	Мобильные данные
+Mobile data off on Wi-Fi	Отключать мобильные данные при Wi-Fi
+Model	Модель
+Modify contacts	Изменение контактов
+Modify system settings	Изменение настроек системы
+Most recent first, from the system's app-ops record.	Сначала недавние, из системного журнала app-ops.
+Mute audio	Заглушить звук
+Muted	Без звука
+Muted  ·  plays with others	Без звука  ·  играет с другими
+Name	Название
+Needs Android 14 or newer.	Требуется Android 14 или новее.
+Network & battery	Сеть и батарея
+Network info	Информация о сети
+Networks	Сети
+Never	Никогда
+Never opened	Ни разу не открывалось
+Night Light	Ночной режим
+No app is blocked.	Ни одно приложение не заблокировано.
+No app use recorded in this time.	За это время использование приложений не зафиксировано.
+No app was found in the picked files.	В выбранных файлах не найдено приложений.
+No apps here.	Здесь нет приложений.
+No backups yet. Back up first.	Резервных копий пока нет. Сначала создайте копию.
+No browser found to open GitHub.	Не найден браузер для открытия GitHub.
+No crashes recorded since the phone started.\n\nAndroid clears this log on restart.	С момента включения телефона сбоев не зафиксировано.\n\nAndroid очищает этот журнал при перезагрузке.
+No file picker found on this phone.	На этом телефоне не найдено средство выбора файлов.
+No installed app handles this type.	Ни одно установленное приложение не поддерживает этот тип.
+No log output. The app may not be running, or this phone hides app logs.	Нет данных в журнале. Возможно, приложение не запущено или этот телефон скрывает логи приложений.
+No release notes for this version.	Нет примечаний к этой версии.
+No saved networks, or this phone doesn't allow reading them.	Нет сохранённых сетей или телефон не разрешает их чтение.
+No setup backups yet. Back up first.	Резервных копий настроек пока нет. Сначала создайте копию.
+No thanks	Нет, спасибо
+No trackers found.	Трекеры не найдены.
+No vibrations recorded since the phone started.	С момента включения телефона вибраций не зафиксировано.
+None set	Не задано
+Normal (1×)	Обычная (1×)
+Normal install. Tap to allow downgrades or grant permissions.	Обычная установка. Нажмите, чтобы разрешить понижение версии или предоставить разрешения.
+Not applied: it also changed 	Не применено: также изменилось 
+Not charging	Не заряжается
+Not enough free storage.	Недостаточно свободного места.
+Not now	Не сейчас
+Not plugged in	Не подключено
+Not reported by this phone	Не поддерживается этим телефоном
+Not set up	Не настроено
+Not set. Tap to paste it from Shizuku's settings.	Не задано. Нажмите, чтобы вставить из настроек Shizuku.
+Not supported on this Android version	Не поддерживается в этой версии Android
+Nothing changed.	Ничего не изменилось.
+Nothing found in any recycle bin or trash.	Ни в одной корзине ничего не найдено.
+Nothing needed repair. Everything TinyKit checks is normal.	Восстановление не требуется. Все проверяемые TinyKit параметры в норме.
+Nothing recorded since the last charge, or this phone hides it.	Нет записей с момента последней зарядки или этот телефон скрывает их.
+Nothing to show.	Нечего показать.
+Nothing was picked.	Ничего не выбрано.
+Nothing was reset because the backup couldn't be saved. 	Сброс не выполнен, так как не удалось сохранить резервную копию. 
+Nothing yet. Apps you install with TinyKit from now on show up here.	Пока ничего нет. Приложения, установленные через TinyKit, будут отображаться здесь.
+Notification channels	Каналы уведомлений
+Notification channels need Android 8 or newer.	Для каналов уведомлений требуется Android 8 или новее.
+Notifications	Уведомления
+Now	Сейчас
+Off	Отключено
+Off. TinyKit never runs by itself.	Отключено. TinyKit никогда не работает сам по себе.
+Offer to report crashes	Предлагать отчёт о сбоях
+Offline	Офлайн
+One tap turns Shizuku on or off. It uses the auth token when it's set, otherwise Termux with shizuku-termux.	Включение и выключение Shizuku в одно касание. Использует токен авторизации, если он задан, иначе — Termux с shizuku-termux.
+One-handed mode	Режим работы одной рукой
+Only apps with internet permission	Только приложения с разрешением на доступ в интернет
+Open	Открыть
+Open Shizuku	Открыть Shizuku
+Open System > Edit quick panel in TinyKit and add "	Откройте «Система» > «Редактировать панель быстрых настроек» в TinyKit и добавьте "
+Open network	Открытая сеть
+Open network — no password	Открытая сеть — без пароля
+Open router settings	Открыть настройки роутера
+Opens 	Открывает 
+Optimize apps	Оптимизация приложений
+Original Shizuku	Оригинальный Shizuku
+Other	Другое
+Other things depend on it. Only remove it if you know what it does.	От этого зависят другие компоненты. Удаляйте, только если знаете, для чего оно нужно.
+Over voltage	Перенапряжение
+Overheating	Перегрев
+Package	Имя пакета
+Part of Android, not in TinyKit's list	Часть Android, отсутствует в списке TinyKit
+Parts of the app are missing. Pick every file of the app together.	Не хватает частей приложения. Выберите все файлы приложения вместе.
+Password copied	Пароль скопирован
+Password: 	Пароль: 
+Pause and resume blocking apps' internet.	Приостановка и возобновление блокировки интернета приложениям.
+Pause blocking	Приостановить блокировку
+Paused	Приостановлено
+Paused. No app is blocked until you resume.	Приостановлено. Ни одно приложение не блокируется, пока вы не возобновите работу.
+Permission choices (Fake, Real, Off) and any damage they caused	Выбор разрешений (Фейковые, Настоящие, Отключено) и любые вызванные ими сбои
+Permissions	Разрешения
+Permissions: 	Разрешения: 
+Permissions: Shizuku isn't running, so nothing was changed.	Разрешения: Shizuku не запущен, поэтому ничего не изменилось.
+Permissions: reset 	Разрешения: сброшено 
+Phone	Телефон
+Phone info	О телефоне
+Physical activity	Физическая активность
+Pick a backup file and apply it.	Выберите файл резервной копии и примените его.
+Pick a setup file and apply it.	Выберите файл конфигурации и примените его.
+Pick an app to change its permissions and app-ops.	Выберите приложение, чтобы изменить его разрешения и app-ops.
+Pick an app to choose which kinds of notification it may show.	Выберите приложение, чтобы настроить типы уведомлений, которые оно может показывать.
+Pick an app to give it its own language. It only takes effect for languages the app has.	Выберите приложение, чтобы назначить ему отдельный язык. Это работает только для языков, поддерживаемых приложением.
+Pick an app to see its recent log output.	Выберите приложение, чтобы просмотреть его недавний журнал логов.
+Pick apps Android must never kill or delay, like Termux or messengers.	Выберите приложения, которые Android никогда не должен выгружать или задерживать (например, Termux или мессенджеры).
+Pick apps that can't read what you copy, like passwords and codes.	Выберите приложения, которым запрещено читать буфер обмена (пароли, коды и т. д.).
+Pick apps that can't run or wake the phone in the background.	Выберите приложения, которым запрещено работать или пробуждать телефон в фоновом режиме.
+Pick the app to use as the default 	Выберите приложение по умолчанию для 
+Pick the apps that may use the internet. Everything else is blocked.	Выберите приложения, которым разрешён доступ в интернет. Все остальные будут заблокированы.
+Pick the apps to cut off.	Выберите приложения, которым нужно заблокировать доступ.
+Plain text	Простой текст
+Play normally (take focus)	Обычное воспроизведение (захват аудиофокуса)
+Plays with others	Воспроизводится вместе с другими
+Power	Питание
+Power saving	Энергосбережение
+Power source	Источник питания
+Power, current, voltage and battery health.	Мощность, сила тока, напряжение и состояние батареи.
+Precise location	Точное местоположение
+Preparing the report…	Подготовка отчёта…
+Privacy	Приватность
+Private DNS	Частный DNS
+Problem: 	Проблема: 
+Processor	Процессор
+Public IP	Публичный IP
+Put the camera/microphone permission back to normal on 	Разрешение на доступ к камере/микрофону возвращено в исходное состояние для 
+Put the tiles back the way they were before you used this.	Вернуть плитки в состояние, которое было до использования этой функции.
+Puts what TinyKit changed back to Android's defaults. TinyKit can't know what a setting was before it changed it, so this is Android's default, not a custom value you had earlier. A backup is saved to Download/TinyKit first.\n\nNot touched: developer options, USB debugging, screen timeout, notification channels and special access.	Возвращает изменённые TinyKit параметры к стандартным значениям Android. TinyKit не может знать, какими были настройки до изменений, поэтому восстанавливаются значения Android по умолчанию, а не ваши предыдущие пользовательские значения. Сначала создаётся резервная копия в Download/TinyKit.\n\nНе затрагиваются: параметры разработчика, отладка по USB, время отключения экрана, каналы уведомлений и специальный доступ.
+QR scanner	Сканер QR-кодов
+Quick Settings	Быстрые настройки
+Quick panel	Панель быстрых настроек
+Quick toggles	Быстрые переключатели
+Read app usage	Доступ к истории использования
+Read clipboard	Чтение буфера обмена
+Read contacts	Чтение контактов
+Read storage	Чтение данных из хранилища
+Reading apps…	Чтение списка приложений…
+Reading current state…	Чтение текущего состояния…
+Reading files…	Чтение файлов…
+Reading permissions…	Чтение разрешений…
+Reading saved networks…	Чтение сохранённых сетей…
+Reading usage…	Чтение данных об использовании…
+Reading…	Чтение…
+Real	Настоящие
+Reboot	Перезагрузка
+Reboot to bootloader	Перезагрузка в загрузчик (bootloader)
+Reboot to recovery	Перезагрузка в recovery
+Reboot, recovery, bootloader or a soft (userspace) reboot.	Обычная перезагрузка, recovery, bootloader или мягкая перезагрузка (userspace).
+Recent access	Недавний доступ
+Recent vibrations	Недавние вибрации
+Recent vibrations and what asked for them.	Недавние вибрации и вызвавшие их приложения.
+Recent vibrations, most recent first.	Недавние вибрации, сначала самые новые.
+Recommended	Рекомендованный
+Recommended versions that keep running in the background.	Рекомендуемые версии, продолжающие работать в фоновом режиме.
+Record the screen to Movies.	Запись экрана в папку «Movies».
+Recording saved to Movies	Запись сохранена в «Movies»
+Recording…	Запись…
+Recover deleted files	Восстановление удалённых файлов
+Recover files	Восстановить файлы
+Recovered fragments	Восстановленные фрагменты
+Refresh	Обновить
+Remove	Удалить
+Remove 	Удалить 
+Remove apps your phone came with, for you only. Nothing is deleted from the system: bring any app back from Removed, and a factory reset restores all of them. Hold an app to read about it.	Удаление предустановленных приложений только для текущего пользователя. Из системы ничего не удаляется: любое приложение можно восстановить из «Удалённых», а сброс к заводским настройкам вернёт их все. Зажмите приложение, чтобы узнать подробности.
+Remove apps your phone came with, with a safety rating for each. Bring any of them back later.	Удаление предустановленных приложений с оценкой безопасности. Их можно восстановить позже.
+Removed 	Удалено 
+Removed apps	Удалённые
+Removed.	Удалено.
+Removing 	Удаление 
+Removing it can switch off a feature you may use. Read the description first.	Его удаление может отключить нужную вам функцию. Сначала прочтите описание.
+Reorder, add and remove tiles	Перемещение, добавление и удаление плиток
+Reorder, add and remove tiles with one tap each.	Перемещайте, добавляйте и удаляйте плитки в одно касание.
+Repair permissions	Исправить разрешения
+Repaired permissions that Fake had left changed on 	Исправлены разрешения, изменённые режимом Фейковые для 
+Report a problem	Сообщить о проблеме
+Reset	Сбросить
+Reset everything TinyKit changed	Сбросить всё, что изменил TinyKit
+Reset everything TinyKit changed?	Сбросить всё, что изменил TinyKit?
+Reset permission changes	Сбросить изменения разрешений
+Reset permission changes?	Сбросить изменения разрешений?
+Restarts Android without a full reboot. Needs Android 11+; otherwise it reboots normally.	Перезапускает Android без полной перезагрузки. Требуется Android 11+; иначе выполняется обычная перезагрузка.
+Restore	Восстановить
+Restore 	Восстановить 
+Restore TinyKit setup	Восстановить настройки TinyKit
+Restore original layout	Восстановить исходную раскладку
+Restore settings	Восстановить настройки
+Restore settings?	Восстановить настройки?
+Restore this file?	Восстановить этот файл?
+Restore which backup?	Какую резервную копию восстановить?
+Restore which setup?	Какую конфигурацию восстановить?
+Restored 	Восстановлено 
+Restored to Download/TinyKit/Recovered	Восстановлено в Download/TinyKit/Recovered
+Restoring 	Восстановление 
+Roles	Роли
+Router	Роутер
+Run	Выполнить
+Run a command	Выполнить команду
+Run a shell command as the shell user through Shizuku.	Запуск команд оболочки от имени пользователя shell через Shizuku.
+Run in background	Работа в фоновом режиме
+Run in the background	Работа в фоновом режиме
+Run the shizuku-termux install command in Termux once.	Выполните команду установки shizuku-termux в Termux один раз.
+Running & background	Запущенные и фоновые
+Running apps	Запущенные приложения
+Running…	Выполняется…
+Runs as the shell (adb) user through Shizuku. Output and exit code show below.	Выполняется от имени пользователя shell (adb) через Shizuku. Вывод и код завершения отображаются ниже.
+Runs storage maintenance and TRIM to keep storage fast.	Запускает обслуживание хранилища и TRIM для поддержания высокой скорости.
+Safe to remove. Nothing else depends on it.	Безопасно для удаления. Ничто другое от этого не зависит.
+Safety	Уровень
+Save	Сохранить
+Save a screenshot.	Сохранить снимок экрана.
+Save all settings to a file.	Сохранить все настройки в файл.
+Save all system settings to a file and put them back.	Сохранение всех системных настроек в файл и их восстановление.
+Save any app's APK	Сохранить APK любого приложения
+Save any app's APK to Download/TinyKit.	Сохранить APK любого приложения в папку Download/TinyKit.
+Save these choices to Download/TinyKit.	Сохранить эти настройки в папку Download/TinyKit.
+Saved 	Сохранено 
+Saved Wi-Fi	Сохранённые сети Wi-Fi
+Saved Wi-Fi networks	Сохранённые сети Wi-Fi
+Saved to 	Сохранено в 
+Saves your choices in TinyKit: blocked and allowed apps, the clipboard guard, stopped background apps, kept-alive and hidden apps, special access, removed system apps. Restoring puts all of it back, for example after a factory reset.	Сохраняет ваши настройки в TinyKit: заблокированные и разрешённые приложения, защиту буфера обмена, остановленные фоновые приложения, удерживаемые и скрытые приложения, специальный доступ, удалённые системные приложения. Восстановление возвращает всё обратно, например после сброса к заводским настройкам.
+Saving 	Сохранение 
+Saving a backup, then resetting…	Сохранение резервной копии, затем сброс…
+Scanning apps…	Сканирование приложений…
+Screen record	Запись экрана
+Screen recorder	Запись экрана
+Screen time	Время работы экрана
+Screen timeout	Таймаут экрана
+Screenshot	Скриншот
+Screenshot saved to Pictures/Screenshots	Скриншот сохранён в Pictures/Screenshots
+Search all settings & tools	Поиск по всем настройкам и инструментам
+Search apps	Поиск приложений
+Search networks	Поиск сетей
+Searching…	Поиск…
+Security patch	Обновление безопасности
+See an app's log output (Huawei hides most of it).	Просмотр логов приложения (Huawei скрывает большую их часть).
+See saved passwords and share any network with a QR code.	Просматривайте сохранённые пароли и делитесь любой сетью через QR-код.
+See which ad and analytics libraries each app carries.	Просмотр рекламных и аналитических библиотек в каждом приложении.
+See why an app crashed or closed by itself.	Узнайте, почему приложение аварийно завершило работу или закрылось само.
+Send	Отправить
+Sensors	Датчики
+Sensors off	Отключить датчики
+Serial	Серийный номер
+Set 	Задать 
+Set Shizuku's auth token in TinyKit, or install shizuku-termux, to start Shizuku from here.	Укажите токен авторизации Shizuku в TinyKit или установите shizuku-termux, чтобы запускать Shizuku отсюда.
+Set any app's permissions to Real, Fake (looks granted, gets nothing) or Off.	Настройте разрешения любого приложения: «Настоящие», «Фейковые» (выглядит предоставленным, но ничего не получает) или «Отключено».
+Set the default launcher, browser, phone and more.	Выбор лаунчера, браузера, приложения для звонков и других по умолчанию.
+Set. Start and Stop go straight to Shizuku.	Задан. Запуск и остановка выполняются напрямую через Shizuku.
+Settings backup & restore	Резервное копирование и восстановление настроек
+Shizuku	Shizuku
+Shizuku (thedjchi's fork, recommended): its Watchdog restarts Shizuku if Android kills it	Shizuku (форк от thedjchi, рекомендуется): Watchdog перезапускает Shizuku, если Android завершает его процесс
+Shizuku auth token	Токен авторизации Shizuku
+Shizuku didn't start. Open Termux or the Shizuku app to see why.	Shizuku не запустился. Откройте Termux или приложение Shizuku, чтобы узнать причину.
+Shizuku is not available.	Shizuku недоступен.
+Shizuku is not installed	Shizuku не установлен
+Shizuku is not running	Shizuku не запущен
+Shizuku is running. Allow TinyKit to use it.	Shizuku запущен. Разрешите TinyKit доступ к нему.
+Shizuku isn't ready yet. Open Shizuku, make sure it is running, then try again.	Shizuku ещё не готов. Откройте Shizuku, убедитесь, что он запущен, и повторите попытку.
+Shizuku tile	Плитка Shizuku
+Shizuku, which TinyKit needs	Shizuku, необходимый для работы TinyKit
+Show	Показать
+Show system apps	Показать системные приложения
+Shows web pages inside apps	Отображает веб-страницы внутри приложений
+Signal	Сигнал
+Silence one kind of notification from an app, not all of them (Android 8+).	Отключение определённого типа уведомлений приложения вместо всех сразу (Android 8+).
+Silent	Без звука
+Silent, hidden	Без звука, скрыто
+Size	Размер
+Soft reboot	Быстрая перезагрузка
+Something not working? Opens a ready-made GitHub issue that you read and post yourself.	Что-то не работает? Открывает готовый тикет на GitHub, который вы сможете проверить и отправить сами.
+Sort	Сортировка
+Sound	Звук
+Sound and pop-up	Звук и всплывающее окно
+Special access	Специальный доступ
+Speed up phone	Ускорить телефон
+Speed-up widget	Виджет ускорения
+Speeding up…	Ускорение…
+Start	Запустить
+Start Shizuku and allow TinyKit first.	Сначала запустите Shizuku и предоставьте доступ TinyKit.
+Start Shizuku first	Сначала запустите Shizuku
+Start Shizuku first.	Сначала запустите Shizuku.
+Start Shizuku once so TinyKit can change this.	Запустите Shizuku один раз, чтобы TinyKit мог изменить эту настройку.
+Start uses the auth token when it's set, otherwise Termux with shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Stop closes Shizuku fully, so a Watchdog can't start it straight back up.	«Запустить» использует токен авторизации (если задан), иначе Termux с shizuku-termux, либо открывает Shizuku для нажатия кнопки «Запустить». «Остановить» полностью закрывает Shizuku, предотвращая его немедленный перезапуск службой Watchdog.
+Started. Android finishes it in the background.	Запущено. Android завершит операцию в фоновом режиме.
+Started. It keeps running if you close TinyKit.	Запущено. Работа продолжится, даже если вы закроете TinyKit.
+Starting…	Запуск…
+Status	Статус
+Stop	Остановить
+Stop 	Остановить приложение 
+Stop background activity	Остановить фоновую активность
+Stop background apps.	Остановка фоновых приложений.
+Stop background scanning	Остановить фоновое сканирование
+Stopping…	Остановка…
+Stops Huawei usage analytics and app analytics.	Отключает аналитику использования и приложений Huawei.
+Storage	Хранилище
+Storage by app	Хранилище по приложениям
+Storage by app needs Android 8 or newer.	Для распределения хранилища по приложениям требуется Android 8 или новее.
+Success	Успешно
+Switched the camera app back on: 	Приложение камеры снова включено: 
+Switches: Shizuku isn't running; nothing to check.	Переключатели: Shizuku не запущен; нечего проверять.
+Switches: nothing was on.	Переключатели: ничего не было включено.
+Switches: turned off 	Переключатели: отключено 
+System	Система
+System default	Системное значение
+Tap Real, Fake or Off for each permission. Fake shows the app the permission as granted while it actually gets nothing.	Выберите «Настоящие», «Фейковые» или «Отключено» для каждого разрешения. В режиме «Фейковые» приложение видит разрешение как предоставленное, но ничего не получает.
+Tap Start in Shizuku. TinyKit connects by itself once it's running.	Нажмите «Запустить» в Shizuku. TinyKit подключится автоматически, как только служба заработает.
+Tap a default to change it. Some phones only allow certain apps for a role.	Нажмите на приложение по умолчанию, чтобы изменить его. Некоторые телефоны поддерживают для роли только определённые приложения.
+Tap a network to see its password and a QR code to share it.	Нажмите на сеть, чтобы увидеть её пароль и QR-код для отправки.
+Tap a tile to add it to the end of your panel.	Нажмите на плитку, чтобы добавить её в конец панели.
+Tap a tile to add it to your quick panel. On Android 13+ that's one tap; on older phones TinyKit shows where to drag it.	Нажмите на плитку, чтобы добавить её в панель быстрых настроек. В Android 13+ это делается в одно касание; на старых версиях TinyKit покажет, куда её перетащить.
+Tap an app to save its APK to Download/TinyKit.	Нажмите на приложение, чтобы сохранить его APK в папку Download/TinyKit.
+Tap an app to stop it. System processes can't be stopped.	Нажмите на приложение, чтобы остановить его. Системные процессы остановить нельзя.
+Tap another tile to swap them, use the buttons below, or tap it again to let go.	Нажмите на другую плитку, чтобы поменять их местами, используйте кнопки ниже или коснитесь её снова, чтобы отменить выбор.
+Tap to send the crash details so it can be fixed.	Нажмите, чтобы отправить сведения о сбое для его исправления.
+Tap to speed up	Нажмите для ускорения
+Technology	Технология
+Temperature	Температура
+Temperatures	Температуры
+Termux didn't answer.	Termux не ответил.
+Termux doesn't allow other apps to run commands yet. Run the shizuku-termux install command in Termux once.	Termux пока не разрешает другим приложениям выполнять команды. Выполните команду установки shizuku-termux в Termux один раз.
+Termux from F-Droid: needed to start Shizuku without a computer	Termux из F-Droid: необходим для запуска Shizuku без компьютера
+Termux returned no result.	Termux не вернул результата.
+Test-only apps	Тестовые приложения
+That file	Этот файл
+That file has nothing TinyKit can restore.	В этом файле нет данных, которые TinyKit мог бы восстановить.
+That isn't a valid app file.	Этот файл не является корректным файлом приложения.
+The Debloater needs Android 8 or newer, so removed apps can be restored.	Деблоатер требует Android 8 или новее, чтобы удалённые приложения можно было восстановить.
+The app and its data are deleted.	Приложение и его данные будут удалены.
+The app that opens each kind of file. Tap to see every app that can open it (Android needs root to pin a file-type default directly).	Приложение, открывающее каждый тип файлов. Нажмите, чтобы увидеть все подходящие приложения (Android требует root для прямого закрепления ассоциаций файлов).
+The changes in version 	Изменения в версии 
+The installed version was signed with a different key, so this can't update it. Uninstall the installed one first (this deletes its data).	Установленная версия подписана другим ключом, поэтому обновление невозможно. Сначала удалите её (это приведёт к удалению её данных).
+The phone will restart into that mode now.	Телефон сейчас перезагрузится в этот режим.
+The phone will restart now.	Телефон сейчас перезагрузится.
+These are the permissions Android hides on separate screens. Pick one to see only the apps that ask for it, and allow or take it away.	Это разрешения, которые Android скрывает на отдельных экранах. Выберите нужный пункт, чтобы увидеть только запросившие его приложения, и предоставьте или отзовите доступ.
+This Android doesn't support blocking apps: 	Эта версия Android не поддерживает блокировку приложений: 
+This app blocks screenshots. Android doesn't let any app get past that without root.	Это приложение блокирует создание скриншотов. Android не позволяет обойти этот запрет без root.
+This app hasn't created any notification channels yet.	Это приложение ещё не создало ни одного канала уведомлений.
+This app isn't built for this phone's processor.	Это приложение не предназначено для процессора этого телефона.
+This app needs a newer version of Android.	Для этого приложения требуется более новая версия Android.
+This app requests no sensitive permissions.	Это приложение не запрашивает конфиденциальных разрешений.
+This app shares its permissions with 	Это приложение делит свои разрешения с 
+This is a system process and can't be stopped.	Это системный процесс, его нельзя остановить.
+This is only used by Block internet per app, which needs Android 14 or newer.	Используется только функцией «Блокировка интернета по приложениям», для которой требуется Android 14 или новее.
+This is part of Android itself, so it can't be blocked on its own.	Это часть самой системы Android, поэтому её нельзя заблокировать отдельно.
+This is part of Android itself. Changing its permissions can break the phone, so TinyKit won't.	Это часть самой системы Android. Изменение её разрешений может нарушить работу телефона, поэтому TinyKit этого не делает.
+This is your phone's camera app. Making its camera or microphone Fake or Off stops it from opening, so TinyKit won't.	Это системное приложение камеры вашего телефона. Перевод камеры или микрофона в режим «Фейковые» или «Отключено» не позволит ему открываться, поэтому TinyKit этого не делает.
+This phone didn't accept the change.	Этот телефон не принял изменение.
+This phone doesn't expose thermal zones.	Этот телефон не сообщает данные о температурных зонах.
+This phone doesn't let apps change the quick panel.	Этот телефон не разрешает приложениям изменять панель быстрых настроек.
+This phone doesn't record recent access, or nothing recent.	Этот телефон не записывает недавний доступ или недавней активности не было.
+This phone has no screenrecord command. Use its built-in screen recorder.	На этом телефоне нет команды screenrecord. Используйте встроенную запись экрана.
+This writes the saved settings back. Read-only keys are skipped. Some changes may need a restart.	Восстанавливает сохранённые настройки. Параметры только для чтения пропускаются. Для некоторых изменений может потребоваться перезагрузка.
+Those files are for different apps. Pick one app's files at a time.	Эти файлы принадлежат разным приложениям. Выбирайте файлы только одного приложения за раз.
+Thread: 	Поток: 
+Thumbnail cache	Кэш миниатюр
+Tick = the app may show this kind of notification. Untick to block just that kind. Some system channels can't be blocked.	Флажок = приложению разрешено показывать этот тип уведомлений. Снимите его, чтобы заблокировать именно этот тип. Некоторые системные каналы заблокировать нельзя.
+Time:	Время:
+TinyKit	TinyKit
+TinyKit 	TinyKit 
+TinyKit needs usage access. Start Shizuku once and reopen this page, or allow it in Settings > Apps > Special access.	TinyKit требуется доступ к данным об использовании. Запустите Shizuku один раз и снова откройте эту страницу либо разрешите доступ в Настройки > Приложения > Специальный доступ.
+TinyKit setup	Настройки TinyKit
+TinyKit stopped	Приложение TinyKit остановлено
+TinyKit stopped last time	В прошлый раз TinyKit завершил работу со сбоем
+TinyKit tiles	Плитки TinyKit
+TinyKit, the app you are using	TinyKit, используемое вами приложение
+TinyKit: 	TinyKit: 
+Title: choice	Заголовок: выбор
+Today	Сегодня
+Tools	Инструменты
+Total on screen: 	Всего на экране: 
+Touch and hold an empty spot on your home screen, tap Widgets, then drag TinyKit's "Speed up" widget onto the screen.	Нажмите и удерживайте пустое место на главном экране, выберите «Виджеты» и перетащите виджет TinyKit «Ускорить» на экран.
+Trackers in apps	Трекеры в приложениях
+Tracking	Отслеживание
+Trash	Корзина
+Trim storage	Оптимизация хранилища
+Turn Shizuku on and off from the quick panel with one tap.	Включение и отключение Shizuku из панели быстрых настроек в одно касание.
+Turn Shizuku on and off.	Включение и отключение Shizuku.
+Turn USB debugging on or off.	Включение или отключение отладки по USB.
+Turn developer options on or off.	Включение или отключение меню для разработчиков.
+Turn off Huawei and Google analytics, ad tracking and HiCloud.	Отключение аналитики Huawei и Google, рекламного трекинга и HiCloud.
+Turn off hardware overlays (developer option).	Отключить аппаратные наложения (параметр для разработчиков).
+Turn on	Включить
+Turned off the sensor block that was cutting the camera and microphone for every app.	Отключена блокировка датчиков, перекрывавшая доступ к камере и микрофону для всех приложений.
+Type	Тип
+USB debugging	Отладка по USB
+Unavailable	Недоступно
+Unblock all apps	Разблокировать все приложения
+Undo TinyKit's changes and go back to Android's defaults. Saves a backup first.	Отменяет изменения TinyKit и возвращает настройки Android по умолчанию. Предварительно создаётся резервная копия.
+Undo every Real, Fake and Off choice TinyKit made and fix any problems it caused.	Отменяет все изменения разрешений («Настоящие», «Фейковые», «Отключено»), сделанные в TinyKit, и устраняет вызванные ими неполадки.
+Unknown	Неизвестно
+Unknown command	Неизвестная команда
+Unknown package	Неизвестный пакет
+Unmute audio	Включить звук
+Unsafe	Небезопасный
+Unused apps	Неиспользуемые приложения
+Update available	Доступно обновление
+Updated 	Обновлено 
+Uplink	Исходящая скорость
+Uptime	Время работы
+Usage access	Доступ к данным об использовании
+User Experience Programme	Программа улучшения пользовательского опыта
+Vibrate	Вибрация
+Vibration	Вибрация
+Vibration log	Журнал вибраций
+Video	Видео
+View	Вид
+Voltage	Напряжение
+Wake-ups	Пробуждения
+Wallet	Кошелёк
+Web page (HTML)	Веб-страница (HTML)
+What has held the phone awake since the last charge, longest first.	Что удерживало телефон в активном режиме с момента последней зарядки (по убыванию времени).
+What has kept the phone awake.	Что удерживало телефон от перехода в спящий режим.
+What's new	Что нового
+What's new in 	Что нового в 
+When you open TinyKit, ask GitHub for a new version and show a popup if there is one.	При открытии TinyKit проверять наличие новой версии на GitHub и показывать уведомление при её обнаружении.
+Which apps have drained the most since the last charge.	Какие приложения израсходовали больше всего заряда с момента последней зарядки.
+Which apps take the most space	Какие приложения занимают больше всего места
+Which apps take the most space.	Какие приложения занимают больше всего места.
+Who used the camera, mic, location, contacts or clipboard lately.	Кто недавно использовал камеру, микрофон, местоположение, контакты или буфер обмена.
+Wi-Fi MAC	MAC-адрес Wi-Fi
+Wi-Fi and Bluetooth stop scanning	Остановка поиска сетей Wi-Fi и Bluetooth
+Wi-Fi and Bluetooth stop scanning for nearby devices while they're off.	Запрещает Wi-Fi и Bluetooth сканировать устройства поблизости, когда они отключены.
+Wi-Fi password	Пароль Wi-Fi
+Wireless	Беспроводная зарядка
+Word document	Документ Word
+Work apps	Рабочие приложения
+Working	Выполняется
+Working…	Выполняется…
+Write clipboard	Запись в буфер обмена
+Write storage	Запись в хранилище
+Writing part 	Запись части 
+Yesterday	Вчера
+You have the latest version (	У вас установлена последняя версия (
+You have version 	У вас установлена версия 
+Your home screen	Главный экран
+Your keyboard	Клавиатура
+Your messages app	Приложение для сообщений
+Your panel  ·  	Ваша панель  ·  
+Your phone app	Приложение для звонков
+ZIP archive	ZIP-архив
+allowed: 	разрешено: 
+blocked: 	заблокировано: 
+couldn't write the file.	не удалось записать файл.
+send this?	отправить это?
+shizuku-termux isn't installed in Termux.	shizuku-termux не установлен в Termux.
+shizuku-termux isn't installed in Termux. Get it from github.com/Order52/shizuku-termux.	shizuku-termux не установлен в Termux. Загрузите его с github.com/Order52/shizuku-termux.
+AR Emoji stickers	Стикеры AR Emoji
+AR Zone	AR Zone
+Access to storage	Доступ к хранилищу
+Ads in system apps	Реклама в системных приложениях
+Amazon app, installed by the maker	Приложение Amazon, предустановленное производителем
+Android extras: suggestions and sharing	Дополнения Android: предложения и общий доступ
+Android system	Система Android
+Augmented reality support	Поддержка дополненной реальности
+Backs up your wallpaper	Резервное копирование обоев
+Backup	Резервное копирование
+Bixby Vision	Bixby Vision
+Bug reports	Отчёты об ошибках
+Calculator	Калькулятор
+Call manager	Диспетчер вызовов
+Caller ID and yellow pages	Определитель номера и жёлтые страницы
+Calls and mobile network	Вызовы и мобильная сеть
+Carrier settings	Настройки оператора
+Carrier setup	Настройка оператора
+Certificates and keys	Сертификаты и ключи
+Cleaner	Очистка
+Clock and alarms	Часы и будильники
+Customization Service	Служба персонализации
+Device Health Services: battery tips	Device Health Services: советы по расходу заряда
+Device Personalization Services	Службы персонализации устройства
+Device care	Обслуживание устройства
+Digital Wellbeing	Цифровое благополучие
+Dynamic system updates	Динамические обновления системы
+Email app	Почтовое приложение
+Emergency alerts	Экстренные оповещения
+Emergency information	Экстренная информация
+Exchange email accounts	Учётные записи почты Exchange
+Facebook, installed by the maker	Facebook, установленный производителем
+File picker used by every app	Интерфейс выбора файлов для всех приложений
+Files by Google	Files от Google
+Find My Mobile	Поиск мобильного устройства
+Finder search	Поиск Finder
+First-time phone setup	Первоначальная настройка телефона
+Galaxy Themes	Темы Galaxy
+Galaxy Watch setup	Настройка Galaxy Watch
+Gallery	Галерея
+Game Launcher	Game Launcher
+Game Tools	Инструменты для игр
+Game services	Игровые сервисы
+GetApps store	Магазин GetApps
+Google Assistant	Google Ассистент
+Google Calendar	Google Календарь
+Google Docs, Sheets and Slides	Google Документы, Таблицы и Презентации
+Google News	Google Новости
+Google Play Books	Google Play Книги
+Google Play Music	Google Play Музыка
+Google Play Store	Google Play Маркет
+Google Play services: sign-in, push notifications, maps, location	Сервисы Google Play: вход, push-уведомления, карты, геолокация
+Google Wallet and tap to pay	Google Кошелёк и бесконтактная оплата
+Google app and Assistant	Приложение Google и Ассистент
+Google services framework	Google Services Framework
+Hidden Android game	Скрытая игра Android
+Home screen	Главный экран
+Installs and removes apps	Установка и удаление приложений
+Keyboards and input devices	Клавиатуры и устройства ввода
+Link to Windows	Связь с Windows
+Live wallpaper picker	Выбор живых обоев
+Mi Browser	Браузер Mi
+Mi Music	Mi Музыка
+Mi Video	Mi Видео
+Microsoft Office	Microsoft Office
+Mobile network switching	Переключение мобильной сети
+Modes and Routines	Режимы и сценарии
+NFC tag reader	Считыватель меток NFC
+NFC, tap to pay and tags	NFC, бесконтактная оплата и метки
+Needed by Chrome and WebView	Необходимо для Chrome и WebView
+Netflix setup	Настройка Netflix
+Network connection checks	Проверка подключения к сети
+Old browser bookmarks	Старые закладки браузера
+Old search box	Старая строка поиска
+One-time setup after an update	Разовая настройка после обновления
+Opens saved web pages	Открывает сохранённые веб-страницы
+Pairing with watches and accessories	Сопряжение с часами и аксессуарами
+Permission screens	Экраны разрешений
+Printing	Печать
+Proxy auto-config	Автонастройка прокси
+Proxy settings	Настройки прокси
+Quick apps	Быстрые приложения
+SIM card menu from your carrier	Меню SIM-карты от вашего оператора
+SIM setup prompts	Запросы настройки SIM-карты
+Samsung Email	Samsung Email
+Samsung Kids	Samsung Kids
+Samsung Knox security	Безопасность Samsung Knox
+Samsung tips	Советы Samsung
+Screen savers	Заставки
+Secure element, used for payments	Secure Element, используется для платежей
+Security app	Приложение «Безопасность»
+Sending and receiving MMS	Отправка и приём MMS
+Sends feedback to Google	Отправка отзывов в Google
+Sends usage data	Отправка данных об использовании
+Services and feedback	Службы и обратная связь
+Setup for the maker's apps	Настройка приложений производителя
+Sound effects	Звуковые эффекты
+Speech for TalkBack and reading aloud	Синтез речи для TalkBack и чтения вслух
+Status bar, quick panel and lock screen	Строка состояния, панель быстрых настроек и экран блокировки
+Storage clean-up	Очистка памяти
+Stores contacts, media, settings and downloads	Хранит контакты, медиафайлы, настройки и загрузки
+Suggests print plug-ins	Предлагает модули печати
+Syncs contacts and calendar	Синхронизирует контакты и календарь
+System tracing for developers	Трассировка системы для разработчиков
+TalkBack screen reader	Программа чтения с экрана TalkBack
+The shell Shizuku and adb use	Оболочка, которую используют Shizuku и adb
+Tips	Советы
+Transferring files to a computer	Передача файлов на компьютер
+VPN permission prompt	Запрос разрешения на подключение к VPN
+Verifies app links	Проверяет ссылки приложений
+WAP push messages	WAP push-сообщения
+Wallpaper carousel	Карусель обоев
+Weather	Погода
+Wi-Fi hotspot sign-up	Регистрация в точках доступа Wi-Fi
+Wi-Fi sign-in pages	Страницы входа в сети Wi-Fi
+Work profiles and device setup	Рабочие профили и настройка устройства
+Work setup	Настройка рабочего профиля
+Xiaomi push services	Службы push-уведомлений Xiaomi
+ is out (you have 	 уже доступна (у вас 
+just now	только что
+under a minute	меньше минуты
+not installed	не установлено
+your device policy blocks this	заблокировано политикой устройства
+this phone doesn't allow it	это запрещено на этом телефоне
+\nIt disappears	\nОно исчезает
+\nThey disappear	\nОни исчезают
+. In use right now	. Сейчас используется
+‹  Earlier	‹  Ранее
+eBook (EPUB)	Электронная книга (EPUB)
+kept alive	работающие в фоне
+camera and microphone block	блокировка камеры и микрофона
+not allowed	не разрешено
+# Shut Up
+Shut Up	Заглушить
+Some apps refuse to work, or nag you, when Developer options or USB or Wireless debugging are on. Choose those apps here. While one of them is on screen, TinyKit turns the three settings off, and it turns back on whatever was on the moment you leave the app. Android can't hide a setting from one app only, so every app sees it off during that time. An app that checks in its first moments, before TinyKit notices it, or that remembers an earlier check, can still see it.	Некоторые приложения не работают или показывают предупреждения, если включены «Для разработчиков», «Отладка по USB» или «Беспроводная отладка». Выберите эти приложения здесь. Пока одно из них открыто на экране, TinyKit отключает эти три параметра и снова включает то, что было включено, как только вы выходите из приложения. Android не может скрыть настройку только от одного приложения, поэтому все приложения видят её отключённой в это время. Приложение, проверяющее её в первые секунды, до того как TinyKit его заметит, или помнящее прошлую проверку, всё ещё может её обнаружить.
+No app chosen yet.	Приложения ещё не выбраны.
+ app chosen.	 приложение выбрано.
+ apps chosen.	 прил. выбрано.
+Running. Hidden right now, because a chosen app is open.	Работает. Сейчас скрыто, так как открыто выбранное приложение.
+Running. Nothing is hidden until you open a chosen app.	Работает. Ничего не скрыто, пока вы не откроете выбранное приложение.
+Off. TinyKit changes nothing and runs nothing.	Отключено. TinyKit ничего не меняет и ничего не запускает.
+Shut Up apps	Приложения «Заглушить»
+Checked apps see Developer options, USB debugging and Wireless debugging as off while they are open.	Отмеченные приложения видят параметры для разработчиков, отладку по USB и беспроводную отладку отключёнными, пока они открыты.
+Stop Shizuku while they're open	Останавливать Shizuku, пока они открыты
+Some apps notice Shizuku running. With this on, TinyKit stops Shizuku while a chosen app is open and starts it again about 15 seconds after you leave. Turning USB or Wireless debugging off can end Shizuku too, so TinyKit also starts it again after that. It only does this when it can start Shizuku by itself.	Некоторые приложения замечают работу Shizuku. Если этот параметр включён, TinyKit останавливает Shizuku, пока открыто выбранное приложение, и перезапускает его примерно через 15 секунд после выхода. Отключение отладки по USB или беспроводной отладки также может завершить работу Shizuku, поэтому TinyKit перезапускает его и после этого. Это работает, только если TinyKit может запустить Shizuku самостоятельно.
+TinyKit can start Shizuku again by itself.	TinyKit может снова запустить Shizuku самостоятельно.
+Not available: TinyKit has no way to start Shizuku by itself. Save Shizuku's auth token (Shizuku tab, for a Shizuku fork with start and stop intents), or install Termux with shizuku-termux and allow TinyKit to run commands there.	Недоступно: TinyKit не может запустить Shizuku самостоятельно. Сохраните токен авторизации Shizuku (вкладка Shizuku, для форка Shizuku с поддержкой интентов запуска и остановки) или установите Termux с пакетом shizuku-termux и разрешите TinyKit выполнять там команды.
+TinyKit has no way to start Shizuku by itself yet. See the note below.	TinyKit пока не может запустить Shizuku самостоятельно. См. примечание ниже.
+# 1.15.0: one background service, reorganised tabs, search over every row
+New apps	Новые приложения
+TinyKit is running in the background	TinyKit работает в фоновом режиме
+Start Shizuku and allow TinyKit once, so Shut Up can change these settings and see which app is open without it.	Запустите Shizuku и предоставьте доступ TinyKit один раз, чтобы функция «Заглушить» могла изменять эти настройки и определять открытое приложение без него.
+Paused, because Run in the background is off. Tap here to turn it back on.	Приостановлено, так как параметр «Работа в фоновом режиме» отключён. Нажмите здесь, чтобы включить его снова.
+On. Choose at least one app above.	Включено. Выберите хотя бы одно приложение выше.
+Watches which app is open (a couple of times a second, only while the screen is on) with a quiet notification. It uses very little battery. Turning it on also turns on Run in the background (Info tab), which it needs.	Отслеживает открытое приложение (пару раз в секунду, только при включённом экране) с ненавязчивым уведомлением. Потребляет минимум заряда батареи. Включение этой функции также активирует параметр «Работа в фоновом режиме» (вкладка «Инфо»), необходимый для её работы.
+Every app sees Developer options as off. adb and Shizuku keep working.	Все приложения видят параметры для разработчиков отключёнными. adb и Shizuku продолжают работать.
+Only the apps you choose see developer options, USB debugging and Wireless debugging as off.	Только выбранные приложения видят параметры для разработчиков, отладку по USB и беспроводную отладку отключёнными.
+Cut chosen apps off Wi-Fi and mobile data.	Запрет доступа к Wi-Fi и мобильной сети выбранным приложениям.
+Network	Сеть
+Install & remove	Установка и удаление
+Undo	Отменить
+Running now for: 	Сейчас работает для: 
+new apps	новых приложений
+On. Nothing needs it right now, so nothing is running.	Включено. Сейчас в этом нет необходимости, поэтому ничего не запущено.
+Blocked apps can't use Wi-Fi or mobile data. Android itself enforces it, so TinyKit runs nothing in the background unless you turn on "Run in the background" below, and the block comes back by itself after a restart as soon as Shizuku is running again.	Заблокированные приложения не могут использовать Wi-Fi или мобильный интернет. Это ограничение обеспечивает сама система Android, поэтому TinyKit ничего не запускает в фоновом режиме, пока вы не включите параметр «Работа в фоновом режиме» ниже. После перезагрузки блокировка восстанавливается автоматически, как только запустится Shizuku.
+Block every app except the ones you allow. Apps you install later are blocked when you next open TinyKit, or at once with "Run in the background" below. Allow Google Play services if you want push notifications.	Блокировать все приложения, кроме разрешённых. Приложения, установленные позже, будут заблокированы при следующем открытии TinyKit или сразу же, если включён параметр «Работа в фоновом режиме» ниже. Разрешите сервисы Google Play, если хотите получать push-уведомления.
+Blocks a new app the moment you install it, with a quiet notification. This is the same switch as in the Info tab, shared with Shut Up. It uses almost no battery or memory.	Блокирует новое приложение сразу после его установки с ненавязчивым уведомлением. Этот переключатель общий с функцией «Заглушить» и аналогичен переключателю на вкладке «Инфо». Почти не расходует заряд батареи и память.
+Running. New apps are blocked the moment they are installed.	Работает. Новые приложения блокируются сразу после установки.
+On. Nothing to watch until you block an app or turn on allow list mode.	Включено. Нечего отслеживать, пока вы не заблокируете приложение или не включите режим белого списка.
+Off. Apps you install are blocked the next time you open TinyKit.	Отключено. Установленные приложения будут заблокированы при следующем открытии TinyKit.
+Nothing found.	Ничего не найдено.
+This app isn't installed any more.	Это приложение больше не установлено.
+Choosing default apps here needs Android 10 or newer. Use Settings > Apps > Default apps instead.	Выбор приложений по умолчанию здесь требует Android 10 или новее. Используйте «Настройки > Приложения > Приложения по умолчанию».
+Restore this setup?	Восстановить эту конфигурацию?
+Recording, for up to 3 minutes. Tap the tile again to stop.	Запись (до 3 минут). Нажмите на плитку ещё раз, чтобы остановить.
+Couldn't start recording. This screen may be protected, or another recording is running.	Не удалось начать запись. Возможно, этот экран защищён или уже запущена другая запись.
+Internet block (allow list mode, blocked and allowed apps, pause)	Блокировка интернета (режим белого списка, заблокированные и разрешённые приложения, пауза)
+Hidden apps and removed system apps (brought back, including apps you switched off in Settings)	Скрытые и удалённые системные приложения (восстанавливаются, включая приложения, отключённые в Настройках)
+Force dark, HW overlays, sensors off, Shut Up, Run in the background, and the Quick toggles that are on	Принудительный тёмный режим, аппаратные наложения, отключение датчиков, «Заглушить», работа в фоновом режиме и включённые быстрые переключатели
+ will be blocked from the internet when you resume blocking.	 потеряет доступ к интернету при возобновлении блокировки.
+Shizuku is running	Shizuku работает
+Waiting: start Shizuku once so TinyKit can give itself the access Shut Up needs.	Ожидание: запустите Shizuku один раз, чтобы TinyKit мог предоставить себе доступ, необходимый для функции «Заглушить».
+Stopping Shizuku…	Остановка Shizuku…
+Starting Shizuku…	Запуск Shizuku…
+Shizuku didn't start. Check the auth token matches the one in Shizuku's settings.	Не удалось запустить Shizuku. Проверьте, совпадает ли токен авторизации с указанным в настройках Shizuku.
+Shizuku didn't stop. Check the auth token matches the one in Shizuku's settings.	Не удалось остановить Shizuku. Проверьте, совпадает ли токен авторизации с указанным в настройках Shizuku.
+Shizuku didn't stop. Try again, or stop it in the Shizuku app.	Не удалось остановить Shizuku. Попробуйте снова или остановите его в приложении Shizuku.
+Open Termux	Открыть Termux
+Shizuku didn't start	Shizuku не запустился
+Shizuku didn't stop	Shizuku не остановился
+Work profile	Рабочий профиль
+A separate space for apps, with their own data and accounts. Freeze them when you don't need them.	Отдельное пространство для приложений с собственными данными и учётными записями. Замораживайте их, когда они не нужны.
+Create work profile	Создать рабочий профиль
+Takes a few seconds.	Займёт несколько секунд.
+Creating…	Создание…
+This phone allows only one work profile, and it already has one.	На этом телефоне разрешён только один рабочий профиль, и он уже создан.
+Add or remove apps	Добавить или удалить приложения
+Choose which apps have a copy in the work profile.	Выберите, какие приложения будут скопированы в рабочий профиль.
+Checked apps have a copy in the work profile. Check one to add it. Uncheck it to remove that copy and its data from the work profile.	Отмеченные приложения имеют копию в рабочем профиле. Отметьте приложение, чтобы добавить его. Снимите отметку, чтобы удалить эту копию и её данные из рабочего профиля.
+Freeze	Заморозить
+Freeze all	Заморозить все
+Turns every work app off: it can't run, wake the phone or show in the launcher, and keeps its data.	Отключает каждое рабочее приложение: оно не может работать, выводить телефон из спящего режима или отображаться на главном экране, сохраняя при этом свои данные.
+Unfreeze all	Разморозить все
+Turns them all back on.	Включает их все обратно.
+Profile	Профиль
+Remove work profile	Удалить рабочий профиль
+Deletes the profile, every app in it and all their data.	Удаляет профиль, все приложения в нём и все их данные.
+Remove the work profile?	Удалить рабочий профиль?
+Every app in it and all their data are deleted for good. Your main profile is not touched.	Все приложения в нём и их данные будут удалены навсегда. Ваш основной профиль затронут не будет.
+Freezing…	Заморозка…
+Unfreezing…	Разморозка…
+Nothing to change.	Нечего изменять.
+Froze 	Заморожено 
+Unfroze 	Разморожено 
+Frozen	Заморожено
+No apps in the work profile yet.	В рабочем профиле пока нет приложений.
+Unfreeze and open	Разморозить и открыть
+Unfreeze	Разморозить
+Remove from work profile	Удалить из рабочего профиля
+Its copy in the work profile and that copy's data are deleted. The app on your main profile stays.	Его копия в рабочем профиле и её данные будут удалены. Приложение в основном профиле останется.
+Lets TinyKit keep a small service running, with a quiet notification, for the tools that need it: Shut Up, blocking a new app's internet the moment it is installed, and freezing work apps when the screen is off. It only runs while one of them is in use, and uses almost no battery or memory. Off: TinyKit never runs by itself.	Позволяет TinyKit поддерживать работу небольшой службы с ненавязчивым уведомлением для функций, которым это необходимо: «Заглушить», блокировка доступа в сеть новым приложениям сразу после установки и заморозка рабочих приложений при выключении экрана. Служба работает только тогда, когда используется хотя бы один из этих инструментов, и почти не расходует заряд батареи и память. Отключено: TinyKit никогда не работает самостоятельно.
+Running	Работает
+app	приложение
+apps	прил.
+frozen	заморожено
+Pause work profile	Приостановить рабочий профиль
+Open, freeze, add a launcher shortcut to, or remove the apps in the work profile.	Открывайте, замораживайте, создавайте ярлыки на главном экране или удаляйте приложения из рабочего профиля.
+Install APK in the work profile	Установить APK в рабочий профиль
+Install .apk, .apks, .xapk and .apkm files into the work profile only.	Установка файлов .apk, .apks, .xapk и .apkm только в рабочий профиль.
+Freeze when the screen is off	Замораживать при выключенном экране
+No app chosen yet. Open Work apps, tap an app and choose Auto-freeze.	Приложения ещё не выбраны. Откройте «Рабочие приложения», нажмите на приложение и выберите «Автозаморозка».
+. Tap to change the wait.	. Нажмите, чтобы изменить время ожидания.
+Right away	Сразу
+After 1 minute	Через 1 минуту
+After 5 minutes	Через 5 минут
+After 15 minutes	Через 15 минут
+Freeze after the screen has been off	Замораживать после выключения экрана
+Run in the background is on now. Auto-freeze and auto-lock need it.	Параметр «Работа в фоновом режиме» теперь включён. Он необходим для автозаморозки и автоблокировки.
+Tap an app to open it, freeze it, set it to freeze by itself, or add a launcher shortcut. A frozen app is off and keeps its data.	Нажмите на приложение, чтобы открыть его, заморозить, настроить автозаморозку или добавить ярлык на главный экран. Замороженное приложение отключено, но сохраняет свои данные.
+No match. Tick Show system apps to see more.	Ничего не найдено. Отметьте «Показывать системные приложения», чтобы увидеть больше.
+Auto-freeze	Автозаморозка
+Stop auto-freezing	Отключить автозаморозку
+Auto-freeze when the screen is off	Автозаморозка при выключенном экране
+Add launcher shortcut	Добавить ярлык на главный экран
+Clear data	Очистить данные
+Clear data of 	Очистить данные 
+Everything the app saved in the work profile is deleted: accounts, files and settings. The app stays.	Всё, что приложение сохранило в рабочем профиле, будет удалено: учётные записи, файлы и настройки. Само приложение останется.
+work	работа
+work profile	рабочего профиля
+This phone doesn't let TinyKit pause the work profile.	Этот телефон не позволяет TinyKit приостановить рабочий профиль.
+There is no work profile.	Рабочий профиль отсутствует.
+That app isn't in the work profile any more.	Этого приложения больше нет в рабочем профиле.
+Needs Android 8 or newer.	Требуется Android 8 или новее.
+Your launcher can't add shortcuts.	Ваш лаунчер не поддерживает добавление ярлыков.
+Your launcher didn't add it.	Ваш лаунчер не добавил ярлык.
+Create the work profile in TinyKit first (Apps tab).	Сначала создайте рабочий профиль в TinyKit (вкладка «Приложения»).
+Pause and resume your work profile.	Приостановка и возобновление рабочего профиля.
+Start Shizuku	Запустить Shizuku
+On	Включено
+On: 	Включено: 
+This phone can't have a work profile: it needs Android 8 or newer, and work profile support from its maker.	На этом телефоне нельзя создать рабочий профиль: требуется Android 8 или новее, а также поддержка рабочих профилей производителем.
+A work profile is a second, separate space on this phone. Apps you add to it are copies with their own accounts, data and notifications. Freeze them, or let them freeze by themselves, so they don't run at all. Give it its own PIN and it locks like Samsung's Secure Folder. Android allows one. TinyKit makes it by itself: no setup screens and no extra app inside it.	Рабочий профиль — это отдельное второе пространство на этом телефоне. Добавляемые в него приложения — это копии со своими учётными записями, данными и уведомлениями. Замораживайте их вручную или настройте автоматическую заморозку, чтобы они не работали вовсе. Установите собственный PIN-код, и профиль будет блокироваться, как «Защищенная папка» Samsung. Android поддерживает только один такой профиль. TinyKit создаёт его самостоятельно: без лишних экранов настройки и сторонних приложений внутри.
+Locked	Заблокировано
+Unlock work profile	Разблокировать рабочий профиль
+The work profile is locked. Enter its PIN to use its apps.	Рабочий профиль заблокирован. Введите его PIN-код, чтобы использовать приложения.
+Stops every work app and silences its notifications, like the Work switch in your launcher. With a PIN of its own (see Lock) it stays locked until the PIN is entered.	Останавливает все рабочие приложения и отключает их уведомления, как переключатель «Рабочие» на главном экране. При наличии собственного PIN-кода (см. «Блокировка») профиль остаётся заблокированным, пока не будет введён PIN-код.
+Lock	Блокировка
+Give the work profile its own PIN, like Samsung's Secure Folder. Pausing then locks it: only the PIN opens it again.	Установите для рабочего профиля собственный PIN-код, как в «Защищенной папке» Samsung. Приостановка заблокирует его: открыть его снова можно будет только с помощью PIN-кода.
+No PIN of its own yet. Add one, and pausing locks the profile.	Собственный PIN-код ещё не задан. Установите его, и приостановка будет блокировать профиль.
+It has a PIN of its own. Tap to change or remove it.	Установлен собственный PIN-код. Нажмите, чтобы изменить или удалить его.
+Work profile PIN	PIN-код рабочего профиля
+Lock when the screen is off	Блокировать при выключенном экране
+. Pauses the whole work profile. Tap to change.	. Приостанавливает весь рабочий профиль. Нажмите, чтобы изменить.
+Lock after the screen has been off	Блокировать после выключения экрана
+Lock after a restart	Блокировать после перезагрузки
+Pauses the work profile once each time the phone restarts, as soon as Shizuku is running again.	Приостанавливает рабочий профиль при каждой перезагрузке телефона, как только Shizuku снова начинает работать.
+PIN	PIN-код
+Current PIN (empty if none)	Текущий PIN-код (оставьте пустым, если нет)
+New PIN (empty removes it)	Новый PIN-код (оставьте пустым для удаления)
+A PIN is 4 to 16 digits. With one of its own the work profile's data is locked until the PIN is entered. If you forget it, those apps and their data can't be opened again: the only way out is to remove the work profile.	PIN-код должен содержать от 4 до 16 цифр. При его установке данные рабочего профиля заблокированы до ввода PIN-кода. Если вы забудете его, эти приложения и их данные невозможно будет открыть снова: единственный выход — удалить рабочий профиль.
+PIN removed.	PIN-код удалён.
+PIN saved.	PIN-код сохранён.
+This phone can't have a work profile.	Этот телефон не поддерживает рабочий профиль.
+Android refused: 	Android отклонил запрос: 
+no reason given.	причина не указана.
+\n\nSome phones block work profiles. Dual Apps, App Twin, Second space and a custom recovery are common causes: turn those off and try again.	\n\nНекоторые телефоны блокируют рабочие профили. Клонирование приложений (Dual Apps, App Twin), «Второе пространство» и кастомное рекавери — частые причины: отключите их и попробуйте снова.
+Android didn't create the profile.	Системе Android не удалось создать профиль.
+This phone didn't pause the work profile.	Этот телефон не приостановил рабочий профиль.
+Enter the work profile's PIN on the screen that opened, to switch it back on.	Введите PIN-код рабочего профиля на открывшемся экране, чтобы включить его обратно.
+The work profile is locked. Open TinyKit > Apps > Work profile and unlock it with its PIN.	Рабочий профиль заблокирован. Откройте TinyKit > Приложения > Рабочий профиль и разблокируйте его с помощью PIN-кода.
+A PIN is 4 to 16 digits.	PIN-код должен содержать от 4 до 16 цифр.
+That current PIN isn't right.	Неверный текущий PIN-код.
+The profile already has a PIN. Type it in the first box to change or remove it.	У профиля уже есть PIN-код. Введите его в первое поле, чтобы изменить или удалить.
+That PIN isn't right.	Неверный PIN-код.
+Couldn't open it.	Не удалось открыть.
+Share menu pins	Закрепление в меню «Поделиться»
+Pin the apps you share to most. They show in the top row of the share menu, so you don't scroll to find them (Android 10+).	Закрепляйте приложения, в которые вы чаще всего отправляете файлы. Они отображаются в верхнем ряду меню «Поделиться», чтобы их не нужно было искать (Android 10+).
+The first three apps you check show in the top row of the share menu. Up to 8: the rest are in the Pinned apps entry. Tapping one hands what you share straight to that app.	Первые три отмеченных приложения будут отображаться в верхнем ряду меню «Поделиться». Всего можно выбрать до 8: остальные будут находиться в пункте «Закреплённые приложения». Нажатие на приложение сразу передаёт ему отправляемый контент.
+You can pin up to 8 apps.	Можно закрепить до 8 приложений.
+Needs Android 10 or newer.	Требуется Android 10 или новее.
+Share with	Поделиться с помощью
+That app can't take this.	Это приложение не может принять эти данные.
+Dimmed tools need Shizuku. Start it on the first tab.	Затемнённые инструменты требуют Shizuku. Запустите его на первой вкладке.
+Create work profile?	Создать рабочий профиль?
+This adds a second, separate space to your phone. Your own apps and data stay as they are. You can remove it later.	Это создаст отдельное второе пространство на вашем телефоне. Ваши приложения и данные останутся неизменными. Вы сможете удалить его позже.
+Create	Создать
+Light theme	Светлая тема
+Use a light background instead of OLED black.	Использовать светлый фон вместо глубокого чёрного для OLED.
