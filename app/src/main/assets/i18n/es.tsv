@@ -1222,3 +1222,11 @@ This Android can only mute an app, not turn it down. Android 13 and newer can do
 Pick apps Android must never kill or delay, like Termux or messengers.	Elige las apps que Android nunca debe cerrar ni retrasar, como Termux o las de mensajería.
 This Android is older than 11, so it has no Wireless debugging, and this phone has neither root nor adb over the network switched on. On Android 10 and older one of those has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).	Este Android es anterior a 11, así que no tiene depuración inalámbrica, y este teléfono no tiene ni root ni adb por red activado. En Android 10 y anteriores hace falta una de las dos cosas: root, o adb tcpip 5555 desde un ordenador una vez (dura hasta que se reinicie el teléfono).
 If the phone asks to allow USB debugging, choose Allow (Always allow).	Si el teléfono pide permitir la depuración USB, elige Permitir (Permitir siempre).
+Pick Termux, then Use this folder. TinyKit switches on what it needs there.	Elige Termux y luego Usar esta carpeta. TinyKit activa ahí lo que necesita.
+Through Termux, in the background.	A través de Termux, en segundo plano.
+Pick Termux's home folder (Termux, then Use this folder).	Elige la carpeta principal de Termux (Termux y luego Usar esta carpeta).
+Couldn't write Termux's settings: 	No se pudo escribir la configuración de Termux: 
+Termux didn't answer in time.	Termux no respondió a tiempo.
+Couldn't reach Termux: 	No se pudo contactar con Termux: 
+Termux refused.	Termux lo rechazó.
+Termux returned no result.	Termux no devolvió ningún resultado.

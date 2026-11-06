@@ -24,6 +24,7 @@ what it actually does, and what it never does.
 | Permission | Why |
 | --- | --- |
 | `QUERY_ALL_PACKAGES` | App pickers list every installed app |
+| `com.termux.permission.RUN_COMMAND` | Start Shizuku through Termux, if you have it. Android asks you first. |
 | `INTERNET` | Check for updates, and the public IP on Network info, only when you use them. Also how Start talks to Wireless debugging on this same phone (`127.0.0.1`). |
 | `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE` | Network info reads the active connection's details |
 | `KILL_BACKGROUND_PROCESSES` | Speed up phone without Shizuku on Android 13 and older. Closes only cached apps. |

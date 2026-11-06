@@ -74,6 +74,21 @@ thedjchi's fork can be started and stopped with an intent carrying a secret toke
 **Start** and **Stop** then go straight to Shizuku. **Stop** also works properly with the
 Watchdog on, because Shizuku knows the stop was intentional.
 
+### With Termux (set up by TinyKit)
+
+If [Termux](https://f-droid.org/packages/com.termux/) is installed, **Start** goes through it first, in the
+background (no Termux window opens), and TinyKit prepares Termux itself the first time:
+
+1. Android asks you to allow TinyKit to *run commands in Termux*. Allow it.
+2. TinyKit switches on the one Termux setting that lets other apps do that (`allow-external-apps`). It
+   writes it through Termux's own file provider, so you only pick **Termux** and tap **Use this folder**
+   once (and **Allow**) in Android's folder picker. No command to type, nothing to copy.
+3. TinyKit runs its own start script in Termux (built in; no other repo). It tries, as shizuku-termux does:
+   already running, root, adb over the network (port 5555), then Wireless debugging. It installs `adb`
+   (`android-tools`) in Termux by itself the first time it needs it.
+
+If Termux can't do it (not installed, not allowed, no working `adb` there), TinyKit's own adb client takes over:
+
 ### With TinyKit's own adb client
 
 With no token saved, **Start** runs TinyKit's own adb client (`Adb.java`, no library, no Termux, no other

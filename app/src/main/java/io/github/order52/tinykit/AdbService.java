@@ -43,6 +43,9 @@ public final class AdbService extends Service {
     private static final int NOTIFICATION = 7;
     private static final String CONNECT = "_adb-tls-connect._tcp.", PAIRING = "_adb-tls-pairing._tcp.";
     private static final String PREF_PAIRED = "adb_paired";
+    /** Set once Termux lets TinyKit run commands: then Start goes through it. */
+    static final String PREF_TERMUX = "termux_ready";
+    private static final String TERMUX_SKIP = "skip";
     private static final String NEEDS_WIRELESS = "wireless", NEEDS_PAIRING = "pairing", NEEDS_NOTHING = "nothing";
     private static final String NOTHING_AVAILABLE = "This Android is older than 11, so it has no Wireless debugging, and "
             + "this phone has neither root nor adb over the network switched on. On Android 10 and older one of those "
@@ -104,9 +107,17 @@ public final class AdbService extends Service {
     private void flow() {
         String result;
         try {
+            if (Termux.installed(this) && Termux.permitted(this) && prefs.getBoolean(PREF_TERMUX, false)) {
+                String viaTermux = termuxFlow();
+                if (!TERMUX_SKIP.equals(viaTermux)) {
+                    finish(viaTermux);
+                    return;
+                }
+            }
             Adb adb = new Adb(getFilesDir());
             // As shizuku-termux does, first what needs no pairing: root, then adb over the network if it is on.
             String quick = quickStart(adb);
+            android.util.Log.i("TinyKit", "adb: quick start gave " + quick);
             if (quick == null || !NEEDS_NOTHING.equals(quick) || !supported()) {
                 finish(quick == null ? null : NEEDS_NOTHING.equals(quick) ? NOTHING_AVAILABLE : quick);
                 return;
@@ -160,8 +171,86 @@ public final class AdbService extends Service {
             android.util.Log.w("TinyKit", "adb start: " + e);
             result = "Couldn't start Shizuku: " + e.getMessage();
         }
+        android.util.Log.i("TinyKit", "adb: flow ended with " + result);
         finish(result == null ? null : NEEDS_WIRELESS.equals(result) || NEEDS_PAIRING.equals(result)
                 ? "Wireless debugging wasn't set up in time. Tap Start to try again." : result);
+    }
+
+    /**
+     * Starts Shizuku through Termux, in the background. Null when it is on its way, TERMUX_SKIP when Termux can't do it
+     * (then TinyKit's own adb client takes over), else why not. The same steps as the other way: root, adb over the
+     * network, then Wireless debugging, asking for the pairing code in a notification the first time.
+     */
+    private String termuxFlow() throws InterruptedException {
+        say("Starting Shizuku…", "Through Termux, in the background.", false, null);
+        Termux.Result r = Termux.start(this, START, "");
+        android.util.Log.i("TinyKit", "termux start: exit=" + r.exitCode + " error=" + r.error + " out=" + r.out);
+        if (!r.ran()) return TERMUX_SKIP;
+        long end = System.currentTimeMillis() + 5 * 60_000L;
+        while (r.exitCode == Termux.NOT_CONNECTED && System.currentTimeMillis() < end) {
+            if (!supported()) return NOTHING_AVAILABLE;
+            if (Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 0) {
+                if (enableWireless()) {
+                    Thread.sleep(5000); // the network needs a moment to announce it
+                    r = Termux.start(this, START, join(discover(CONNECT, 4000)));
+                } else {
+                    boolean developer = Settings.Global.getInt(getContentResolver(),
+                            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1;
+                    say(developer ? "Turn on Wireless debugging" : "Turn on Developer options",
+                            developer ? "Tap here, then switch on Wireless debugging. It needs Wi-Fi. TinyKit carries on by itself."
+                                    : "Tap here, then tap Build number 7 times. TinyKit carries on by itself.",
+                            false, developer ? Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS : Settings.ACTION_DEVICE_INFO_SETTINGS);
+                    Thread.sleep(3000);
+                    if (Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 1) {
+                        Thread.sleep(4000);
+                        r = Termux.start(this, START, join(discover(CONNECT, 4000)));
+                    }
+                }
+                continue;
+            }
+            List<Integer> connect = discover(CONNECT, 3000);
+            if (!connect.isEmpty() && !tried.containsAll(connect)) { // the ports TinyKit sees, that Termux's own lookup missed
+                tried.addAll(connect);
+                r = Termux.start(this, START, join(connect));
+                continue;
+            }
+            say("Enter the pairing code", "In Wireless debugging tap Pair device with pairing code, then type "
+                    + "the six digits here.", true, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
+            String code = codes.poll(2, TimeUnit.SECONDS);
+            if (code == null) continue;
+            List<Integer> ports = discover(PAIRING, 8000);
+            if (ports.isEmpty()) {
+                say("Enter the pairing code", "Open Pair device with pairing code first, then type the digits again.",
+                        true, null);
+                continue;
+            }
+            boolean paired = false;
+            for (int port : ports) {
+                if (Termux.pair(this, START, port, code).exitCode == 0) {
+                    paired = true;
+                    break;
+                }
+            }
+            if (paired) {
+                say("Paired", "Starting Shizuku…", false, null);
+                Thread.sleep(3000);
+                tried.clear();
+                r = Termux.start(this, START, join(discover(CONNECT, 6000)));
+            } else {
+                say("Enter the pairing code", "That didn't pair. Type the digits again.", true, null);
+            }
+        }
+        if (r.exitCode == 0) return null;
+        if (r.exitCode == Termux.NOT_CONNECTED) return "Wireless debugging wasn't set up in time. Tap Start to try again.";
+        return TERMUX_SKIP;
+    }
+
+    private final Set<Integer> tried = new java.util.HashSet<>();
+
+    private static String join(List<Integer> ports) {
+        StringBuilder out = new StringBuilder();
+        for (int p : ports) out.append(out.length() > 0 ? " " : "").append(p);
+        return out.toString();
     }
 
     /** Null when Shizuku is on its way, NEEDS_NOTHING when neither root nor adb over the network is there, else why not. */
@@ -373,7 +462,12 @@ public final class AdbService extends Service {
     }
 
     /** Ends with a short message that stays, or quietly when Shizuku is on its way. */
+    /** Told when a start ends, so the Shizuku tab stops saying "Starting…" if Shizuku didn't come up. */
+    static volatile java.util.function.Consumer<String> onFinish;
+
     private void finish(String error) {
+        java.util.function.Consumer<String> listener = onFinish;
+        if (listener != null) listener.accept(error == null ? "Shizuku didn't start. Tap Start again, or open the Shizuku app." : error);
         stopForeground(STOP_FOREGROUND_REMOVE);
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.cancel(NOTIFICATION);

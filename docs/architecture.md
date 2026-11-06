@@ -59,6 +59,7 @@ tinykit/
 │       │   ├── Tiles.java          14 Quick Settings tiles on one base class
 │       │   ├── Adb.java            Own adb client: wireless pairing, connect and shell (pure Java, no libraries)
 │       │   ├── Spake2.java         The pairing key exchange (Ed25519 SPAKE2, BoringSSL's flavour)
+│       │   ├── Termux.java         Starts Shizuku through Termux: permission, allow-external-apps via its file provider, start script
 │       │   ├── AdbService.java     Starts Shizuku through Adb: finds the port, enables Wireless debugging, asks for the code
 │       │   ├── ShizukuTile.java    Shizuku on/off tile (token or TinyKit's own adb start, or kill)
 │       │   ├── ScreenshotTile.java Screenshot tile

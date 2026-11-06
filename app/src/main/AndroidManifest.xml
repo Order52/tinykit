@@ -15,6 +15,8 @@
     <!-- Network info page reads the active connection's addresses and Wi-Fi state. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Start Shizuku through Termux, which Android asks the user to allow. -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
 
     <!-- Unused apps and recent access read usage stats; the appop is granted through Shizuku. -->
@@ -214,6 +216,9 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Pairs with the phone's Wireless debugging and starts Shizuku when the user taps Start, and asks for the pairing code in a notification" />
         </service>
+
+        <!-- Termux's reply to a command TinyKit ran there. -->
+        <receiver android:name=".Termux$Reply" android:exported="false" />
 
         <!-- Starts that service again after a restart or an update of TinyKit. -->
         <receiver android:name=".StartReceiver" android:exported="false">

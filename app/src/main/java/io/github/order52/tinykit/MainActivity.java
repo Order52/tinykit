@@ -130,6 +130,8 @@ public class MainActivity extends Activity {
     private static final String SHIZUKU_ORIGINAL = "https://shizuku.rikka.app/download/";
     private static final String REPO = "https://github.com/Order52/tinykit";
     private static final int REQUEST_NOTIFICATIONS = 2;
+    private static final int REQUEST_RUN_COMMAND = 3;
+    private static final int REQUEST_TERMUX_HOME = 5;
     private static final int REQUEST_PICK_APK = 4;
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
@@ -267,7 +269,7 @@ public class MainActivity extends Activity {
     private Button shizukuButton;
     private Button startButton;
     private Button stopButton;
-    private boolean starting, stopping, askedNotifications;
+    private boolean starting, stopping, askedNotifications, termuxChecked, askedTermux, askedTermuxSetup, termuxResume;
 
     private final Shizuku.OnBinderReceivedListener binderReceived = () -> main.post(this::refreshShizuku);
     private final Shizuku.OnBinderDeadListener binderDead = () -> main.post(this::refreshShizuku);
@@ -319,6 +321,7 @@ public class MainActivity extends Activity {
         tabBar = buildTabBar();
         root.addView(tabBar);
         setContentView(root);
+        if (lightTheme && Build.VERSION.SDK_INT >= 29) root.setForceDarkAllowed(false); // see AppTheme_Light
         tabRoots = new View[TAB_NAMES.length];
         int tab = Math.max(0, Math.min(getIntent().getIntExtra(EXTRA_TAB, prefs.getInt("tab", 0)),
                 TAB_NAMES.length - 1));
@@ -498,6 +501,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (termuxResume) { // back from Termux, which has read its settings again
+            termuxResume = false;
+            termuxChecked = false;
+            main.postDelayed(this::startShizuku, 500);
+        }
         refreshShizuku();
     }
 
@@ -782,9 +790,61 @@ public class MainActivity extends Activity {
      * over the network on older Android. TinyKit's binder listener refreshes this screen as soon as
      * Shizuku is running.
      */
+    /**
+     * Gets Termux ready to start Shizuku, by itself: the permission to run commands there (Android asks once), and
+     * the Termux setting that lets other apps do it, written through Termux's file provider after the person picks
+     * Termux's folder once. When Termux can't be used, Start goes on with TinyKit's own adb client.
+     */
+    private void prepareTermux() {
+        if (!Termux.permitted(this)) {
+            if (!askedTermux && Build.VERSION.SDK_INT >= 23) {
+                askedTermux = true;
+                requestPermissions(new String[]{Termux.PERMISSION}, REQUEST_RUN_COMMAND);
+                return;
+            }
+            termuxChecked = true; // not allowed: the other way
+            startShizuku();
+            return;
+        }
+        if (prefs.getBoolean(AdbService.PREF_TERMUX, false)) {
+            termuxChecked = true;
+            startShizuku();
+            return;
+        }
+        starting = true;
+        refreshShizuku();
+        worker.execute(() -> {
+            Termux.Result r = Termux.probe(this);
+            main.post(() -> {
+                starting = false;
+                if (r.ran()) {
+                    prefs.edit().putBoolean(AdbService.PREF_TERMUX, true).apply();
+                    termuxChecked = true;
+                    startShizuku();
+                } else if (r.allowMissing && !askedTermuxSetup) {
+                    askedTermuxSetup = true;
+                    toast(Tr.t("Pick Termux, then Use this folder. TinyKit switches on what it needs there."));
+                    try {
+                        startActivityForResult(Termux.homePicker(), REQUEST_TERMUX_HOME);
+                    } catch (RuntimeException e) {
+                        termuxChecked = true;
+                        startShizuku();
+                    }
+                } else {
+                    termuxChecked = true; // Termux can't be used right now: the other way
+                    startShizuku();
+                }
+            });
+        });
+    }
+
     private void startShizuku() {
         if (starting) return;
         if (!ShizukuControl.intents(this, prefs)) {
+            if (Termux.installed(this) && !termuxChecked) {
+                prepareTermux();
+                return;
+            }
             // The notification that asks for the pairing code needs to be allowed (Android 13+); asked once.
             if (Build.VERSION.SDK_INT >= 33 && AdbService.supported() && !AdbService.paired(this) && !askedNotifications
                     && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
@@ -800,10 +860,13 @@ public class MainActivity extends Activity {
         }
         starting = true;
         refreshShizuku();
+        AdbService.onFinish = message -> main.postDelayed(() -> {
+            if (starting && !Shell.running()) startFinished(message); // it ended and Shizuku isn't there
+        }, 4000);
         // Shizuku's own start intent takes a couple of seconds. TinyKit's own start can wait for pairing, which
         // it asks for in a notification, so it is given minutes; it reports a failure in a notification itself.
         main.postDelayed(startTimeout, ShizukuControl.intents(this, prefs) ? 15_000L
-                : AdbService.paired(this) ? 40_000L : 300_000L);
+                : AdbService.paired(this) && !prefs.getBoolean(AdbService.PREF_TERMUX, false) ? 40_000L : 300_000L);
     }
 
     /**
@@ -892,6 +955,7 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         // Allowed or not, go on: without the notification the start still works when TinyKit is paired already.
         if (requestCode == REQUEST_NOTIFICATIONS) startShizuku();
+        if (requestCode == REQUEST_RUN_COMMAND) startShizuku(); // allowed or not: it goes on either way
     }
 
     private void loadSettings() {
@@ -932,7 +996,11 @@ public class MainActivity extends Activity {
         status.addView(shizukuText);
         LinearLayout buttons = new LinearLayout(this);
         buttons.setPadding(0, dp(12), 0, 0);
-        startButton = primary(button("Start", v -> startShizuku()));
+        startButton = primary(button("Start", v -> {
+            termuxChecked = false; // a tap checks Termux again
+            askedTermuxSetup = false;
+            startShizuku();
+        }));
         stopButton = button("Stop", v -> stopShizuku());
         buttons.addView(startButton, weight());
         buttons.addView(stopButton, weight());
@@ -3089,6 +3157,46 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_TERMUX_HOME) {
+            Uri tree = resultCode == RESULT_OK && data != null ? data.getData() : null;
+            if (tree == null) {
+                termuxChecked = true; // not picked: the other way
+                startShizuku();
+                return;
+            }
+            try {
+                getContentResolver().takePersistableUriPermission(tree,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            } catch (RuntimeException ignored) {
+            }
+            starting = true;
+            refreshShizuku();
+            worker.execute(() -> {
+                String error = Termux.allowExternalApps(this, tree);
+                Termux.Result r = error == null ? Termux.probe(this) : null;
+                main.post(() -> {
+                    starting = false;
+                    if (error != null) {
+                        toast(Tr.t(error));
+                        termuxChecked = true;
+                        startShizuku();
+                    } else if (r != null && r.ran()) {
+                        prefs.edit().putBoolean(AdbService.PREF_TERMUX, true).apply();
+                        termuxChecked = true;
+                        startShizuku();
+                    } else if (r != null && r.allowMissing) {
+                        // Termux is running with the old settings: opening it once makes it read them again.
+                        termuxResume = true;
+                        Intent launch = getPackageManager().getLaunchIntentForPackage(Termux.PACKAGE);
+                        if (launch != null) startActivity(launch); else { termuxChecked = true; startShizuku(); }
+                    } else {
+                        termuxChecked = true;
+                        startShizuku();
+                    }
+                });
+            });
+            return;
+        }
         if (requestCode != REQUEST_PICK_APK || resultCode != RESULT_OK || data == null) return;
         List<Uri> uris = new ArrayList<>();
         if (data.getClipData() != null) {

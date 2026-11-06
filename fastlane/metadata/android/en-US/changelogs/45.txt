@@ -1,0 +1,3 @@
+• Start goes through Termux first when it is installed, and TinyKit sets Termux up itself: the permission, the allow-external-apps setting (pick Termux's folder once) and a built-in start script that runs in the background. Otherwise TinyKit's own adb client.
+• Light theme no longer gets darkened by the phone's automatic dark mode.
+• The Shizuku tab stops saying Starting… when a start ends without Shizuku.

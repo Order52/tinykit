@@ -1,0 +1,227 @@
+package io.github.order52.tinykit;
+
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.provider.DocumentsContract;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Starts Shizuku through Termux, with everything Termux needs set up by TinyKit: the permission to run
+ * commands there, the one Termux setting that lets other apps do so (written through Termux's own file
+ * provider, after the person picks Termux's folder once), and a start script that installs what it needs
+ * (adb) the first time. The script runs in the background, no Termux window opens.
+ */
+final class Termux {
+    static final String PACKAGE = "com.termux";
+    static final String PERMISSION = "com.termux.permission.RUN_COMMAND";
+    private static final String BIN = "/data/data/com.termux/files/usr/bin/";
+    private static final String AUTHORITY = "com.termux.documents";
+    static final String HOME = "/data/data/com.termux/files/home";
+
+    /** Exit codes of {@link #SCRIPT}. */
+    static final int STARTED = 0, NOT_CONNECTED = 3, PAIR_FAILED = 4, NO_ADB = 5;
+
+    /**
+     * Start Shizuku, the way shizuku-termux does: already running? root? adb over the network (port 5555)?
+     * Wireless debugging (a port the network lists, or the ones TinyKit found)? Arguments: the start command,
+     * then "start" and the extra ports, or "pair" with a port and the pairing code.
+     */
+    private static final String SCRIPT = "export PATH=" + BIN + ":$PATH; START=\"$1\"; MODE=\"$2\"; "
+            + "running() { ps -A 2>/dev/null | grep -q '[s]hizuku_server'; }; "
+            + "need_adb() { adb version >/dev/null 2>&1 && return 0; pkg install -y android-tools >/dev/null 2>&1; "
+            + "adb version >/dev/null 2>&1; }; "
+            + "if [ \"$MODE\" = pair ]; then need_adb || exit 5; adb start-server >/dev/null 2>&1; "
+            + "adb pair \"localhost:$3\" \"$4\" 2>&1 | grep -qi 'success' && exit 0; exit 4; fi; "
+            + "running && exit 0; "
+            + "if command -v su >/dev/null 2>&1 && [ \"$(su -c id -u 2>/dev/null)\" = 0 ]; then "
+            + "su -c \"$START\" >/dev/null 2>&1; sleep 1; running && exit 0; fi; "
+            + "need_adb || exit 5; adb start-server >/dev/null 2>&1; "
+            + "try() { adb connect \"$1\" 2>&1 | grep -qiE 'connected to|already connected' || return 1; "
+            + "adb -s \"$1\" shell \"$START\" >/dev/null 2>&1; sleep 1; running; }; "
+            + "try localhost:5555 && exit 0; "
+            + "for p in $(adb mdns services 2>/dev/null | grep _adb-tls-connect | grep -oE '[0-9]+$'); do "
+            + "try \"localhost:$p\" && exit 0; done; "
+            + "for p in $3; do try \"localhost:$p\" && exit 0; done; exit 3";
+
+    /** What a run in Termux gave back. */
+    static final class Result {
+        int exitCode = -1;
+        String out = "", error = "";
+        boolean allowMissing;
+
+        /** Termux ran it, whatever it answered. */
+        boolean ran() {
+            return exitCode >= 0 && error.isEmpty();
+        }
+    }
+
+    private static final ConcurrentHashMap<Integer, Result> RESULTS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Integer, CountDownLatch> WAITING = new ConcurrentHashMap<>();
+    private static final AtomicInteger NEXT = new AtomicInteger(100);
+
+    private Termux() {
+    }
+
+    static boolean installed(Context c) {
+        try {
+            c.getPackageManager().getPackageInfo(PACKAGE, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    static boolean permitted(Context c) {
+        return Build.VERSION.SDK_INT < 23 || c.checkSelfPermission(PERMISSION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Runs {@code script} (with its arguments) in Termux, in the background, and waits for the answer. Off the main thread. */
+    static Result run(Context c, String script, long timeoutMs, String... args) {
+        int id = NEXT.incrementAndGet();
+        CountDownLatch done = new CountDownLatch(1);
+        WAITING.put(id, done);
+        String[] arguments = new String[args.length + 3];
+        arguments[0] = "-c";
+        arguments[1] = script;
+        arguments[2] = "tinykit";
+        System.arraycopy(args, 0, arguments, 3, args.length);
+        int flags = PendingIntent.FLAG_ONE_SHOT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+        PendingIntent reply = PendingIntent.getBroadcast(c, id, new Intent(c, Reply.class).putExtra("id", id), flags);
+        Intent run = new Intent("com.termux.RUN_COMMAND").setClassName(PACKAGE, "com.termux.app.RunCommandService")
+                .putExtra("com.termux.RUN_COMMAND_PATH", BIN + "bash")
+                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", arguments)
+                .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
+                .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", reply);
+        Result result = new Result();
+        try {
+            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(run); else c.startService(run);
+            if (!done.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+                result.error = "Termux didn't answer in time.";
+                return result;
+            }
+        } catch (RuntimeException | InterruptedException e) {
+            result.error = "Couldn't reach Termux: " + e.getMessage();
+            return result;
+        } finally {
+            WAITING.remove(id);
+        }
+        Result answer = RESULTS.remove(id);
+        return answer == null ? result : answer;
+    }
+
+    /** The start script, once: false is not answered or not allowed. */
+    static Result start(Context c, String startCommand, String ports) {
+        return run(c, SCRIPT, 240_000, startCommand, "start", ports);
+    }
+
+    static Result pair(Context c, String startCommand, int port, String code) {
+        return run(c, SCRIPT, 120_000, startCommand, "pair", String.valueOf(port), code);
+    }
+
+    /** Whether Termux lets TinyKit run commands now. */
+    static Result probe(Context c) {
+        return run(c, "true", 15_000);
+    }
+
+    /** Termux's answer to a run. */
+    public static final class Reply extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int id = intent.getIntExtra("id", -1);
+            Bundle bundle = intent.getBundleExtra("result");
+            Result r = new Result();
+            if (bundle != null) {
+                r.exitCode = bundle.getInt("exitCode", -1);
+                r.out = bundle.getString("stdout", "");
+                String errmsg = bundle.getString("errmsg", "");
+                if (bundle.getInt("err", 0) > 0 && r.exitCode == -1) {
+                    r.error = errmsg.isEmpty() ? "Termux refused." : errmsg;
+                    r.allowMissing = errmsg.contains("allow-external-apps");
+                }
+            } else {
+                r.error = "Termux returned no result.";
+            }
+            RESULTS.put(id, r);
+            CountDownLatch done = WAITING.get(id);
+            if (done != null) done.countDown();
+        }
+    }
+
+    // ---- The one setting Termux needs ------------------------------------------------------------
+
+    /** The picker that asks for Termux's home folder, opened on it. */
+    static Intent homePicker() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        pick.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri(AUTHORITY, HOME));
+        pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        return pick;
+    }
+
+    /**
+     * Switches on allow-external-apps in ~/.termux/termux.properties, through the folder the person picked
+     * (it has to be Termux's home). Returns null when written, else why not.
+     */
+    static String allowExternalApps(Context c, Uri tree) {
+        ContentResolver cr = c.getContentResolver();
+        try {
+            String homeId = DocumentsContract.getTreeDocumentId(tree);
+            if (!homeId.endsWith("/home")) return "Pick Termux's home folder (Termux, then Use this folder).";
+            Uri dir = child(cr, tree, homeId, ".termux", true);
+            String dirId = DocumentsContract.getDocumentId(dir);
+            Uri props = child(cr, tree, dirId, "termux.properties", false);
+            StringBuilder text = new StringBuilder();
+            try (InputStream in = cr.openInputStream(props)) {
+                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                byte[] buffer = new byte[4096];
+                for (int n; in != null && (n = in.read(buffer)) > 0; ) bytes.write(buffer, 0, n);
+                for (String line : bytes.toString("UTF-8").split("\n")) {
+                    String t = line.trim();
+                    if (!t.isEmpty() && !t.startsWith("#") && t.replace(" ", "").startsWith("allow-external-apps=")) continue;
+                    text.append(line).append('\n');
+                }
+            }
+            text.append("allow-external-apps = true\n");
+            try (OutputStream out = cr.openOutputStream(props, "wt")) {
+                out.write(text.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            return null;
+        } catch (Exception e) {
+            return "Couldn't write Termux's settings: " + e.getMessage();
+        }
+    }
+
+    /** A file or folder in a folder of the tree: found, or made when {@code folder} says so (or as an empty file). */
+    private static Uri child(ContentResolver cr, Uri tree, String parentId, String name, boolean folder) throws Exception {
+        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, parentId);
+        try (Cursor cursor = cr.query(children, new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
+            while (cursor != null && cursor.moveToNext()) {
+                if (name.equals(cursor.getString(1))) {
+                    return DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0));
+                }
+            }
+        }
+        Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, parentId);
+        Uri made = DocumentsContract.createDocument(cr, parent,
+                folder ? DocumentsContract.Document.MIME_TYPE_DIR : "text/plain", name);
+        if (made == null) throw new java.io.IOException("could not create " + name);
+        return made;
+    }
+}

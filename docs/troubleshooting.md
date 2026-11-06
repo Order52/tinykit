@@ -11,6 +11,9 @@ every reboot.
 **Start does nothing, or says *"Shizuku didn't start"*.**
 - *With the auth token*: check that the token matches the one in Shizuku's settings, and that
   you're using a Shizuku build that supports start intents (thedjchi's fork).
+- *Termux*: if it is installed, Start goes through it. Allow TinyKit to run commands there when Android asks, and
+  pick Termux's folder once in the picker so TinyKit can switch on `allow-external-apps`. If Termux's `adb`
+  is broken, TinyKit falls back to its own adb client.
 - *With no token*: TinyKit starts Shizuku itself, through root, adb over the network or, on Android 11+,
   Wireless debugging. On Android 10 and older without root or `adb tcpip 5555` it says so: Android
   allows nothing else. On Android 11+ follow its notification: *Turn on Developer options* or *Turn on Wireless debugging* (it needs Wi-Fi),
