@@ -36,7 +36,7 @@ of them keeps a service running.
 |  | **Work profile** | Pauses (locks) or resumes the work profile | On / Paused / Locked / Not set up | Yes |
 | <img src="images/tiles/kill.svg" width="40" alt=""> | **Close app** | Force-stops the app on screen | — | Yes |
 
-¹ The Shizuku tile needs either the auth token or Termux with shizuku-termux. See
+¹ The Shizuku tile starts Shizuku with the auth token or, on Android 11+, with TinyKit's own adb client. See
 [Getting started](getting-started.md#starting-shizuku-from-tinykit).
 
 ² Free RAM works without Shizuku on Android 13 and older, closing cached apps only.
@@ -48,9 +48,8 @@ show *"Start Shizuku once so TinyKit can change this."*
 ## Details
 
 **Shizuku.** Starts and stops Shizuku the same way as the Shizuku tab. Start: Shizuku's own start
-intent with the auth token, otherwise `shizuku start` in Termux. Stop: the stop intent with the
-token, otherwise it closes the Shizuku app (so a Watchdog doesn't restart it) and ends the server,
-or runs `shizuku stop` in Termux if TinyKit isn't allowed in Shizuku. Its state refreshes on its own when Shizuku starts or stops.
+intent with the auth token, otherwise TinyKit's own adb start over Wireless debugging. Stop: the stop intent
+with the token, otherwise it closes the Shizuku app (so a Watchdog doesn't restart it) and ends the server. Its state refreshes on its own when Shizuku starts or stops.
 
 **Screenshot.** Closes the panel, waits a moment, then runs `screencap`. Apps that block
 screenshots (`FLAG_SECURE`, used by banking and DRM apps) stay blocked, and the tile tells you

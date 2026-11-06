@@ -57,7 +57,10 @@ tinykit/
 │       │   ├── Shell.java          Runs shell commands through Shizuku
 │       │   ├── Tweak.java          Settings toggles shared by the app and its tiles
 │       │   ├── Tiles.java          14 Quick Settings tiles on one base class
-│       │   ├── ShizukuTile.java    Shizuku on/off tile (token, Termux or kill)
+│       │   ├── Adb.java            Own adb client: wireless pairing, connect and shell (pure Java, no libraries)
+│       │   ├── Spake2.java         The pairing key exchange (Ed25519 SPAKE2, BoringSSL's flavour)
+│       │   ├── AdbService.java     Starts Shizuku through Adb: finds the port, enables Wireless debugging, asks for the code
+│       │   ├── ShizukuTile.java    Shizuku on/off tile (token or TinyKit's own adb start, or kill)
 │       │   ├── ScreenshotTile.java Screenshot tile
 │       │   ├── Ram.java            Speed up phone, shared by the app, the Free RAM tile and the widget
 │       │   ├── BoostWidget.java    Home screen widget: one tap frees RAM and clears caches

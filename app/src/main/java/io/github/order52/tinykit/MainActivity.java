@@ -128,12 +128,8 @@ public class MainActivity extends Activity {
     // thedjchi's fork adds a Watchdog that restarts Shizuku when Android kills it.
     private static final String SHIZUKU_DOWNLOAD = "https://github.com/thedjchi/Shizuku/releases/latest";
     private static final String SHIZUKU_ORIGINAL = "https://shizuku.rikka.app/download/";
-    private static final String TERMUX_DOWNLOAD = "https://f-droid.org/packages/com.termux/";
     private static final String REPO = "https://github.com/Order52/tinykit";
-    private static final String TERMUX = "com.termux";
-    private static final String PERMISSION_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
-    private static final String ACTION_TERMUX_RESULT = "io.github.order52.tinykit.TERMUX_RESULT";
-    private static final int REQUEST_RUN_COMMAND = 2;
+    private static final int REQUEST_NOTIFICATIONS = 2;
     private static final int REQUEST_PICK_APK = 4;
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
@@ -279,26 +275,10 @@ public class MainActivity extends Activity {
             (code, result) -> main.post(this::refreshShizuku);
     private final Runnable startTimeout = () -> startFinished(ShizukuControl.intents(this, prefs)
             ? "Shizuku didn't start. Check the auth token matches the one in Shizuku's settings."
-            : "Shizuku didn't start. Open Termux or the Shizuku app to see why.");
+            : "Shizuku didn't start. Tap Start again, or open the Shizuku app.");
     private final Runnable stopTimeout = () -> stopFinished(ShizukuControl.intents(this, prefs)
             ? "Shizuku didn't stop. Check the auth token matches the one in Shizuku's settings."
             : "Shizuku didn't stop. Try again, or stop it in the Shizuku app.");
-    private final BroadcastReceiver termuxResult = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Bundle result = intent.getBundleExtra("result");
-            if (result != null && result.getInt("exitCode", -1) == 127) {
-                // Termux is there but shizuku-termux isn't: use Shizuku's own Start button.
-                startFinished(null);
-                openShizukuToStart();
-                return;
-            }
-            String message = termuxMessage(result);
-            boolean failed = result == null || result.getInt("exitCode", -1) != 0;
-            // A failure is shown at once; after a success Shizuku's binder can take a moment to arrive.
-            main.postDelayed(() -> startFinished(message), failed ? 0 : 3000);
-        }
-    };
 
     private void applySystemBarColors() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -361,12 +341,6 @@ public class MainActivity extends Activity {
         Shizuku.addBinderReceivedListenerSticky(binderReceived);
         Shizuku.addBinderDeadListener(binderDead);
         Shizuku.addRequestPermissionResultListener(permissionResult);
-        IntentFilter filter = new IntentFilter(ACTION_TERMUX_RESULT);
-        if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(termuxResult, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(termuxResult, filter);
-        }
         // Not on rotation or other re-creations: only when TinyKit is actually opened.
         if (savedInstanceState == null) {
             Runnable startup = () -> {
@@ -568,7 +542,6 @@ public class MainActivity extends Activity {
         Shizuku.removeRequestPermissionResultListener(permissionResult);
         main.removeCallbacks(startTimeout);
         main.removeCallbacks(stopTimeout);
-        unregisterReceiver(termuxResult);
         worker.shutdown();
         thumbs.shutdownNow();
         super.onDestroy();
@@ -803,38 +776,36 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Starts Shizuku without a computer: through its start intent when an auth token is saved and
-     * the installed Shizuku has one, otherwise by asking Termux to run the shizuku-termux command
-     * (the result comes back to {@link #termuxResult}). The standard Shizuku app has neither, so
-     * TinyKit opens it on its Start button and connects as soon as it's running.
+     * Starts Shizuku without a computer: through its start intent when an auth token is saved and the
+     * installed Shizuku has one, otherwise with TinyKit's own adb client over Wireless debugging
+     * ({@link AdbService}, Android 11+), which asks for a pairing code once. On Android 10 and older the
+     * Shizuku app is opened to start it. TinyKit's binder listener refreshes this screen as soon as
+     * Shizuku is running.
      */
     private void startShizuku() {
         if (starting) return;
         if (!ShizukuControl.intents(this, prefs)) {
-            try {
-                getPackageManager().getPackageInfo(TERMUX, 0);
-            } catch (PackageManager.NameNotFoundException e) {
-                openShizukuToStart();
+            if (!AdbService.supported() || !ShizukuControl.canStart(this, prefs)) {
+                openShizukuToStart(); // Android 10 and older have no Wireless debugging
                 return;
             }
-            if (Build.VERSION.SDK_INT >= 23
-                    && checkSelfPermission(PERMISSION_RUN_COMMAND) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{PERMISSION_RUN_COMMAND}, REQUEST_RUN_COMMAND);
+            // The notification that asks for the pairing code needs to be allowed (Android 13+).
+            if (Build.VERSION.SDK_INT >= 33 && !AdbService.paired(this)
+                    && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQUEST_NOTIFICATIONS);
                 return;
             }
         }
-        int flags = PendingIntent.FLAG_ONE_SHOT;
-        if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
-        PendingIntent result = PendingIntent.getBroadcast(this, 0,
-                new Intent(ACTION_TERMUX_RESULT).setPackage(getPackageName()), flags);
-        if (!ShizukuControl.start(this, prefs, result)) {
-            toast(Tr.t("Could not reach Termux. Open Termux once, then try again."));
+        if (!ShizukuControl.start(this, prefs)) {
+            openShizukuToStart();
             return;
         }
         starting = true;
         refreshShizuku();
-        // Shizuku's own start intent takes a couple of seconds; Termux may first need to pair.
-        main.postDelayed(startTimeout, ShizukuControl.intents(this, prefs) ? 15_000L : 60_000L);
+        // Shizuku's own start intent takes a couple of seconds. TinyKit's own start can wait for pairing, which
+        // it asks for in a notification, so it is given minutes; it reports a failure in a notification itself.
+        main.postDelayed(startTimeout, ShizukuControl.intents(this, prefs) ? 15_000L
+                : AdbService.paired(this) ? 40_000L : 300_000L);
     }
 
     /**
@@ -860,7 +831,7 @@ public class MainActivity extends Activity {
         main.postDelayed(stopTimeout, 6000);
         // Its own thread: the worker may be busy, and Stop should never wait behind other work.
         new Thread(() -> {
-            String error = ShizukuControl.stop(getApplicationContext(), prefs, null);
+            String error = ShizukuControl.stop(getApplicationContext(), prefs);
             if (error != null) main.post(() -> stopFinished(error));
         }).start();
     }
@@ -875,13 +846,11 @@ public class MainActivity extends Activity {
     /** A start or stop that failed: the whole message (a toast cuts it at two lines), and where to fix it. */
     private void shizukuProblem(String title, String message) {
         if (!alive()) return;
-        boolean termux = !ShizukuControl.intents(this, prefs) && ShizukuControl.termux(this);
         new AlertDialog.Builder(this)
                 .setTitle(Tr.t(title))
                 .setMessage(Tr.t(message))
                 .setPositiveButton(android.R.string.ok, null)
-                .setNeutralButton(Tr.t(termux ? "Open Termux" : "Open Shizuku"),
-                        (d, w) -> openApp(termux ? TERMUX : SHIZUKU_PKG))
+                .setNeutralButton(Tr.t("Open Shizuku"), (d, w) -> openApp(SHIZUKU_PKG))
                 .show();
     }
 
@@ -921,30 +890,10 @@ public class MainActivity extends Activity {
         if (!Shell.running() && !TextUtils.isEmpty(message)) shizukuProblem("Shizuku didn't start", message);
     }
 
-    private static String termuxMessage(Bundle result) {
-        if (result == null) return "Termux returned no result.";
-        int exitCode = result.getInt("exitCode", -1);
-        String errmsg = result.getString("errmsg", "");
-        if (result.getInt("err", 0) > 0 && exitCode == -1) {
-            return errmsg.contains("allow-external-apps")
-                    ? "Termux doesn't allow other apps to run commands yet. Run the shizuku-termux "
-                            + "install command in Termux once."
-                    : errmsg;
-        }
-        if (exitCode == 127) {
-            return "shizuku-termux isn't installed in Termux. Get it from github.com/Order52/shizuku-termux.";
-        }
-        return (result.getString("stdout", "") + "\n" + result.getString("stderr", "")).trim();
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        if (requestCode != REQUEST_RUN_COMMAND) return;
-        if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
-            startShizuku();
-        } else {
-            toast(Tr.t("Allow \"Run commands in Termux environment\" for TinyKit to start Shizuku."));
-        }
+        // Allowed or not, go on: without the notification the start still works when TinyKit is paired already.
+        if (requestCode == REQUEST_NOTIFICATIONS) startShizuku();
     }
 
     private void loadSettings() {
@@ -1000,9 +949,10 @@ public class MainActivity extends Activity {
 
         row(list, "Auth token", "", arrow(), this::editToken, false);
         tokenText = (TextView) list.getChildAt(list.getChildCount() - 1).getTag();
-        TextView help = text("Start uses the auth token when it's set, otherwise Termux with "
-                + "shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Stop closes "
-                + "Shizuku fully, so a Watchdog can't start it straight back up.", 13, false);
+        TextView help = text("Start uses the auth token when it's set, otherwise TinyKit starts Shizuku itself "
+                + "through Wireless debugging (Android 11+; the first time it asks for a pairing code), otherwise it "
+                + "opens Shizuku so you tap its Start button. Stop closes Shizuku fully, so a Watchdog can't start "
+                + "it straight back up.", 13, false);
         setDim(help, 0.6f);
         help.setPadding(dp(16), dp(8), dp(16), 0);
         list.addView(help);
@@ -1011,8 +961,8 @@ public class MainActivity extends Activity {
         row(list, "Shizuku tile", "Turn Shizuku on and off from the quick panel with one tap.",
                 arrow(), () -> addTile(ShizukuTile.class, "Shizuku", R.drawable.ic_tile_shizuku,
                         "One tap turns Shizuku on or off. It uses the auth token when it's set, "
-                                + "otherwise Termux with shizuku-termux."), false);
-        row(list, "Install Shizuku & Termux", "Recommended versions that keep running in the background.",
+                                + "otherwise TinyKit starts it through Wireless debugging."), false);
+        row(list, "Install Shizuku", "The recommended version keeps running in the background.",
                 arrow(), this::showInstall, false);
         return withSearch(scroll(list));
     }
@@ -1200,9 +1150,8 @@ public class MainActivity extends Activity {
                 .setTitle(Tr.t("Install"))
                 .setItems(Tr.all(new String[]{
                         "Shizuku (thedjchi's fork, recommended): its Watchdog restarts Shizuku if Android kills it",
-                        "Termux from F-Droid: needed to start Shizuku without a computer",
                         "Original Shizuku"}), (d, which) -> openUrl(new String[]{
-                        SHIZUKU_DOWNLOAD, TERMUX_DOWNLOAD, SHIZUKU_ORIGINAL}[which]))
+                        SHIZUKU_DOWNLOAD, SHIZUKU_ORIGINAL}[which]))
                 .setNegativeButton(Tr.t("Cancel"), null)
                 .show();
     }
@@ -1660,8 +1609,11 @@ public class MainActivity extends Activity {
         return v;
     }
 
-    private static String percentText(int percent) {
-        return percent == 0 ? Tr.t("Muted") : percent + "%";
+    private static final String NOTE_SCALE = "Android caps an app at 100%. To make one app louder, raise this and turn the others down.";
+    private static final String NOTE_MUTE = "This Android can only mute an app, not turn it down. Android 13 and newer can do both.";
+
+    private static String percentText(int percent, boolean muteOnly) {
+        return percent == 0 ? Tr.t("Muted") : muteOnly ? Tr.t("Sound on") : percent + "%";
     }
 
     private SeekBar slider(int max, int progress) {
@@ -1707,8 +1659,10 @@ public class MainActivity extends Activity {
         final TextView value = text("", 14, true);
         final SeekBar bar = slider(20, 20);
         Voice voice;
+        final boolean[] mute; // this Android can only mute an app: the slider has two stops
 
-        MixRow(Map<Integer, Integer> volumes, boolean[] dragging) {
+        MixRow(Map<Integer, Integer> volumes, boolean[] dragging, boolean[] mute) {
+            this.mute = mute;
             view.setPadding(dp(16), dp(10), dp(16), dp(2));
             LinearLayout top = new LinearLayout(MainActivity.this);
             top.setGravity(Gravity.CENTER_VERTICAL);
@@ -1725,12 +1679,22 @@ public class MainActivity extends Activity {
             view.addView(bar);
             view.setTag(this);
             onSlide(bar, dragging, (progress, fromUser) -> {
-                value.setText(percentText(progress * 5));
+                int percent = mute[0] ? progress * 100 : progress * 5;
+                value.setText(percentText(percent, mute[0]));
                 if (!fromUser || voice == null) return;
-                if (progress == 20) volumes.remove(voice.uid);
-                else volumes.put(voice.uid, progress * 5);
+                if (percent == 100) volumes.remove(voice.uid);
+                else volumes.put(voice.uid, percent);
                 Mixer.save(prefs, volumes);
-                mixerApply();
+                if (mute[0]) {
+                    Voice v = voice;
+                    worker.execute(() -> {
+                        if (v.pkg != null && !Mixer.mute(v.pkg, v.uid / 100000, percent == 0)) {
+                            main.post(() -> toast(Tr.t("Couldn't change that app's sound.")));
+                        }
+                    });
+                } else {
+                    mixerApply();
+                }
             });
         }
 
@@ -1741,8 +1705,9 @@ public class MainActivity extends Activity {
             icon.setTag(null);
             if (v.pkg != null) showIcon(icon, v.pkg);
             else icon.setImageResource(android.R.drawable.sym_def_app_icon);
-            value.setText(percentText(percent));
-            bar.setProgress(percent / 5);
+            value.setText(percentText(percent, mute[0]));
+            bar.setMax(mute[0] ? 1 : 20);
+            bar.setProgress(mute[0] ? (percent == 0 ? 0 : 1) : percent / 5);
         }
     }
 
@@ -1753,6 +1718,8 @@ public class MainActivity extends Activity {
         final List<Integer> open = new ArrayList<>();
         final String[] shown = {null}; // what the "open now" part was drawn from
         final boolean[] dragging = {false};
+        // Before Android 13 (unless Shizuku is root) an app can only be muted, so the sliders have two stops.
+        final boolean[] mute = {Build.VERSION.SDK_INT < 33};
         final int[] gen = {0};
         final boolean[] polling = {false};
         final boolean[] wasAlive = {false};
@@ -1796,7 +1763,8 @@ public class MainActivity extends Activity {
             if (fromUser) audio.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0);
         });
         masterValue.setText(masterBar.getProgress() * 100 / steps + "%");
-        upper.addView(note("Android caps an app at 100%. To make one app louder, raise this and turn the others down."));
+        TextView mixNote = note(mute[0] ? NOTE_MUTE : NOTE_SCALE);
+        upper.addView(mixNote);
 
         section(upper, "Open now");
         LinearLayout openBox = vertical();
@@ -1840,7 +1808,7 @@ public class MainActivity extends Activity {
 
             @Override
             public View getView(int position, View convert, ViewGroup parent) {
-                MixRow row = convert == null ? new MixRow(volumes, dragging) : (MixRow) convert.getTag();
+                MixRow row = convert == null ? new MixRow(volumes, dragging, mute) : (MixRow) convert.getTag();
                 Voice v = filtered.get(position);
                 row.bind(v, state(v.uid, v.work, v.pkg, playing, open), volumes.getOrDefault(v.uid, 100));
                 return row.view;
@@ -1870,7 +1838,7 @@ public class MainActivity extends Activity {
             List<Integer> ids = new ArrayList<>(playing);
             for (int uid : open) if (!ids.contains(uid) && launchable.contains(uid) && uid % 100000 >= 10000) ids.add(uid);
             for (int uid : ids) {
-                MixRow row = new MixRow(volumes, dragging);
+                MixRow row = new MixRow(volumes, dragging, mute);
                 Voice v = voice(uid);
                 row.bind(v, state(uid, v.work, null, playing, open), volumes.getOrDefault(uid, 100));
                 openBox.addView(row.view);
@@ -1898,9 +1866,9 @@ public class MainActivity extends Activity {
                 if (polling[0] || !Shell.ready()) return;
                 polling[0] = true;
                 reads.execute(() -> {
-                    Mixer.State state = Mixer.poll();
+                    Mixer.State state = Mixer.poll(MainActivity.this);
                     // It died (Shizuku stopped, say): start it again once, so the volumes hold.
-                    String error = !state.alive && wasAlive[0] ? Mixer.apply(MainActivity.this, prefs) : null;
+                    String error = !state.alive && wasAlive[0] && !mute[0] ? Mixer.apply(MainActivity.this, prefs) : null;
                     main.post(() -> {
                         polling[0] = false;
                         if (g != gen[0]) return;
@@ -1909,7 +1877,7 @@ public class MainActivity extends Activity {
                             problem.setText(Tr.t(error));
                             problem.setVisibility(View.VISIBLE);
                         }
-                        if (state.alive && !dragging[0] && !(state.playing + "|" + state.open).equals(shown[0])) {
+                        if ((state.alive || mute[0]) && !dragging[0] && !(state.playing + "|" + state.open).equals(shown[0])) {
                             playing.clear();
                             playing.addAll(state.playing);
                             open.clear();
@@ -1956,9 +1924,16 @@ public class MainActivity extends Activity {
             }
             problem.setVisibility(View.GONE);
             worker.execute(() -> {
+                boolean scale = Mixer.scaling(this);
                 String error = Mixer.apply(this, prefs);
                 main.post(() -> {
                     if (g != gen[0]) return;
+                    if (mute[0] == scale) { // the first guess was wrong: Shizuku can turn apps down here
+                        mute[0] = !scale;
+                        mixNote.setText(Tr.t(mute[0] ? NOTE_MUTE : NOTE_SCALE));
+                        drawOpen.run();
+                        adapter.notifyDataSetChanged();
+                    }
                     wasAlive[0] = error == null;
                     if (error != null) {
                         problem.setText(Tr.t(error));
@@ -2097,8 +2072,8 @@ public class MainActivity extends Activity {
             stopSwitch.setChecked(prefs.getBoolean(ShutUp.PREF_STOP_SHIZUKU, true) && can);
             stopStatus.setText(Tr.t(can ? "TinyKit can start Shizuku again by itself."
                     : "Not available: TinyKit has no way to start Shizuku by itself. Save Shizuku's auth token "
-                    + "(Shizuku tab, for a Shizuku fork with start and stop intents), or install Termux with "
-                    + "shizuku-termux and allow TinyKit to run commands there."));
+                    + "(Shizuku tab, for a Shizuku fork with start and stop intents), or tap Start once so "
+                    + "TinyKit pairs with Wireless debugging (Android 11+)."));
         };
         row(list, "Stop Shizuku while they're open", "Some apps notice Shizuku running. With this on, TinyKit "
                 + "stops Shizuku while a chosen app is open and starts it again about 15 seconds after you "

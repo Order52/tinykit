@@ -40,6 +40,16 @@ public final class Mixer {
 
     public static void main(String[] args) {
         try {
+            if (args.length > 0 && args[0].equals("probe")) {
+                // Whether this user may scale players (and read who plays): not the adb shell before Android 13.
+                Object pm = Class.forName("android.content.pm.IPackageManager$Stub").getMethod("asInterface", IBinder.class)
+                        .invoke(null, Class.forName("android.os.ServiceManager").getMethod("getService", String.class)
+                                .invoke(null, "package"));
+                int granted = (Integer) pm.getClass().getMethod("checkUidPermission", String.class, int.class)
+                        .invoke(pm, "android.permission.MODIFY_AUDIO_ROUTING", android.os.Process.myUid());
+                System.out.println(granted == 0 ? "OK" : "NO");
+                return;
+            }
             if (args.length < 2 || !args[0].equals("run")) throw new IllegalArgumentException("run FILE");
             run(new File(args[1]));
         } catch (Throwable e) {
@@ -154,12 +164,33 @@ public final class Mixer {
 
     // ---- TinyKit's side ---------------------------------------------------------------------------
 
-    /**
-     * Android 13 and newer: older versions hide from the shell which app a player belongs to (and
-     * its volume control), so there is nothing to scale. Tried on Android 8, 10, 11, 13, 14 and 16.
-     */
+    /** From Android 8 on: apps can be turned down where the shell may scale players (see {@link #scaling}), muted everywhere. */
     static boolean supported() {
-        return Build.VERSION.SDK_INT >= 33;
+        return Build.VERSION.SDK_INT >= 26;
+    }
+
+    private static Boolean scalable;
+
+    /**
+     * Whether Shizuku may turn one app's volume down, not just mute it: Android 13 and newer, or Shizuku
+     * running as root. Before Android 13 the adb shell is told nothing about who plays and has no volume
+     * control, so there the mixer mutes with the app-op instead. Asked once; call off the main thread.
+     */
+    static synchronized boolean scaling(Context c) {
+        if (Build.VERSION.SDK_INT >= 33) return true;
+        if (scalable == null) {
+            Shell.Result r = Shell.run("CLASSPATH=" + c.getPackageCodePath()
+                    + " app_process /system/bin io.github.order52.tinykit.Mixer probe");
+            if (!r.ok() && r.out.trim().isEmpty()) return false; // Shizuku isn't ready: ask again next time
+            scalable = r.out.contains("OK");
+        }
+        return scalable;
+    }
+
+    /** Mutes or unmutes one app (in one profile) with the app-op that the Mixed audio page uses. */
+    static boolean mute(String pkg, int user, boolean muted) {
+        return Shell.run("appops set --user " + user + " " + Shell.quote(pkg) + " PLAY_AUDIO "
+                + (muted ? "deny" : "allow")).ok();
     }
 
     /** The volumes the user lowered, by uid, in percent. An app at 100 has no entry. */
@@ -209,11 +240,11 @@ public final class Mixer {
      * Also touches the volumes file: the helper ends a little after nothing has looked at it. The open
      * apps come from Android's recent-apps list ("A=uid:package" on each task), work profile included.
      */
-    static State poll() {
+    static State poll(Context c) {
         State state = new State();
         Shell.Result r = Shell.run("[ -e " + FILE + " ] && touch " + FILE + "; echo $(( $(date +%s) - $(stat -c %Y "
                 + FILE + ".now 2>/dev/null || echo 0) )); cat " + FILE + ".now 2>/dev/null; echo @@; "
-                + "dumpsys activity recents | grep -o ' A=[0-9]*:'");
+                + "dumpsys activity recents | grep -o ' A=[^ ]* U=[0-9]*'");
         String[] lines = r.out.split("\n");
         try {
             state.alive = r.ok() && Integer.parseInt(lines[0].trim()) <= 3;
@@ -222,8 +253,8 @@ public final class Mixer {
                 String line = lines[i].trim();
                 if (line.equals("@@")) recents = true;
                 else if (recents && line.startsWith("A=")) {
-                    Integer uid = Integer.valueOf(line.substring(2, line.length() - 1));
-                    if (!state.open.contains(uid)) state.open.add(uid);
+                    int uid = taskUid(c, line.substring(2));
+                    if (uid >= 0 && !state.open.contains(uid)) state.open.add(uid);
                 } else if (!recents && !line.isEmpty()) state.playing.add(Integer.parseInt(line));
             }
         } catch (NumberFormatException e) {
@@ -232,11 +263,26 @@ public final class Mixer {
         return state;
     }
 
+    /** The uid of a recent task, from "uid:package U=user" (Android 11+) or "package U=user" (before). -1 if unknown. */
+    static int taskUid(Context c, String task) {
+        String[] part = task.split(" U=");
+        if (part.length != 2) return -1;
+        int colon = part[0].indexOf(':');
+        try {
+            if (colon > 0 && Character.isDigit(part[0].charAt(0))) return Integer.parseInt(part[0].substring(0, colon));
+            return Integer.parseInt(part[1]) * 100000
+                    + c.getPackageManager().getApplicationInfo(part[0], 0).uid % 100000;
+        } catch (NumberFormatException | android.content.pm.PackageManager.NameNotFoundException e) {
+            return -1;
+        }
+    }
+
     /**
      * Hands the helper the volumes, starting it when it isn't running. Returns null when it runs,
      * else why not. Call off the main thread.
      */
     static String apply(Context c, SharedPreferences p) {
+        if (!scaling(c)) return null; // muting is an app-op the system keeps: nothing to run
         StringBuilder text = new StringBuilder();
         for (Map.Entry<Integer, Integer> e : rules(p).entrySet()) {
             text.append(e.getKey()).append(' ').append(e.getValue()).append('\n');
@@ -244,7 +290,7 @@ public final class Mixer {
         if (!Shell.run("cat > " + FILE, new ByteArrayInputStream(text.toString().getBytes(StandardCharsets.UTF_8))).ok()) {
             return "TinyKit couldn't save the volumes. Is Shizuku running?";
         }
-        if (poll().alive) return null;
+        if (poll(c).alive) return null;
         Shell.run("rm -f " + FILE + ".now " + FILE + ".log; (CLASSPATH=" + c.getPackageCodePath()
                 + " nohup app_process -Xmx8m -Xms1m -Xusejit:false /system/bin io.github.order52.tinykit.Mixer run " + FILE + " >" + FILE
                 + ".log 2>&1 &)");
@@ -255,7 +301,7 @@ public final class Mixer {
                 Thread.currentThread().interrupt();
                 break;
             }
-            if (poll().alive) return null;
+            if (poll(c).alive) return null;
         }
         String why = Shell.run("cat " + FILE + ".log 2>/dev/null").out.trim();
         return why.isEmpty() ? "The mixer didn't start." : why;

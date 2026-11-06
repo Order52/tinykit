@@ -1,13 +1,11 @@
 package io.github.order52.tinykit;
 
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.service.quicksettings.Tile;
@@ -56,28 +54,28 @@ public class ShizukuTile extends TileService {
         Context app = getApplicationContext();
         if (on && ShizukuControl.canStop(this, p)) {
             WORKER.execute(() -> {
-                String error = ShizukuControl.stop(app, p, termuxResult());
+                String error = ShizukuControl.stop(app, p);
                 if (error != null) main.post(() -> {
                     pending = null;
                     update();
                     Toast.makeText(app, Tr.t(error), Toast.LENGTH_LONG).show();
                 });
             });
-        } else if (!on && ShizukuControl.canRestart(this, p)) {
-            ShizukuControl.start(this, p, termuxResult());
+        } else if (!on && ShizukuControl.canStart(this, p)) {
+            ShizukuControl.start(this, p);
         } else {
-            Toast.makeText(this, Tr.t("Set Shizuku's auth token in TinyKit, or install shizuku-termux, "
-                    + "to start Shizuku from here."), Toast.LENGTH_LONG).show();
+            // Android 10 and older, with no token: only the Shizuku app can start it.
+            Toast.makeText(this, Tr.t("Open TinyKit and tap Start."), Toast.LENGTH_LONG).show();
             openApp();
             return;
         }
         pending = !on;
         update();
-        // Give up on "Starting…" if nothing happens, and show the real state again.
+        // Give up on "Starting…" if nothing happens, and show the real state again (pairing can take minutes).
         main.postDelayed(() -> {
             pending = null;
             update();
-        }, 30_000L);
+        }, on ? 30_000L : 90_000L);
     }
 
     private void update() {
@@ -99,13 +97,6 @@ public class ShizukuTile extends TileService {
         if (Build.VERSION.SDK_INT >= 29) tile.setSubtitle(Tr.t(text));
     }
 
-    /** Where Termux sends its reply, so a failed start or stop is shown instead of hanging on "Starting…". */
-    private PendingIntent termuxResult() {
-        int flags = PendingIntent.FLAG_ONE_SHOT;
-        if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
-        return PendingIntent.getBroadcast(this, 0, new Intent(this, Result.class), flags);
-    }
-
     @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated") // PendingIntent form used on 34+
     private void openApp() {
         Intent intent = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -123,28 +114,5 @@ public class ShizukuTile extends TileService {
         ComponentName tile = new ComponentName(context, ShizukuTile.class);
         Shizuku.addBinderReceivedListener(() -> requestListeningState(context, tile));
         Shizuku.addBinderDeadListener(() -> requestListeningState(context, tile));
-    }
-
-    /** Termux's reply; only shown when something went wrong. */
-    public static class Result extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Bundle result = intent.getBundleExtra("result");
-            int exitCode = result == null ? -1 : result.getInt("exitCode", -1);
-            if (exitCode == 0) return;
-            pending = null;
-            String message;
-            if (exitCode == 127) {
-                message = "shizuku-termux isn't installed in Termux.";
-            } else if (result != null && result.getString("errmsg", "").contains("allow-external-apps")) {
-                message = "Run the shizuku-termux install command in Termux once.";
-            } else {
-                message = result == null ? "Termux didn't answer."
-                        : (result.getString("stdout", "") + "\n" + result.getString("stderr", "")).trim();
-            }
-            Toast.makeText(context, Tr.t(message.isEmpty() ? "Couldn't change Shizuku." : message),
-                    Toast.LENGTH_LONG).show();
-            requestListeningState(context, new ComponentName(context, ShizukuTile.class));
-        }
     }
 }

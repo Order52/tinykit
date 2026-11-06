@@ -16,8 +16,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-    <!-- Start Shizuku by asking Termux to run the shizuku-termux command (granted by the user). -->
-    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
     <!-- Unused apps and recent access read usage stats; the appop is granted through Shizuku. -->
     <uses-permission
@@ -207,6 +205,16 @@
                 android:value="Listens for newly installed apps to block their internet access, watches which app is open to hide developer options from the apps the user chose, and freezes the work-profile apps the user chose when the screen has been off for a while" />
         </service>
 
+        <!-- Starts Shizuku with TinyKit's own adb client over Wireless debugging, only while a start is under way. -->
+        <service
+            android:name=".AdbService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Pairs with the phone's Wireless debugging and starts Shizuku when the user taps Start, and asks for the pairing code in a notification" />
+        </service>
+
         <!-- Starts that service again after a restart or an update of TinyKit. -->
         <receiver android:name=".StartReceiver" android:exported="false">
             <intent-filter>
@@ -214,11 +222,6 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-
-        <!-- Termux's reply to a tile tap. -->
-        <receiver
-            android:name=".ShizukuTile$Result"
-            android:exported="false" />
 
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

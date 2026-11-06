@@ -1,0 +1,2 @@
+• Start Shizuku by itself: TinyKit has its own adb client now. On Android 11+ it pairs with Wireless debugging once (type the code into a notification), then one tap starts Shizuku. No Termux needed.
+• Audio mixer works on Android 8+: sliders on 13+, a mute switch per app before that.

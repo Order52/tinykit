@@ -30,15 +30,15 @@ whatever comes next: **Get Shizuku**, **Allow** or **Open Shizuku**.
 Start and Stop work with the standard Shizuku app and with forks such as thedjchi's:
 
 - **Start** uses Shizuku's auth token if one is saved and your Shizuku has a start intent
-  (`moe.shizuku.privileged.api.START` broadcast, in thedjchi's fork). Otherwise it uses Termux
-  (`shizuku start` via Termux's `RUN_COMMAND` service). It gives up after 60 seconds and shows
-  Termux's error if something went wrong. Without Termux or shizuku-termux, it opens Shizuku
-  so you tap its own **Start** button, and TinyKit connects by itself once Shizuku is running.
-  That's the only way to start the standard Shizuku app without root or a computer.
+  (`moe.shizuku.privileged.api.START` broadcast, in thedjchi's fork). Otherwise, on Android 11+, it
+  starts Shizuku with TinyKit's own adb client over Wireless debugging (`AdbService`, see
+  [Getting started](getting-started.md#with-tinykits-own-adb-client)): it finds the service, turns
+  Wireless debugging on when it may, pairs once with a code typed into a notification, connects and runs
+  Shizuku's starter as the adb user. On Android 10 and older it opens Shizuku so you tap its own
+  **Start** button, and TinyKit connects by itself once Shizuku is running.
 - **Stop** uses the token (`…STOP` broadcast) on forks that have it. Otherwise it force-stops
   the Shizuku app (so a Watchdog can't restart the server), sends `shizuku_server` SIGTERM, and
-  SIGKILL if it's still there after 3 seconds. If TinyKit isn't allowed in Shizuku it falls back
-  to `shizuku stop` in Termux. The tab, the tile and Shut Up share this one stop.
+  SIGKILL if it's still there after 3 seconds. The tab, the tile and Shut Up share this one stop.
 
 See [Getting started → Starting Shizuku from TinyKit](getting-started.md#starting-shizuku-from-tinykit).
 
@@ -49,8 +49,8 @@ Stores Shizuku's start/stop token in TinyKit's private preferences. **Clear** re
 ### Quick Settings
 
 Shortcuts to add the [Shizuku](quick-settings-tiles.md#shizuku) and
-[Screenshot](quick-settings-tiles.md#screenshot) tiles. **Install Shizuku & Termux** links to the
-recommended downloads: thedjchi's Shizuku, Termux from F-Droid and the original Shizuku.
+[Screenshot](quick-settings-tiles.md#screenshot) tiles. **Install Shizuku** links to the
+recommended downloads: thedjchi's Shizuku and the original Shizuku.
 
 ### Search
 
@@ -160,7 +160,7 @@ turns back on whatever was on the moment you leave the app (or turn the screen o
 - **Stop Shizuku while they're open** (on by default): some apps notice Shizuku running. TinyKit
   stops it while a chosen app is open and starts it again about 15 seconds after you leave. It only
   does this when it can start Shizuku by itself: a Shizuku fork with start and stop intents and the auth
-  token saved in TinyKit, or Termux with shizuku-termux. With the standard Shizuku app alone it leaves
+  token saved in TinyKit, or TinyKit already paired with Wireless debugging (Android 11+). Otherwise it leaves
   Shizuku running, because nothing could bring it back. Turning USB or Wireless debugging off can also
   end a Shizuku started through adb, so TinyKit starts it again after that too.
 - An app that checks in its first moments, before TinyKit notices it, or that remembers an earlier
@@ -339,7 +339,10 @@ apps and the waits; the profile and its apps are read back from Android each tim
 ### Audio mixer
 
 A volume slider for each app, so one app can be quieter than another. **Apps tab > Audio mixer**
-(Android 13 or newer, needs Shizuku; older versions don't let Shizuku see which app is playing).
+(Android 8 or newer, needs Shizuku). On Android 13 and newer, and wherever Shizuku runs as root, every app
+gets a volume slider. Before Android 13 the adb user can't see which app is playing or turn it down, so there
+each app has a **mute** switch instead (the same app-op as *Mixed audio*, which Android keeps by itself) and
+the playing apps can't be marked; the open apps still are.
 At the top is the phone's media volume. **Open now** lists the apps playing right now first, then
 the other open apps (the recent-apps list), and **All apps** lists every app with a launcher icon
 with a search box. Apps in the work profile are in both lists, marked **Work profile**, with

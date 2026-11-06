@@ -19,7 +19,7 @@ This guide takes you from nothing installed to TinyKit running in about five min
 | --- | --- |
 | **Phone** | Android 7.0 (API 24) or newer. No root. |
 | **Shizuku** | [thedjchi's fork](https://github.com/thedjchi/Shizuku/releases/latest) (recommended) or the [original](https://shizuku.rikka.app/download/) |
-| **A way to start Shizuku** | Wireless debugging (Android 11+), a computer with `adb`, or Termux with [shizuku-termux](https://github.com/Order52/shizuku-termux) |
+| **A way to start Shizuku** | TinyKit's **Start** button on Android 11+ (it pairs with Wireless debugging itself), or a computer with `adb` |
 
 ## 1. Install Shizuku
 
@@ -36,12 +36,16 @@ auth token, which TinyKit can use (see [below](#with-the-auth-token)). The stand
 
 Shizuku has to be started again after every reboot. Choose whichever method suits you:
 
-### Option A: Wireless debugging (Android 11+, no computer)
+### Option A: TinyKit's Start button (Android 11+, nothing else to install)
 
-1. Turn on **Developer options**: open *Settings → About phone* and tap *Build number* seven times.
-2. Open Shizuku and tap **Pairing**, then follow its step-by-step guide to pair with
-   *Wireless debugging*.
-3. Tap **Start** in Shizuku.
+Tap **Start** on the Shizuku tab (or use the Shizuku tile). TinyKit starts Shizuku itself through
+Wireless debugging, with its own adb client. The first time it needs one thing Android won't let
+an app do alone: a **pairing code**. TinyKit opens Developer options for you (turn on *Developer
+options* first if they're off: *Settings → About phone*, tap *Build number* seven times), you
+switch on **Wireless debugging**, tap **Pair device with pairing code**, and type the six digits
+into TinyKit's notification. That's all. After that, **Start** needs nobody: TinyKit turns
+Wireless debugging on by itself (once Shizuku has let it change that setting), connects and starts
+Shizuku, also after a reboot. Wireless debugging needs Wi-Fi.
 
 ### Option B: A computer with adb
 
@@ -51,37 +55,6 @@ adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh
 
 Shizuku shows the exact command for your version under *Start by connecting to a computer*.
 
-### Option C: Termux (no computer, any Android version)
-
-Install [Termux from F-Droid](https://f-droid.org/packages/com.termux/) and set up
-[shizuku-termux](https://github.com/Order52/shizuku-termux) once. After that, TinyKit's **Start**
-button and the **Shizuku** tile can start Shizuku for you. See
-[Starting Shizuku from TinyKit](#starting-shizuku-from-tinykit).
-
-## 3. Install TinyKit
-
-Download `TinyKit-<version>.apk` from the
-[latest release](https://github.com/Order52/tinykit/releases/latest) and open it. You may need
-to allow your browser or file manager to install apps.
-
-To build it yourself instead, see [Building](building.md).
-
-## 4. First run
-
-1. Open TinyKit. The **Shizuku** tab shows Shizuku's status.
-2. If it says *"Shizuku is running. Allow TinyKit to use it."*, tap **Allow** and accept
-   Shizuku's prompt.
-3. The status changes to **Shizuku is running ✓**.
-
-On that first connection, TinyKit uses Shizuku once to grant itself two things:
-
-- `WRITE_SECURE_SETTINGS`, so its settings toggles and Quick Settings tiles keep working when
-  Shizuku is **not** running.
-- The `GET_USAGE_STATS` app-op, used by **Unused apps** and **Storage by app**.
-
-Both are standard grants that any `adb shell` can make. They show up in Android's own records,
-and uninstalling TinyKit removes them.
-
 ## Starting Shizuku from TinyKit
 
 The **Shizuku** tab has **Start** and **Stop** buttons, and there is a one-tap
@@ -89,8 +62,8 @@ The **Shizuku** tab has **Start** and **Stop** buttons, and there is a one-tap
 and with forks. **Start** tries these in order:
 
 1. The [auth token](#with-the-auth-token), if one is saved and your Shizuku has start intents.
-2. [Termux](#with-termux), if it's installed.
-3. Otherwise it [opens Shizuku](#with-the-standard-shizuku-app) so you tap its own Start button.
+2. TinyKit's [own adb start](#with-tinykits-own-adb-client) over Wireless debugging (Android 11+).
+3. Otherwise (Android 10 and older) it [opens Shizuku](#with-the-standard-shizuku-app) so you tap its own Start button.
 
 ### With the auth token
 
@@ -102,21 +75,22 @@ thedjchi's fork can be started and stopped with an intent carrying a secret toke
 **Start** and **Stop** then go straight to Shizuku. **Stop** also works properly with the
 Watchdog on, because Shizuku knows the stop was intentional.
 
-### With Termux
+### With TinyKit's own adb client
 
-With no token saved, **Start** asks Termux to run `shizuku start` from
-[shizuku-termux](https://github.com/Order52/shizuku-termux).
+With no token saved, **Start** runs TinyKit's own adb client (`Adb.java`, no library, no other app):
 
-- The first time, Android asks you to allow TinyKit to *Run commands in Termux environment*.
-  Allow it.
-- If Termux says it doesn't allow external apps, run the shizuku-termux install command in
-  Termux once. It sets `allow-external-apps=true`.
-- If Termux is installed but shizuku-termux isn't, TinyKit opens Shizuku instead, as below.
+1. It looks for your phone's Wireless debugging on the network and, if it is off and TinyKit may
+   change that setting, switches it on.
+2. The first time, it asks for the pairing code in a notification (see Option A above) and pairs.
+3. It connects, and runs Shizuku's own starter as the adb user.
+
+The notification says what it is waiting for and ends by itself. Android shows *"Allow wireless
+debugging on this network?"* once for each Wi-Fi network.
 
 ### With the standard Shizuku app
 
 The standard Shizuku app has no start intents, and without root or a computer it can only be
-started from its own screen. So with no token and no Termux, **Start** opens Shizuku on its
+started from its own screen. So on Android 10 and older with no token, **Start** opens Shizuku on its
 **Start** button. Tap it (the first time, Shizuku walks you through pairing with Wireless
 debugging), then go back: TinyKit notices Shizuku is running and connects by itself.
 
@@ -125,8 +99,6 @@ debugging), then go back: TinyKit notices Shizuku is running and connects by its
 - **Forks with the auth token saved:** **Stop** uses Shizuku's own stop intent.
 - **Otherwise:** **Stop** closes the Shizuku app first, so a Watchdog can't start Shizuku again,
   then asks Shizuku's server to end, and makes it end if it hasn't within 3 seconds.
-- **Shizuku running but TinyKit not allowed:** with Termux and shizuku-termux, **Stop** runs
-  `shizuku stop` there.
 
 The Shizuku tab, the Shizuku tile and Shut Up all stop Shizuku this same way.
 

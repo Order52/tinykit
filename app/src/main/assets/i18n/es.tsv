@@ -92,7 +92,6 @@ All	Todo
 All files access	Acceso a todos los archivos
 All sensors off	Todos los sensores apagados
 Allow	Permitir
-Allow "Run commands in Termux environment" for TinyKit to start Shizuku.	Permite "Ejecutar comandos en el entorno de Termux" para que TinyKit inicie Shizuku.
 Allow TinyKit in Shizuku first, or set the auth token.	Permite primero a TinyKit en Shizuku, o define el token de autenticación.
 Allow downgrade	Permitir versión anterior
 Allow downgrade (install an older version over a newer one)	Permitir versión anterior (instalar una versión más antigua sobre una más nueva)
@@ -216,7 +215,6 @@ Copy it from Shizuku: Settings, where the start/stop intent parameters are liste
 Copy password	Copiar contraseña
 Copying game data…	Copiando datos del juego…
 Could not copy the APK.	No se pudo copiar el APK.
-Could not reach Termux. Open Termux once, then try again.	No se pudo contactar con Termux. Abre Termux una vez y vuelve a intentarlo.
 Couldn't	No se pudo
 Couldn't change Shizuku.	No se pudo cambiar Shizuku.
 Couldn't change notification channels: 	No se pudieron cambiar los canales de notificaciones: 
@@ -359,7 +357,6 @@ Images	Imágenes
 Info	Info
 Install	Instalar
 Install APK files	Instalar archivos APK
-Install Shizuku & Termux	Instalar Shizuku y Termux
 Install Shizuku first.	Primero instala Shizuku.
 Install failed.	Falló la instalación.
 Install failed: 	Falló la instalación: 
@@ -482,7 +479,6 @@ Off	Apagado
 Off. TinyKit never runs by itself.	Desactivado. TinyKit nunca se ejecuta por sí solo.
 Offer to report crashes	Ofrecer reportar fallos
 Offline	Sin conexión
-One tap turns Shizuku on or off. It uses the auth token when it's set, otherwise Termux with shizuku-termux.	Un toque activa o desactiva Shizuku. Usa el token de autenticación si está definido; si no, Termux con shizuku-termux.
 One-handed mode	Modo de una mano
 Only apps with internet permission	Solo apps con permiso de internet
 Open	Abrir
@@ -521,7 +517,6 @@ Pick an app to change its permissions and app-ops.	Elige una app para cambiar su
 Pick an app to choose which kinds of notification it may show.	Elige una app para decidir qué tipos de notificación puede mostrar.
 Pick an app to give it its own language. It only takes effect for languages the app has.	Elige una app para darle su propio idioma. Solo surte efecto en los idiomas que la app tenga.
 Pick an app to see its recent log output.	Elige una app para ver su registro reciente.
-Pick apps Android must never kill or delay, like Termux or messengers.	Elige las apps que Android nunca debe cerrar ni retrasar, como Termux o las de mensajería.
 Pick apps that can't read what you copy, like passwords and codes.	Elige las apps que no pueden leer lo que copias, como contraseñas y códigos.
 Pick apps that can't run or wake the phone in the background.	Elige las apps que no pueden ejecutarse ni despertar el teléfono en segundo plano.
 Pick the app to use as the default 	Elige la app que será la predeterminada para 
@@ -616,7 +611,6 @@ Run a command	Ejecutar un comando
 Run a shell command as the shell user through Shizuku.	Ejecuta un comando de shell como el usuario shell mediante Shizuku.
 Run in background	Ejecutar en segundo plano
 Run in the background	Ejecutar en segundo plano
-Run the shizuku-termux install command in Termux once.	Ejecuta una vez en Termux el comando de instalación de shizuku-termux.
 Running & background	En ejecución y segundo plano
 Running apps	Apps en ejecución
 Running…	Ejecutando…
@@ -658,7 +652,6 @@ Sensors	Sensores
 Sensors off	Sensores apagados
 Serial	Número de serie
 Set 	Establecer 
-Set Shizuku's auth token in TinyKit, or install shizuku-termux, to start Shizuku from here.	Define el token de autenticación de Shizuku en TinyKit, o instala shizuku-termux, para iniciar Shizuku desde aquí.
 Set any app's permissions to Real, Fake (looks granted, gets nothing) or Off.	Establece los permisos de cualquier app como Real, Falso (parece concedido, pero no recibe nada) o Apagado.
 Set the default launcher, browser, phone and more.	Establece el launcher, el navegador, el teléfono y más predeterminados.
 Set. Start and Stop go straight to Shizuku.	Definido. Iniciar y Detener van directo a Shizuku.
@@ -666,7 +659,6 @@ Settings backup & restore	Respaldo y restauración de ajustes
 Shizuku	Shizuku
 Shizuku (thedjchi's fork, recommended): its Watchdog restarts Shizuku if Android kills it	Shizuku (fork de thedjchi, recomendado): su Watchdog reinicia Shizuku si Android lo cierra
 Shizuku auth token	Token de autenticación de Shizuku
-Shizuku didn't start. Open Termux or the Shizuku app to see why.	Shizuku no se inició. Abre Termux o la app de Shizuku para ver por qué.
 Shizuku is not available.	Shizuku no está disponible.
 Shizuku is not installed	Shizuku no está instalado
 Shizuku is not running	Shizuku no está en ejecución
@@ -696,7 +688,6 @@ Start Shizuku and allow TinyKit first.	Primero inicia Shizuku y permite a TinyKi
 Start Shizuku first	Primero inicia Shizuku
 Start Shizuku first.	Primero inicia Shizuku.
 Start Shizuku once so TinyKit can change this.	Inicia Shizuku una vez para que TinyKit pueda cambiar esto.
-Start uses the auth token when it's set, otherwise Termux with shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Stop closes Shizuku fully, so a Watchdog can't start it straight back up.	Iniciar usa el token de autenticación si está definido; si no, Termux con shizuku-termux; si no, abre Shizuku para que pulses su botón Iniciar. Detener cierra Shizuku por completo, así un Watchdog no puede volver a iniciarlo enseguida.
 Started. Android finishes it in the background.	Iniciado. Android lo termina en segundo plano.
 Started. It keeps running if you close TinyKit.	Iniciado. Sigue en ejecución si cierras TinyKit.
 Starting…	Iniciando…
@@ -731,10 +722,6 @@ Tap to speed up	Toca para acelerar
 Technology	Tecnología
 Temperature	Temperatura
 Temperatures	Temperaturas
-Termux didn't answer.	Termux no respondió.
-Termux doesn't allow other apps to run commands yet. Run the shizuku-termux install command in Termux once.	Termux aún no permite que otras apps ejecuten comandos. Ejecuta una vez en Termux el comando de instalación de shizuku-termux.
-Termux from F-Droid: needed to start Shizuku without a computer	Termux de F-Droid: necesario para iniciar Shizuku sin computadora
-Termux returned no result.	Termux no devolvió ningún resultado.
 Test-only apps	Apps de solo prueba
 That file	Ese archivo
 That file has nothing TinyKit can restore.	Ese archivo no tiene nada que TinyKit pueda restaurar.
@@ -857,8 +844,6 @@ allowed: 	permitidas:
 blocked: 	bloqueadas: 
 couldn't write the file.	no se pudo escribir el archivo.
 send this?	¿enviar esto?
-shizuku-termux isn't installed in Termux.	shizuku-termux no está instalado en Termux.
-shizuku-termux isn't installed in Termux. Get it from github.com/Order52/shizuku-termux.	shizuku-termux no está instalado en Termux. Descárgalo desde github.com/Order52/shizuku-termux.
 AR Emoji stickers	Stickers de AR Emoji
 AR Zone	Zona AR
 Access to storage	Acceso al almacenamiento
@@ -1005,7 +990,6 @@ Checked apps see Developer options, USB debugging and Wireless debugging as off 
 Stop Shizuku while they're open	Detener Shizuku mientras están abiertas
 Some apps notice Shizuku running. With this on, TinyKit stops Shizuku while a chosen app is open and starts it again about 15 seconds after you leave. Turning USB or Wireless debugging off can end Shizuku too, so TinyKit also starts it again after that. It only does this when it can start Shizuku by itself.	Algunas apps notan que Shizuku está en ejecución. Con esto activado, TinyKit detiene Shizuku mientras una app elegida está abierta y lo vuelve a iniciar unos 15 segundos después de que salgas. Apagar la depuración USB o inalámbrica también puede cerrar Shizuku, así que TinyKit lo vuelve a iniciar después de eso. Solo lo hace cuando puede iniciar Shizuku por sí mismo.
 TinyKit can start Shizuku again by itself.	TinyKit puede volver a iniciar Shizuku por sí mismo.
-Not available: TinyKit has no way to start Shizuku by itself. Save Shizuku's auth token (Shizuku tab, for a Shizuku fork with start and stop intents), or install Termux with shizuku-termux and allow TinyKit to run commands there.	No disponible: TinyKit no tiene forma de iniciar Shizuku por sí mismo. Guarda el token de autenticación de Shizuku (pestaña Shizuku, para un fork de Shizuku con intents de inicio y parada), o instala Termux con shizuku-termux y permite que TinyKit ejecute comandos ahí.
 TinyKit has no way to start Shizuku by itself yet. See the note below.	TinyKit aún no tiene forma de iniciar Shizuku por sí mismo. Mira la nota de abajo.
 # 1.15.0: one background service, reorganised tabs, search over every row
 New apps	Apps nuevas
@@ -1046,7 +1030,6 @@ Starting Shizuku…	Iniciando Shizuku…
 Shizuku didn't start. Check the auth token matches the one in Shizuku's settings.	Shizuku no se inició. Comprueba que el token de autenticación coincide con el de los ajustes de Shizuku.
 Shizuku didn't stop. Check the auth token matches the one in Shizuku's settings.	Shizuku no se detuvo. Comprueba que el token de autenticación coincide con el de los ajustes de Shizuku.
 Shizuku didn't stop. Try again, or stop it in the Shizuku app.	Shizuku no se detuvo. Inténtalo de nuevo o detenlo en la app de Shizuku.
-Open Termux	Abrir Termux
 Shizuku didn't start	Shizuku no se inició
 Shizuku didn't stop	Shizuku no se detuvo
 Work profile	Perfil de trabajo
@@ -1206,3 +1189,34 @@ Added 	Se añadieron
  networks that weren't saved yet.	 redes que aún no estaban guardadas.
 This phone doesn't let TinyKit add networks.	Este teléfono no permite a TinyKit añadir redes.
 See saved passwords, share any network with a QR code, and export or import them.	Mira las contraseñas guardadas, comparte cualquier red con un código QR, y expórtalas o impórtalas.
+Starting Shizuku	Iniciando Shizuku
+Turn on Wireless debugging	Activa la depuración inalámbrica
+Tap here, then switch on Wireless debugging. It needs Wi-Fi. TinyKit carries on by itself.	Toca aquí y activa la depuración inalámbrica. Necesita Wi-Fi. TinyKit continúa solo.
+Turn on Developer options	Activa las opciones de desarrollador
+Tap here, then tap Build number 7 times. TinyKit carries on by itself.	Toca aquí y pulsa 7 veces el Número de compilación. TinyKit continúa solo.
+Enter the pairing code	Escribe el código de vinculación
+In Wireless debugging tap Pair device with pairing code, then type the six digits here.	En Depuración inalámbrica toca Vincular dispositivo con código de vinculación y escribe aquí los seis dígitos.
+Open Pair device with pairing code first, then type the digits again.	Abre primero Vincular dispositivo con código de vinculación y escribe los dígitos otra vez.
+Type the digits again.	Escribe los dígitos otra vez.
+Paired	Vinculado
+Pairing code	Código de vinculación
+The pairing code is wrong.	El código de vinculación es incorrecto.
+Pairing stopped. Is the pairing code still on screen?	La vinculación se detuvo. ¿Sigue el código en pantalla?
+Pairing failed.	Falló la vinculación.
+Wireless debugging didn't answer.	La depuración inalámbrica no respondió.
+Couldn't talk to Wireless debugging.	No se pudo hablar con la depuración inalámbrica.
+This phone doesn't know TinyKit yet. Pair it again.	Este teléfono aún no conoce a TinyKit. Vincúlalo de nuevo.
+Wireless debugging wasn't set up in time. Tap Start to try again.	La depuración inalámbrica no se configuró a tiempo. Toca Iniciar para reintentar.
+Couldn't start Shizuku: 	No se pudo iniciar Shizuku: 
+Shizuku didn't start: 	Shizuku no se inició: 
+Open TinyKit and tap Start.	Abre TinyKit y toca Iniciar.
+Shizuku didn't start. Tap Start again, or open the Shizuku app.	Shizuku no se inició. Toca Iniciar otra vez o abre la app Shizuku.
+Start uses the auth token when it's set, otherwise TinyKit starts Shizuku itself through Wireless debugging (Android 11+; the first time it asks for a pairing code), otherwise it opens Shizuku so you tap its Start button. Stop closes Shizuku fully, so a Watchdog can't start it straight back up.	Iniciar usa el token de autenticación si está definido; si no, TinyKit inicia Shizuku por sí mismo con la depuración inalámbrica (Android 11+; la primera vez pide un código de vinculación); si no, abre Shizuku para que toques su botón Iniciar. Detener cierra Shizuku del todo, así que un Watchdog no lo reinicia.
+One tap turns Shizuku on or off. It uses the auth token when it's set, otherwise TinyKit starts it through Wireless debugging.	Un toque activa o desactiva Shizuku. Usa el token de autenticación si está definido; si no, TinyKit lo inicia con la depuración inalámbrica.
+Install Shizuku	Instalar Shizuku
+The recommended version keeps running in the background.	La versión recomendada sigue funcionando en segundo plano.
+Not available: TinyKit has no way to start Shizuku by itself. Save Shizuku's auth token (Shizuku tab, for a Shizuku fork with start and stop intents), or tap Start once so TinyKit pairs with Wireless debugging (Android 11+).	No disponible: TinyKit no puede iniciar Shizuku por sí mismo. Guarda el token de autenticación (pestaña Shizuku, para un fork con intents de inicio y parada), o toca Iniciar una vez para que TinyKit se vincule con la depuración inalámbrica (Android 11+).
+Sound on	Sonido activado
+Couldn't change that app's sound.	No se pudo cambiar el sonido de esa app.
+This Android can only mute an app, not turn it down. Android 13 and newer can do both.	Este Android solo puede silenciar una app, no bajarla. Android 13 y posterior pueden hacer ambas cosas.
+Pick apps Android must never kill or delay, like Termux or messengers.	Elige las apps que Android nunca debe cerrar ni retrasar, como Termux o las de mensajería.

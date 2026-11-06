@@ -116,7 +116,7 @@ Find it under **Apps → App permissions**.
 
 | Tool | What it does |
 | --- | --- |
-| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly. Stop closes Shizuku fully, so a Watchdog can't start it straight back up. Without the token, Start goes through Termux with [shizuku-termux](https://github.com/Order52/shizuku-termux), or opens Shizuku so you tap its Start button. Works with the standard Shizuku app and its forks. |
+| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly. Stop closes Shizuku fully, so a Watchdog can't start it straight back up. Without the token, Start uses TinyKit's own adb client over Wireless debugging (Android 11+): it pairs once, using a code you type into a notification, and after that one tap starts Shizuku, switching Wireless debugging on by itself. Nothing else is installed. On Android 10 and older it opens Shizuku so you tap its Start button. Works with the standard Shizuku app and its forks. |
 | **Search** | Find any TinyKit setting or tool from the top of the home screen. |
 
 ### Quick Settings tiles
@@ -151,7 +151,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**, one at a time or all at once. **Permissions by type** shows which apps have a permission. [See above](#-fake-permissions). |
 | **Default apps** | Choose the launcher, browser, phone, SMS and assistant apps, and see which app opens each file type. |
 | **Work profile** | Makes a work profile in one tap (no setup screens, no extra app inside it) and manages it like Shelter, Island and Samsung's Secure Folder together: separate copies of apps, freeze one or all, **auto-freeze** chosen apps, a **PIN of its own** that locks it, **auto-lock** when the screen is off or after a restart, **pause** (switch or Quick Settings tile), **launcher shortcuts** that unfreeze and open an app, install APKs straight into it. |
-| **Audio mixer** | A volume slider for each app, so you can turn YouTube down and leave your music up, with the phone's media volume at the top. Shows the apps open now, and every app below with search, **including apps in the work profile**. Volumes stick for each new video or song. Has a Quick Settings tile (Android 13+). |
+| **Audio mixer** | A volume slider for each app, so you can turn YouTube down and leave your music up, with the phone's media volume at the top. Shows the apps open now, and every app below with search, **including apps in the work profile**. Volumes stick for each new video or song. Has a Quick Settings tile. Sliders on Android 13+ (or root Shizuku); before that, a mute switch per app. |
 | **Share menu pins** | Pins the apps you share to most in the top row of Android's share menu, so there is no scrolling to find them (Android 10+). |
 | **Hide apps** | Removes apps from the launcher, and they stop running until you restore them. |
 | **Unused apps** | Lists apps by how long since you last used them. |
@@ -202,7 +202,6 @@ The [feature reference](docs/features.md) lists the exact command behind every t
 | --- | --- |
 | **Android** | 7.0 (API 24) or newer |
 | **Shizuku** | [thedjchi's fork](https://github.com/thedjchi/Shizuku/releases/latest) (recommended) or the [original](https://shizuku.rikka.app/download/) |
-| **Termux** *(optional)* | Only needed to start Shizuku with the **Start Shizuku** button: install [Termux](https://termux.dev/) with [shizuku-termux](https://github.com/Order52/shizuku-termux), and the first time, allow *Run commands in Termux environment* |
 
 ## Installation
 

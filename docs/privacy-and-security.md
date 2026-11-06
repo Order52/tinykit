@@ -24,13 +24,14 @@ what it actually does, and what it never does.
 | Permission | Why |
 | --- | --- |
 | `QUERY_ALL_PACKAGES` | App pickers list every installed app |
-| `INTERNET` | Check for updates, and the public IP on Network info, only when you use them |
+| `INTERNET` | Check for updates, and the public IP on Network info, only when you use them. Also how Start talks to Wireless debugging on this same phone (`127.0.0.1`). |
 | `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE` | Network info reads the active connection's details |
-| `com.termux.permission.RUN_COMMAND` | Start Shizuku through Termux. Android asks you first. |
 | `KILL_BACKGROUND_PROCESSES` | Speed up phone without Shizuku on Android 13 and older. Closes only cached apps. |
 | `PACKAGE_USAGE_STATS` | Unused apps, Storage by app and Screen time. Also lets Shut Up (when you turn it on) see which app is open. Granted through Shizuku. |
-| `POST_NOTIFICATIONS` | A "TinyKit stopped, send the details?" notification when it crashes. Android 13+ asks you first, and only if you tap the option in the crash popup. |
+| `POST_NOTIFICATIONS` | A "TinyKit stopped, send the details?" notification when it crashes, and the notification where Start asks for the pairing code. Android 13+ asks you first. |
 | `WRITE_SECURE_SETTINGS` | Lets toggles and tiles work with Shizuku stopped. Granted once through Shizuku. |
+
+TinyKit's own adb client keeps its key in its private storage. It shows up in Developer options under *Paired devices* as `tinykit@android`; remove it there and TinyKit asks for a new code next time. Nothing leaves the phone.
 
 There are **no** location, contacts, camera, microphone, storage or phone permissions. When
 TinyKit reads files (for recovery and APK backup) or system data, it does so through Shizuku as

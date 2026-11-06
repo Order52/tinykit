@@ -84,7 +84,7 @@ final class ShutUp {
         if (!stopsShizuku(c, p) || !Shell.running()) return;
         // Written down first, so a crash still starts it again.
         p.edit().putBoolean(PREF_SHIZUKU_STOPPED, true).commit();
-        ShizukuControl.stop(c, p, null);
+        ShizukuControl.stop(c, p);
         android.util.Log.i("TinyKit", "Shut Up: stopped Shizuku");
     }
 
@@ -96,7 +96,7 @@ final class ShutUp {
         if (!p.getBoolean(PREF_SHIZUKU_STOPPED, false)) return;
         p.edit().putBoolean(PREF_SHIZUKU_STOPPED, false).commit();
         if (Shell.running()) return; // something else already started it
-        boolean ok = ShizukuControl.start(c, p, null);
+        boolean ok = ShizukuControl.start(c, p);
         android.util.Log.i("TinyKit", "Shut Up: started Shizuku ok=" + ok);
     }
 
