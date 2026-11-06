@@ -15,7 +15,7 @@ final class Spake2 {
             .add(new BigInteger("27742317777372353535851937790883648493"));
     private static final BigInteger D = BigInteger.valueOf(-121665)
             .multiply(BigInteger.valueOf(121666).modInverse(P)).mod(P);
-    private static final BigInteger SQRT_M1 = BigInteger.TWO.modPow(P.subtract(BigInteger.ONE).shiftRight(2), P);
+    private static final BigInteger SQRT_M1 = BigInteger.valueOf(2).modPow(P.subtract(BigInteger.ONE).shiftRight(2), P);
     private static final BigInteger[] BASE = {null, BigInteger.valueOf(4).multiply(BigInteger.valueOf(5).modInverse(P)).mod(P)};
     private static final BigInteger[] M = decode(hex("5ada7e4bf6ddd9adb6626d32131c6b5c51a1e347a3478f53cfcf441b88eed12e"));
     private static final BigInteger[] N = decode(hex("10e3df0ae37d8e7a99b5fe74b44672103dbddcbd06af680d71329a11693bc778"));

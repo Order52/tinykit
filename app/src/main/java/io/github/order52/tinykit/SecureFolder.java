@@ -176,12 +176,12 @@ public final class SecureFolder extends Activity {
             manager.enableShortcuts(java.util.Collections.singletonList(id));
             Intent open = plain ? new Intent(Intent.ACTION_MAIN).setComponent(new ComponentName(c.getPackageName(), WORK_FOLDER))
                     : new Intent(c, SecureFolder.class).setAction(Intent.ACTION_MAIN);
-            ShortcutInfo info = new ShortcutInfo.Builder(c, id)
+            ShortcutInfo.Builder builder = new ShortcutInfo.Builder(c, id)
                     .setShortLabel(c.getString(R.string.tiny_folder))
                     .setIcon(Icon.createWithResource(c, plain ? R.mipmap.ic_work_folder : R.mipmap.ic_secure_folder))
-                    .setIntent(open)
-                    .setLongLived(true)
-                    .build();
+                    .setIntent(open);
+            if (Build.VERSION.SDK_INT >= 29) builder.setLongLived(true);
+            ShortcutInfo info = builder.build();
             return manager.requestPinShortcut(info, null) ? null : "Your launcher didn't add it.";
         } catch (RuntimeException e) {
             return "Your launcher didn't add it.";

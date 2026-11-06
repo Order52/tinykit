@@ -105,6 +105,19 @@ final class Adb {
 
     // ---- Pairing ---------------------------------------------------------------------------------------
 
+    /** The TLS exporter secret adb pairing mixes into the password. Android 12 has it in the SDK; Android 11 only inside its TLS library. */
+    private static byte[] exportKeys(SSLSocket ssl) throws Exception {
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            return SSLSockets.exportKeyingMaterial(ssl, "adb-label\0", null, 64);
+        }
+        try {
+            return (byte[]) ssl.getClass().getMethod("exportKeyingMaterial", String.class, byte[].class, int.class)
+                    .invoke(ssl, "adb-label\0", null, 64);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            throw new IOException("Pairing needs Android 12 or newer on this phone.");
+        }
+    }
+
     /** Pairs with the phone's Wireless debugging, with the six digits it shows. */
     void pair(String host, int port, String code) throws Exception {
         try (Socket plain = new Socket(host, port)) {
@@ -112,7 +125,7 @@ final class Adb {
             SSLSocket ssl = (SSLSocket) context().getSocketFactory().createSocket(plain, host, port, true);
             ssl.setEnabledProtocols(new String[]{"TLSv1.3"});
             ssl.startHandshake();
-            byte[] exported = SSLSockets.exportKeyingMaterial(ssl, "adb-label\0", null, 64);
+            byte[] exported = exportKeys(ssl);
             byte[] password = concat(code.getBytes(StandardCharsets.UTF_8), exported);
             Spake2 spake = new Spake2(true, Spake2.ascii("adb pair client\0"), Spake2.ascii("adb pair server\0"), password);
             InputStream in = ssl.getInputStream();

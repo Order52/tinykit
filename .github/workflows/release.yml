@@ -1,0 +1,95 @@
+name: Release
+
+# Push a tag like v1.22.6 (after bumping the version everywhere, see scripts/check-repo.sh) and this
+# builds the signed APK and publishes the GitHub release with the changelog as its notes.
+#
+# Needs four repository secrets (Settings > Secrets and variables > Actions):
+#   KEYSTORE_BASE64    the release keystore, `base64 -i release.jks`
+#   KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+# Without them the release is refused rather than signed with the wrong key: an APK signed with
+# another key can't update the installed one.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, sign and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag matches the version in the code
+        run: |
+          name=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          [ "${GITHUB_REF_NAME}" = "v$name" ] || { echo "Tag ${GITHUB_REF_NAME} is not v$name"; exit 1; }
+          echo "VERSION=$name" >> "$GITHUB_ENV"
+
+      - name: Repo checks
+        run: scripts/check-repo.sh
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          for v in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            [ -n "${!v}" ] || { echo "Secret $v is not set, see the top of this file"; exit 1; }
+          done
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Unit tests and lint
+        run: ./gradlew testDebugUnitTest lintDebug
+
+      - name: Release build
+        run: ./gradlew assembleRelease
+
+      - name: Check the APK and name it
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          size=$(stat -c %s "$apk")
+          echo "APK size: $size bytes"
+          [ "$size" -lt 400000 ] || { echo "APK grew past 400 KB"; exit 1; }
+          bt=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
+          "$bt/apksigner" verify --print-certs "$apk" | tee certs.txt
+          grep -q "CN=Order52" certs.txt || { echo "Not signed with the Order52 key"; exit 1; }
+          sha=$(grep 'SHA-256 digest' certs.txt | head -1 | sed 's/.*: //')
+          cp "$apk" "TinyKit-$VERSION.apk"
+          code=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts)
+          {
+            cat "fastlane/metadata/android/en-US/changelogs/$code.txt"
+            printf '\n\nSigned CN=Order52, SHA-256 %s\n' "$sha"
+          } > notes.md
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "TinyKit-$VERSION.apk" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "TinyKit-$VERSION.apk" \
+              --title "TinyKit $VERSION" --notes-file notes.md --verify-tag
+          fi
+
+      - name: Remove the key
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/release.jks"

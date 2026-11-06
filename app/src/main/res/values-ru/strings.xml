@@ -28,4 +28,6 @@
     <string name="tile_mixer">Аудиомикшер</string>
     <string name="tile_deep_sleep">Глубокий сон</string>
     <string name="secure_folder">Защищённая папка</string>
+    <string name="work_folder">Работа</string>
+    <string name="tiny_folder">TinyFolder</string>
 </resources>

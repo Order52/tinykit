@@ -243,6 +243,8 @@ public abstract class Tiles extends TileService {
     }
 
     /** Opens the audio mixer: a tap closes the panel and shows the mixer page. */
+    @SuppressWarnings("deprecation")
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     public static final class Mixer extends Tiles {
         @Override
         Object[] state() {

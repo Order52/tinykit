@@ -75,7 +75,7 @@ public final class MixerFx extends Service {
 
     /** Sets the effect's attenuation: a gain of {@code db} (0 or below). */
     private static void set(AudioEffect effect, float db) {
-        if (effect instanceof DynamicsProcessing) {
+        if (Build.VERSION.SDK_INT >= 28 && effect instanceof DynamicsProcessing) {
             ((DynamicsProcessing) effect).setInputGainAllChannelsTo(db);
         } else if (effect instanceof Equalizer) { // up to its own limit, about 15 dB
             Equalizer eq = (Equalizer) effect;

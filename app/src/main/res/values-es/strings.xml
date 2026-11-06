@@ -28,4 +28,6 @@
     <string name="tile_mixer">Mezclador de audio</string>
     <string name="tile_deep_sleep">Sueño profundo</string>
     <string name="secure_folder">Carpeta segura</string>
+    <string name="work_folder">Trabajo</string>
+    <string name="tiny_folder">TinyFolder</string>
 </resources>
