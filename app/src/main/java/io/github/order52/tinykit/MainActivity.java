@@ -251,6 +251,7 @@ public class MainActivity extends Activity {
     private volatile List<App> apps;
     private final Object appsLock = new Object();
     private SharedPreferences prefs;
+    private boolean lightTheme;
     private FrameLayout frame;
     private final TextView[] tabs = new TextView[TAB_NAMES.length];
     private final ImageView[] tabIcons = new ImageView[TAB_NAMES.length];
@@ -293,11 +294,33 @@ public class MainActivity extends Activity {
         }
     };
 
+    private void applySystemBarColors() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int flags = getWindow().getDecorView().getSystemUiVisibility();
+            if (lightTheme) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                }
+            } else {
+                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                }
+            }
+            getWindow().getDecorView().setSystemUiVisibility(flags);
+        }
+    }
+
     @Override
     @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag") // flag exists from Android 13
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("tinykit", MODE_PRIVATE);
+        lightTheme = prefs.getBoolean("light_theme", false);
+        if (lightTheme) setTheme(R.style.AppTheme_Light);
+        super.onCreate(savedInstanceState);
+        Tr.init(this);
+        applySystemBarColors();
         // Warm the installed-apps cache (loading labels is the slow part) so every per-app list,
         // picker and log opens instantly. Runs off the worker queue to not delay the first tap.
         thumbs.execute(this::installedApps);
@@ -580,7 +603,7 @@ public class MainActivity extends Activity {
      */
     private View buildTabBar() {
         LinearLayout bar = new LinearLayout(this);
-        bar.setBackgroundColor(0xFF0D0D0D);
+        bar.setBackgroundColor(lightTheme ? 0xFFEBEBEF : 0xFF0D0D0D);
         bar.setMinimumHeight(dp(80));
         for (int i = 0; i < TAB_NAMES.length; i++) {
             LinearLayout tab = vertical();
@@ -596,7 +619,8 @@ public class MainActivity extends Activity {
             TextView label = text(TAB_NAMES[i], 12, false);
             label.setGravity(Gravity.CENTER);
             label.setSingleLine(true);
-            label.setPadding(dp(2), dp(4), dp(2), 0);
+            label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            label.setPadding(dp(1), dp(4), dp(1), 0);
             label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             tabs[i] = label;
             tab.addView(label, new LinearLayout.LayoutParams(-1, -2));
@@ -613,7 +637,7 @@ public class MainActivity extends Activity {
 
     private void fitTabs() {
         float px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12, getResources().getDisplayMetrics());
-        float min = px * 0.6f;
+        float min = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10.5f, getResources().getDisplayMetrics());
         android.text.TextPaint paint = new android.text.TextPaint(tabs[0].getPaint());
         paint.setTypeface(Typeface.DEFAULT_BOLD); // the selected tab is bold, and widest
         while (px > min && !tabsFit(paint, px)) px -= 0.5f;
@@ -623,7 +647,7 @@ public class MainActivity extends Activity {
     private boolean tabsFit(android.text.TextPaint paint, float px) {
         paint.setTextSize(px);
         for (TextView tab : tabs) {
-            int room = tab.getWidth() - tab.getPaddingLeft() - tab.getPaddingRight() - dp(4);
+            int room = tab.getWidth() - tab.getPaddingLeft() - tab.getPaddingRight() - dp(2);
             if (room <= 0) return true; // not laid out yet
             if (paint.measureText(tab.getText().toString()) > room) return false;
         }
@@ -634,12 +658,12 @@ public class MainActivity extends Activity {
     private android.graphics.drawable.RippleDrawable pill(boolean selected) {
         GradientDrawable fill = new GradientDrawable();
         fill.setCornerRadius(dp(16));
-        fill.setColor(selected ? 0x338C9EFF : 0);
+        fill.setColor(selected ? (lightTheme ? 0x262962FF : 0x338C9EFF) : 0);
         GradientDrawable mask = new GradientDrawable();
         mask.setCornerRadius(dp(16));
-        mask.setColor(0xFF000000);
+        mask.setColor(lightTheme ? 0xFFFFFFFF : 0xFF000000);
         return new android.graphics.drawable.RippleDrawable(
-                android.content.res.ColorStateList.valueOf(0x4DFFFFFF), fill, mask);
+                android.content.res.ColorStateList.valueOf(lightTheme ? 0x20000000 : 0x4DFFFFFF), fill, mask);
     }
 
     private View buildTab(int i) {
@@ -671,10 +695,10 @@ public class MainActivity extends Activity {
         int accent = attrColor(android.R.attr.colorAccent);
         for (int i = 0; i < tabs.length; i++) {
             boolean selected = i == index;
-            tabs[i].setTextColor(selected ? accent : 0xFFFFFFFF);
-            tabs[i].setAlpha(selected ? 1f : 0.65f);
+            tabs[i].setTextColor(selected ? accent : (lightTheme ? 0xFF111111 : 0xFFFFFFFF));
+            tabs[i].setAlpha(selected ? 1f : (lightTheme ? 1f : 0.65f));
             tabs[i].setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-            tabIcons[i].setColorFilter(selected ? accent : 0xA6FFFFFF);
+            tabIcons[i].setColorFilter(selected ? accent : (lightTheme ? 0xFF111111 : 0xA6FFFFFF));
             tabIcons[i].setBackground(pill(selected));
             ((View) tabs[i].getParent()).setSelected(selected);
         }
@@ -737,7 +761,7 @@ public class MainActivity extends Activity {
         tokenText.setText(Tr.t(token().isEmpty()
                 ? "Not set. Tap to paste it from Shizuku's settings."
                 : "Set. Start and Stop go straight to Shizuku."));
-        for (View row : shizukuRows) row.setAlpha(ready ? 1f : 0.4f);
+        for (View row : shizukuRows) row.setAlpha(ready ? 1f : (lightTheme ? 1f : 0.4f));
         for (View label : shizukuLabels) label.setVisibility(ready ? View.GONE : View.VISIBLE);
         if (ready) {
             loadSettings();
@@ -937,7 +961,8 @@ public class MainActivity extends Activity {
         status.setPadding(dp(16), dp(16), dp(16), dp(12));
         GradientDrawable card = new GradientDrawable();
         card.setCornerRadius(dp(16));
-        card.setColor(0xFF121212);
+        card.setColor(lightTheme ? 0xFFFFFFFF : 0xFF121212);
+        if (lightTheme) card.setStroke(dp(1), 0x1A000000);
         status.setBackground(card);
         shizukuText = text("", 18, true);
         shizukuText.setGravity(Gravity.CENTER_VERTICAL);
@@ -964,7 +989,7 @@ public class MainActivity extends Activity {
         TextView help = text("Start uses the auth token when it's set, otherwise Termux with "
                 + "shizuku-termux, otherwise it opens Shizuku so you tap its Start button. Stop closes "
                 + "Shizuku fully, so a Watchdog can't start it straight back up.", 13, false);
-        help.setAlpha(0.6f);
+        setDim(help, 0.6f);
         help.setPadding(dp(16), dp(8), dp(16), 0);
         list.addView(help);
 
@@ -990,7 +1015,13 @@ public class MainActivity extends Activity {
         search.setSingleLine(true);
         search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         search.setPadding(dp(16), dp(10), dp(16), dp(10));
-        search.setBackground(roundRect(0xFF1A1A1A, 24));
+        if (lightTheme) {
+            search.setTextColor(0xFF000000);
+            search.setHintTextColor(0xFF555555);
+        }
+        GradientDrawable bg = roundRect(lightTheme ? 0xFFFFFFFF : 0xFF1A1A1A, 24);
+        if (lightTheme) bg.setStroke(dp(1), 0x26000000);
+        search.setBackground(bg);
         return search;
     }
 
@@ -1009,9 +1040,14 @@ public class MainActivity extends Activity {
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         search.setPadding(dp(16), dp(12), dp(16), dp(12));
+        if (lightTheme) {
+            search.setTextColor(0xFF000000);
+            search.setHintTextColor(0xFF555555);
+        }
         GradientDrawable box = new GradientDrawable();
         box.setCornerRadius(dp(24));
-        box.setColor(0xFF1A1A1A);
+        box.setColor(lightTheme ? 0xFFFFFFFF : 0xFF1A1A1A);
+        if (lightTheme) box.setStroke(dp(1), 0x26000000);
         search.setBackground(box);
         LinearLayout.LayoutParams boxMargin = new LinearLayout.LayoutParams(-1, -2);
         boxMargin.setMargins(dp(12), dp(8), dp(12), dp(4));
@@ -1115,7 +1151,7 @@ public class MainActivity extends Activity {
         f.row.post(() -> {
             if (sv != null) sv.smoothScrollTo(0, Math.max(0, f.row.getTop() - dp(64)));
             Drawable old = f.row.getBackground();
-            f.row.setBackgroundColor(0x408C9EFF);
+            f.row.setBackgroundColor(lightTheme ? 0x262962FF : 0x408C9EFF);
             main.postDelayed(() -> f.row.setBackground(old), 1400);
         });
     }
@@ -1384,6 +1420,16 @@ public class MainActivity extends Activity {
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
 
         section(list, "TinyKit");
+        Switch lightThemeSwitch = new Switch(this);
+        lightThemeSwitch.setChecked(lightTheme);
+        lightThemeSwitch.setClickable(false);
+        lightThemeSwitch.setFocusable(false);
+        row(list, "Light theme", "Use a light background instead of OLED black.", lightThemeSwitch, () -> {
+            boolean on = !lightThemeSwitch.isChecked();
+            lightThemeSwitch.setChecked(on);
+            prefs.edit().putBoolean("light_theme", on).apply();
+            recreate();
+        }, false);
         // The one switch for everything TinyKit may keep running. Off: it never runs by itself.
         Switch backgroundSwitch = new Switch(this);
         backgroundSwitch.setClickable(false);
@@ -1591,7 +1637,7 @@ public class MainActivity extends Activity {
             ((TextView) choose[0].getTag()).setText(Tr.t(n == 0 ? "No app chosen yet."
                     : n + (n == 1 ? " app chosen." : " apps chosen.")));
             boolean paused = on && !background;
-            status.setTextColor(paused ? attrColor(android.R.attr.colorAccent) : 0xB3FFFFFF);
+            status.setTextColor(paused ? attrColor(android.R.attr.colorAccent) : (lightTheme ? 0xFF000000 : 0xB3FFFFFF));
             status.setText(Tr.t(BackgroundService.shutUpRunning()
                     ? (ShutUp.hidden(prefs) ? "Running. Hidden right now, because a chosen app is open."
                     : "Running. Nothing is hidden until you open a chosen app.")
@@ -1817,6 +1863,7 @@ public class MainActivity extends Activity {
     }
 
     private static final int[] LEVEL_COLORS = {0xFF66BB6A, 0xFFFFCA28, 0xFFFF8A65, 0xFFEF5350};
+    private static final int[] LEVEL_COLORS_LIGHT = {0xFF1B5E20, 0xFFB25E00, 0xFFC2410C, 0xFFB71C1C};
 
     /** Apps in use right now, with why: removing one would break the phone. Call off the main thread. */
     private Map<String, String> inUse() {
@@ -1904,7 +1951,7 @@ public class MainActivity extends Activity {
         TextView help = text("Remove apps your phone came with, for you only. Nothing is deleted from the "
                 + "system: bring any app back from Removed, and a factory reset restores all of them. "
                 + "Hold an app to read about it.", 13, false);
-        help.setAlpha(0.8f);
+        setDim(help, 0.8f);
         page.addView(help);
         EditText search = searchField("Search apps");
         page.addView(search, fieldMargin());
@@ -1927,8 +1974,20 @@ public class MainActivity extends Activity {
         Adapter<Pkg> adapter = new Adapter<>(true, (p, row) -> {
             row.first.setText(Tr.t(p.label));
             row.second.setText(Tr.t(p.pkg));
-            row.third.setText(Tr.t(Bloat.LEVELS[p.level] + " · " + p.note));
-            row.third.setTextColor(LEVEL_COLORS[p.level]);
+            if (lightTheme) {
+                String levelStr = Tr.t(Bloat.LEVELS[p.level]);
+                String noteStr = Tr.t(p.note);
+                android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder();
+                sb.append(levelStr);
+                sb.setSpan(new android.text.style.ForegroundColorSpan(LEVEL_COLORS_LIGHT[p.level]),
+                        0, levelStr.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                sb.append(" · ").append(noteStr);
+                row.third.setTextColor(0xFF222222);
+                row.third.setText(sb);
+            } else {
+                row.third.setText(Tr.t(Bloat.LEVELS[p.level]) + " · " + Tr.t(p.note));
+                row.third.setTextColor(LEVEL_COLORS[p.level]);
+            }
             row.check.setChecked(p.checked);
             row.check.setVisibility(p.locked ? View.INVISIBLE : View.VISIBLE);
             showIcon(row, p.pkg);
@@ -1995,8 +2054,8 @@ public class MainActivity extends Activity {
             Pkg p = adapter.getItem(position);
             new AlertDialog.Builder(this)
                     .setTitle(Tr.t(p.label))
-                    .setMessage(Tr.t(Bloat.LEVELS[p.level] + ": " + Bloat.MEANING[p.level] + "\n\n" + p.note
-                            + "\n\n" + p.pkg + (versionName(p.pkg).isEmpty() ? "" : "\nVersion " + versionName(p.pkg))))
+                    .setMessage(Tr.t(Bloat.LEVELS[p.level]) + ": " + Tr.t(Bloat.MEANING[p.level]) + "\n\n" + Tr.t(p.note)
+                            + "\n\n" + p.pkg + (versionName(p.pkg).isEmpty() ? "" : "\n" + Tr.t("Version ") + versionName(p.pkg)))
                     .setPositiveButton(Tr.t("OK"), null)
                     .show();
             return true;
@@ -2237,7 +2296,7 @@ public class MainActivity extends Activity {
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Apps installed with TinyKit's installer, newest first. Tap one to open or "
                 + "remove it. This list is read from Android's own records, so TinyKit stores nothing.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         TextView loading = text("Reading…", 14, false);
         page.addView(loading);
@@ -2299,10 +2358,10 @@ public class MainActivity extends Activity {
         StringBuilder on = new StringBuilder();
         String[] short_ = {"Allow downgrade", "Grant all permissions", "Test-only apps"};
         for (int i = 0; i < INSTALL_OPTION_BITS.length; i++) {
-            if ((options & INSTALL_OPTION_BITS[i]) != 0) on.append(on.length() > 0 ? ", " : "").append(short_[i]);
+            if ((options & INSTALL_OPTION_BITS[i]) != 0) on.append(on.length() > 0 ? ", " : "").append(Tr.t(short_[i]));
         }
         return on.length() == 0 ? "Normal install. Tap to allow downgrades or grant permissions."
-                : "On: " + on + ".";
+                : Tr.t("On: ") + on + ".";
     }
 
     private void chooseInstallOptions(TextView summary) {
@@ -2335,7 +2394,7 @@ public class MainActivity extends Activity {
         TextView help = text("Ad and analytics libraries found inside your apps, most first. This is what each "
                 + "app declares, not proof it uses them. Tap an app to see them" + (FirewallPolicy.supported()
                 ? " or cut it off the internet." : "."), 13, false);
-        help.setAlpha(0.8f);
+        setDim(help, 0.8f);
         page.addView(help);
         CheckBox system = new CheckBox(this);
         system.setText(Tr.t("Show system apps"));
@@ -2444,7 +2503,7 @@ public class MainActivity extends Activity {
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Tick = the app may show this kind of notification. Untick to block just that kind. "
                 + "Some system channels can't be blocked.", 13, false);
-        help.setAlpha(0.8f);
+        setDim(help, 0.8f);
         page.addView(help);
         TextView loading = text("Reading…", 14, false);
         page.addView(loading);
@@ -2516,7 +2575,7 @@ public class MainActivity extends Activity {
         page.addView(total);
         TextView help = text("How long each app was on your screen, and how often you opened it. Read from "
                 + "Android's usage history, so TinyKit measures nothing itself.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         TextView loading = text("Reading usage…", 14, false);
         page.addView(loading);
@@ -2707,7 +2766,7 @@ public class MainActivity extends Activity {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView helpView = text(help, 14, false);
-        helpView.setAlpha(0.8f);
+        setDim(helpView, 0.8f);
         page.addView(helpView);
         EditText search = searchField("Search apps");
         page.addView(search, fieldMargin());
@@ -2922,7 +2981,7 @@ public class MainActivity extends Activity {
         TextView summary = text("Loading…", 15, true);
         page.addView(summary);
         TextView help = text("Tap an app to stop it. System processes can't be stopped.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         ListView listView = new ListView(this);
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -2952,8 +3011,8 @@ public class MainActivity extends Activity {
             ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
             ((ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mem);
             main.post(() -> {
-                summary.setText(Tr.t("Memory: " + Formatter.formatShortFileSize(this, mem.totalMem - mem.availMem)
-                        + " used of " + Formatter.formatShortFileSize(this, mem.totalMem)));
+                summary.setText(Tr.t("Memory: ") + Formatter.formatShortFileSize(this, mem.totalMem - mem.availMem)
+                        + Tr.t(" used of ") + Formatter.formatShortFileSize(this, mem.totalMem));
                 procs.clear();
                 procs.addAll(found);
                 apply.run();
@@ -3034,7 +3093,7 @@ public class MainActivity extends Activity {
                         continue;
                     }
                     TextView key = text(item[0], 13, false);
-                    key.setAlpha(0.7f);
+                    setDim(key, 0.7f);
                     key.setPadding(0, dp(8), 0, 0);
                     page.addView(key);
                     TextView value = text(item[1], 16, false);
@@ -3430,7 +3489,7 @@ public class MainActivity extends Activity {
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Files found in every recycle bin and trash, with thumbnails. "
                 + "Tap one to restore it to Download/TinyKit/Recovered. Largest first.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         TextView loading = text("Searching…", 14, false);
         page.addView(loading);
@@ -3581,7 +3640,7 @@ public class MainActivity extends Activity {
                 name.setMaxLines(1);
                 name.setEllipsize(TextUtils.TruncateAt.MIDDLE);
                 sub = text("", 12, false);
-                sub.setAlpha(0.65f);
+                setDim(sub, 0.65f);
                 texts.addView(name);
                 texts.addView(sub);
                 line.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
@@ -4176,7 +4235,7 @@ public class MainActivity extends Activity {
     /** Adds a dim key line and a selectable value line, returning the value view so it can update. */
     private TextView addKv(LinearLayout page, String key, String value) {
         TextView k = text(key, 13, false);
-        k.setAlpha(0.7f);
+        setDim(k, 0.7f);
         k.setPadding(0, dp(8), 0, 0);
         page.addView(k);
         TextView v = text(value, 16, false);
@@ -4483,7 +4542,7 @@ public class MainActivity extends Activity {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView helpView = text(help, 13, false);
-        helpView.setAlpha(0.7f);
+        setDim(helpView, 0.7f);
         page.addView(helpView);
         TextView loading = text("Loading…", 14, false);
         page.addView(loading);
@@ -4574,7 +4633,7 @@ public class MainActivity extends Activity {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView helpView = text(help, 14, false);
-        helpView.setAlpha(0.8f);
+        setDim(helpView, 0.8f);
         page.addView(helpView);
         EditText search = searchField("Search apps");
         page.addView(search, fieldMargin());
@@ -4653,7 +4712,7 @@ public class MainActivity extends Activity {
         LinearLayout htext = vertical();
         htext.addView(text(label(pkg), 20, true));
         TextView sub = text(pkg, 12, false);
-        sub.setAlpha(0.6f);
+        setDim(sub, 0.6f);
         htext.addView(sub);
         head.addView(htext);
         list.addView(head);
@@ -4742,9 +4801,9 @@ public class MainActivity extends Activity {
     private void stylePill(TextView pill, String key, boolean selected) {
         GradientDrawable shape = new GradientDrawable();
         shape.setCornerRadius(dp(8));
-        shape.setColor(selected ? stateColor(key) : 0xFF1C1C1C);
+        shape.setColor(selected ? stateColor(key) : (lightTheme ? 0xFFE0E0E0 : 0xFF1C1C1C));
         pill.setBackground(shape);
-        pill.setTextColor(selected ? 0xFF000000 : 0xFFBDBDBD);
+        pill.setTextColor(selected ? 0xFF000000 : (lightTheme ? 0xFF000000 : 0xFFBDBDBD));
     }
 
     private int stateColor(String state) {
@@ -5174,7 +5233,7 @@ public class MainActivity extends Activity {
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Tap an app to open it, freeze it, set it to freeze by itself, or add a launcher "
                 + "shortcut. A frozen app is off and keeps its data.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         EditText search = searchField("Search apps");
         page.addView(search, fieldMargin());
@@ -5418,7 +5477,7 @@ public class MainActivity extends Activity {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Longest-unused apps first. Tap one to open its settings.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         TextView loading = text("Reading usage…", 14, false);
         page.addView(loading);
@@ -5574,7 +5633,7 @@ public class MainActivity extends Activity {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Most recent first, from the system's app-ops record.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         TextView loading = text("Reading…", 14, false);
         page.addView(loading);
@@ -5660,7 +5719,7 @@ public class MainActivity extends Activity {
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Let apps play audio together, or mute an app. These are app-op changes; "
                 + "nothing runs in the background.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         EditText search = searchField("Search apps");
         page.addView(search, fieldMargin());
@@ -5870,7 +5929,7 @@ public class MainActivity extends Activity {
             row.setEnabled(false);
             view.setEnabled(false);
             shizukuRows.remove(row);
-            row.setAlpha(0.4f);
+            row.setAlpha(lightTheme ? 0.85f : 0.4f);
             sub.setText(Tr.t(summary + "  ·  Not on this phone"));
         } else {
             view.setChecked(state);
@@ -5940,7 +5999,7 @@ public class MainActivity extends Activity {
         LinearLayout page = vertical();
         page.setPadding(dp(16), dp(12), dp(16), 0);
         TextView help = text("Tap a network to see its password and a QR code to share it.", 13, false);
-        help.setAlpha(0.7f);
+        setDim(help, 0.7f);
         page.addView(help);
         EditText search = searchField("Search networks");
         page.addView(search, fieldMargin());
@@ -6365,7 +6424,7 @@ public class MainActivity extends Activity {
             View dot = new View(this);
             GradientDrawable shape = new GradientDrawable();
             shape.setShape(GradientDrawable.OVAL);
-            shape.setColor(p == page ? 0xFFFFFFFF : 0x55FFFFFF);
+            shape.setColor(p == page ? (lightTheme ? 0xFF000000 : 0xFFFFFFFF) : (lightTheme ? 0x40000000 : 0x55FFFFFF));
             dot.setBackground(shape);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(7), dp(7));
             params.setMargins(dp(4), 0, dp(4), 0);
@@ -6425,9 +6484,9 @@ public class MainActivity extends Activity {
         FrameLayout circle = new FrameLayout(this);
         GradientDrawable shape = new GradientDrawable();
         shape.setShape(GradientDrawable.OVAL);
-        shape.setColor(picked ? attrColor(android.R.attr.colorAccent) : 0xFF262626);
+        shape.setColor(picked ? attrColor(android.R.attr.colorAccent) : (lightTheme ? 0xFFE0E0E4 : 0xFF262626));
         circle.setBackground(shape);
-        circle.addView(tileIcon(tile), new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+        circle.addView(tileIcon(tile, picked), new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
         cell.addView(circle, new LinearLayout.LayoutParams(dp(52), dp(52)));
         TextView label = text(tile.title, 12, false);
         label.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -6446,12 +6505,12 @@ public class MainActivity extends Activity {
         cell.setPadding(dp(16), 0, dp(12), 0);
         GradientDrawable shape = new GradientDrawable();
         shape.setCornerRadius(dp(24));
-        shape.setColor(picked ? attrColor(android.R.attr.colorAccent) : 0xFF262626);
+        shape.setColor(picked ? attrColor(android.R.attr.colorAccent) : (lightTheme ? 0xFFE0E0E4 : 0xFF262626));
         cell.setBackground(shape);
         cell.setForeground(getDrawable(attrResource(android.R.attr.selectableItemBackground)));
         LinearLayout.LayoutParams iconSize = new LinearLayout.LayoutParams(dp(20), dp(20));
         iconSize.setMargins(0, 0, dp(12), 0);
-        cell.addView(tileIcon(tile), iconSize);
+        cell.addView(tileIcon(tile, picked), iconSize);
         LinearLayout texts = vertical();
         TextView title = text(tile.title, 14, false);
         title.setSingleLine(true);
@@ -6460,22 +6519,23 @@ public class MainActivity extends Activity {
         TextView sub = text(tile.sub, 12, false);
         sub.setSingleLine(true);
         sub.setEllipsize(TextUtils.TruncateAt.END);
-        sub.setAlpha(0.6f);
+        setDim(sub, 0.6f);
         texts.addView(sub);
         cell.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
         return cell;
     }
 
     /** The tile's icon, or its first letter when there's no icon to show. */
-    private View tileIcon(QsTile tile) {
+    private View tileIcon(QsTile tile, boolean picked) {
         if (tile.icon == null) {
             TextView letter = text(tile.title.isEmpty() ? "?" : tile.title.substring(0, 1), 16, true);
             letter.setGravity(Gravity.CENTER);
+            if (picked) letter.setTextColor(0xFFFFFFFF);
             return letter;
         }
         Drawable d = tile.icon.getConstantState() != null
                 ? tile.icon.getConstantState().newDrawable(getResources()).mutate() : tile.icon.mutate();
-        if (tile.tint) d.setTint(0xFFFFFFFF);
+        if (tile.tint) d.setTint(picked ? 0xFFFFFFFF : (lightTheme ? 0xFF000000 : 0xFFFFFFFF));
         ImageView view = new ImageView(this);
         view.setImageDrawable(d);
         return view;
@@ -6485,7 +6545,7 @@ public class MainActivity extends Activity {
         TextView view = text(label, 22, false);
         view.setGravity(Gravity.CENTER);
         view.setEnabled(enabled);
-        view.setAlpha(enabled ? 0.9f : 0.2f);
+        view.setAlpha(enabled ? (lightTheme ? 1f : 0.9f) : (lightTheme ? 0.6f : 0.2f));
         view.setBackgroundResource(attrResource(android.R.attr.selectableItemBackgroundBorderless));
         if (enabled) view.setOnClickListener(v -> onClick.run());
         view.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(40)));
@@ -6703,7 +6763,7 @@ public class MainActivity extends Activity {
 
     private TextView note(String message) {
         TextView view = text(message, 13, false);
-        view.setAlpha(0.6f);
+        setDim(view, 0.6f);
         view.setPadding(dp(16), dp(12), dp(16), dp(4));
         return view;
     }
@@ -6732,25 +6792,27 @@ public class MainActivity extends Activity {
         final int[] sel = {0};
         TextView chip = text("", 13, true);
         chip.setGravity(Gravity.CENTER);
-        chip.setPadding(dp(16), dp(8), dp(16), dp(8));
+        chip.setSingleLine(true);
+        chip.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        chip.setPadding(dp(12), dp(6), dp(12), dp(6));
         chip.setTextColor(attrColor(android.R.attr.colorAccent));
         GradientDrawable shape = new GradientDrawable();
         shape.setCornerRadius(dp(22));
-        shape.setColor(0xFF161616);
-        shape.setStroke(dp(1), 0x40FFFFFF);
+        shape.setColor(lightTheme ? 0xFFFFFFFF : 0xFF161616);
+        shape.setStroke(dp(1), lightTheme ? 0x26000000 : 0x40FFFFFF);
         chip.setBackground(shape);
         LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-2, -2);
         margin.setMargins(0, 0, dp(8), 0);
         chip.setLayoutParams(margin);
-        Runnable render = () -> chip.setText(Tr.t(icon + title + ": " + options[sel[0]]));
+        Runnable render = () -> chip.setText((icon.isEmpty() ? "" : icon) + Tr.t(title) + ": " + Tr.t(options[sel[0]]));
         chip.setOnClickListener(v -> {
             String[] items = new String[options.length];
             for (int i = 0; i < options.length; i++) {
-                items[i] = (i == sel[0] ? "●  " : "○  ") + options[i];
+                items[i] = (i == sel[0] ? "●  " : "○  ") + Tr.t(options[i]);
             }
             new AlertDialog.Builder(this)
                     .setTitle(Tr.t(title))
-                    .setItems(Tr.all(items), (d, which) -> {
+                    .setItems(items, (d, which) -> {
                         sel[0] = which;
                         render.run();
                         onSelect.run(which);
@@ -6831,7 +6893,7 @@ public class MainActivity extends Activity {
         LinearLayout texts = vertical();
         texts.addView(text(title, 16, false));
         TextView sub = text(summary, 13, false);
-        sub.setAlpha(0.7f);
+        setDim(sub, 0.7f);
         texts.addView(sub);
         row.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
         if (end != null) row.addView(end);
@@ -6854,7 +6916,7 @@ public class MainActivity extends Activity {
 
     private TextView arrow() {
         TextView view = text("›", 24, false);
-        view.setAlpha(0.5f);
+        setDim(view, 0.5f);
         view.setPadding(dp(12), 0, 0, 0);
         return view;
     }
@@ -6876,7 +6938,7 @@ public class MainActivity extends Activity {
             ip.setMargins(0, 0, dp(14), 0);
             view.addView(icon, ip);
             LinearLayout texts = vertical();
-            second.setAlpha(0.7f);
+            setDim(second, 0.7f);
             texts.addView(first);
             texts.addView(second);
             texts.addView(third);
@@ -6980,7 +7042,14 @@ public class MainActivity extends Activity {
         view.setText(Tr.t(value));
         view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         if (bold) view.setTypeface(Typeface.DEFAULT_BOLD);
+        if (lightTheme) view.setTextColor(0xFF000000);
         return view;
+    }
+
+    private void setDim(TextView view, float darkAlpha) {
+        if (view == null) return;
+        view.setAlpha(lightTheme ? 1f : darkAlpha);
+        if (lightTheme) view.setTextColor(0xFF111111);
     }
 
     private Button button(String label, View.OnClickListener listener) {
@@ -6989,9 +7058,10 @@ public class MainActivity extends Activity {
         button.setAllCaps(false);
         button.setOnClickListener(listener);
         button.setStateListAnimator(null); // no raised shadow: a flat pill like the rest of the app
-        button.setBackground(pillBackground(0xFF2C2C30));
+        button.setBackground(pillBackground(lightTheme ? 0xFFE0E0E4 : 0xFF2C2C30));
         button.setTextColor(new android.content.res.ColorStateList(
-                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{0x66FFFFFF, 0xFFFFFFFF}));
+                new int[][]{{-android.R.attr.state_enabled}, {}}, 
+                new int[]{lightTheme ? 0x8A000000 : 0x66FFFFFF, lightTheme ? 0xFF000000 : 0xFFFFFFFF}));
         return button;
     }
 
@@ -6999,7 +7069,8 @@ public class MainActivity extends Activity {
     private Button primary(Button button) {
         button.setBackground(pillBackground(attrColor(android.R.attr.colorAccent)));
         button.setTextColor(new android.content.res.ColorStateList(
-                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{0x66FFFFFF, 0xFF0D0D0D}));
+                new int[][]{{-android.R.attr.state_enabled}, {}}, 
+                new int[]{lightTheme ? 0x8A000000 : 0x66FFFFFF, lightTheme ? 0xFFFFFFFF : 0xFF0D0D0D}));
         return button;
     }
 
@@ -7013,10 +7084,11 @@ public class MainActivity extends Activity {
     /** A fully rounded button background that ripples when pressed and goes dark when disabled. */
     private android.graphics.drawable.Drawable pillBackground(int color) {
         android.graphics.drawable.StateListDrawable states = new android.graphics.drawable.StateListDrawable();
-        states.addState(new int[]{-android.R.attr.state_enabled}, roundRect(0xFF1E1E22, 24));
+        states.addState(new int[]{-android.R.attr.state_enabled}, roundRect(lightTheme ? 0xFFEBEBEF : 0xFF1E1E22, 24));
         states.addState(new int[]{}, roundRect(color, 24));
         return new android.graphics.drawable.RippleDrawable(
-                android.content.res.ColorStateList.valueOf(0x33FFFFFF), states, roundRect(0xFF000000, 24));
+                android.content.res.ColorStateList.valueOf(lightTheme ? 0x20000000 : 0x33FFFFFF),
+                states, roundRect(lightTheme ? 0xFFFFFFFF : 0xFF000000, 24));
     }
 
     /** One line at the top of a tab: dimmed tools need Shizuku. Shown only while it isn't usable. */
@@ -7024,7 +7096,7 @@ public class MainActivity extends Activity {
         TextView note = text("Dimmed tools need Shizuku. Start it on the first tab.", 13, false);
         note.setTextColor(attrColor(android.R.attr.colorAccent));
         note.setPadding(dp(16), dp(12), dp(16), dp(12));
-        note.setBackground(roundRect(0xFF121212, 16));
+        note.setBackground(roundRect(lightTheme ? 0xFFEBEBEF : 0xFF121212, 16));
         note.setVisibility(Shell.ready() ? View.GONE : View.VISIBLE);
         shizukuLabels.add(note);
         LinearLayout.LayoutParams margin = new LinearLayout.LayoutParams(-1, -2);

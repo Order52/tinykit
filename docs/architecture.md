@@ -207,8 +207,7 @@ saves a shell call each time.
   five bottom tabs reset the stack. There are no fragments.
 - **Lists** use one generic `Adapter<T>` with a `Binder<T>` lambda, and app icons are loaded
   lazily.
-- **Theme**: `android:Theme.Material` with a pure black background (`#000000`), accent `#8C9EFF`,
-  and green/blue/red for Real/Fake/Off.
+- **Theme**: Pure black (ndroid:Theme.Material, #000000) with accent #8C9EFF by default, or an optional soft light theme (ndroid:Theme.Material.Light, #F4F4F6) with accent #2962FF, and green/blue/red for Real/Fake/Off.
 
 ## Threading
 

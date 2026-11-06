@@ -10,4 +10,20 @@
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#0D0D0D</item>
     </style>
+
+    <!-- Light theme: soft grayish tone, high readability and comfortable contrast. -->
+    <style name="AppTheme_Light" parent="android:Theme.Material.Light">
+        <item name="android:colorPrimary">#F4F4F6</item>
+        <item name="android:colorPrimaryDark">#E5E5EA</item>
+        <item name="android:colorAccent">#1A56DB</item>
+        <item name="android:windowBackground">#F4F4F6</item>
+        <item name="android:colorBackground">#F4F4F6</item>
+        <item name="android:statusBarColor">#F4F4F6</item>
+        <item name="android:navigationBarColor">#EBEBEF</item>
+        <item name="android:textColorPrimary">#000000</item>
+        <item name="android:textColorSecondary">#111111</item>
+        <item name="android:textColorTertiary">#222222</item>
+        <item name="android:textColor">#000000</item>
+        <item name="android:editTextColor">#000000</item>
+    </style>
 </resources>
