@@ -59,6 +59,7 @@ available in English, Spanish and Russian.
 - **Extra dim safety.** Its strength is capped, and unless you press **Keep** it turns itself off, so a black screen
   fixes itself.
 - **TinyFolder** (Secure folder or plain work profile) only shows its launcher icon when there is a real work profile.
+- **Set a permission for every app in one tap.** In **Permissions by type**, pick a permission and set Real, Fake or Off for all the apps listed, or only the ones a search shows.
 - **Start Shizuku over adb on the network** now also tries port 50000.
 - **Send feedback** from the Info tab opens a ready-made GitHub issue.
 - **Russian translation** and a high-contrast Light theme.
@@ -172,7 +173,7 @@ And **Work profile**, **Deep sleep** and **Audio mixer**.
 
 | Tool | What it does |
 | --- | --- |
-| **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**, one at a time or all at once. **Permissions by type** shows which apps have a permission. [See above](#-fake-permissions). |
+| **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**, one at a time or all at once. **Permissions by type** shows which apps have a permission and sets Real, Fake or Off for every app in the list (or just the ones a search leaves) in one tap. [See above](#-fake-permissions). |
 | **Default apps** | Choose the launcher, browser, phone, SMS and assistant apps, and see which app opens each file type. |
 | **Work profile** | Makes a work profile in one tap (no setup screens, no extra app inside it) and manages it like Shelter, Island and Samsung's Secure Folder together: separate copies of apps, freeze one or all, **auto-freeze** chosen apps, a **PIN of its own** that locks it, **auto-lock** when the screen is off or after a restart, **pause** (switch or Quick Settings tile), **launcher shortcuts** that unfreeze and open an app, install APKs straight into it. |
 | **Deep sleep** | Makes the phone doze sooner after the screen goes off and wake up less often, with Comatose's Light, Moderate, High and Extreme profiles. Writes where your Android version reads them, checks Android is really using it, and can doze right now. A Quick Settings tile cycles the profiles. Phones that refuse some of the timings (Android 16, ColorOS) still get the ones they accept, and TinyKit says which it couldn't set. |

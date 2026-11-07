@@ -1174,6 +1174,18 @@ of	из
 apps have it	приложений с доступом
 Allowed	Разрешено
 Not allowed	Не разрешено
+Set all apps	Для всех приложений
+Set the apps shown	Для показанных приложений
+Set every app shown?	Применить ко всем показанным приложениям?
+The apps get this permission and your real data.	Приложения получат это разрешение и ваши настоящие данные.
+The apps see it as granted but get nothing.	Приложения увидят его как выданное, но ничего не получат.
+The apps are denied this permission.	Приложениям это разрешение будет отказано.
+Real puts each one back.	«Настоящие» вернёт каждому всё как было.
+Apply	Применить
+allowed	разрешено
+already	уже в режиме
+skipped	пропущено
+more	ещё
 All permissions	Все разрешения
 Ask before stopping	Спрашивать перед остановкой
 Stop selected	Остановить выбранные

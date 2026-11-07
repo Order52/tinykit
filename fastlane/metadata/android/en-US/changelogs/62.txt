@@ -1,0 +1,1 @@
+• Permissions by type: set Real, Fake or Off for every app in a permission's list in one tap (or only the apps a search leaves). It asks first, shows what it did, and skips, with the reason, anything it must not touch (camera app, system apps, shared permissions). Each app also shows its current choice.

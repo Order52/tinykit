@@ -261,7 +261,15 @@ as granted while it gets nothing. This is TinyKit's flagship feature, with its o
 
 On an app's page, **All permissions** sets Real, Fake or Off for every permission shown in one tap.
 **Permissions by type** goes the other way: pick a permission (location, camera, microphone, ...)
-and see every app that asks for it, the ones that have it first, with a tap to open that app.
+and see every app that asks for it, the ones that have it first, with a tap to open that app. Each app shows its
+current choice (**Real**, **Fake** or **Off**).
+
+Above that list, **Set all apps** applies Real, Fake or Off to **every app shown at once**: ten apps with the microphone
+permission, one tap. Type in the search box first and it says **Set the apps shown** and changes only those. It asks
+before it does anything, shows what it did, and the button lights up when every app shown already has that choice.
+The same safety checks as for a single app apply, so TinyKit won't make your camera app, a system app or an app that
+shares its permissions with another one Fake or Off, and lists each app it skipped with the reason. **Real** puts them
+all back.
 
 <br clear="right">
 

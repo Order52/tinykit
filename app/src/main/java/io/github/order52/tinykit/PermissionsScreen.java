@@ -197,7 +197,7 @@ final class PermissionsScreen {
         listView.setOnItemClickListener((parent, view, position, id) -> {
             String[] op = adapter.getItem(position);
             List<MainActivity.App> apps = byPermission.get(op[2]);
-            if (apps != null) openPermissionApps(op[1], apps);
+            if (apps != null) openPermissionApps(op, apps);
         });
         tk.worker.execute(() -> {
             PackageManager pm = tk.getPackageManager();
@@ -224,37 +224,145 @@ final class PermissionsScreen {
         });
     }
 
-    /** The apps that ask for one permission, the ones that have it first. A tap opens that app's permissions. */
-    void openPermissionApps(String title, List<MainActivity.App> apps) {
+    /**
+     * The apps that ask for one permission, the ones that have it first. A tap opens that app's permissions. The bar above
+     * the list sets Real, Fake or Off for every app shown (what the search leaves in the list), after asking.
+     */
+    void openPermissionApps(String[] op, List<MainActivity.App> apps) {
+        final String title = op[1];
         LinearLayout page = tk.vertical();
         page.setPadding(tk.dp(16), tk.dp(12), tk.dp(16), 0);
         EditText search = tk.searchField("Search apps");
         page.addView(search, tk.fieldMargin());
+        TextView count = tk.text("", 13, false);
+        tk.setDim(count, 0.8f);
+        page.addView(count);
+
+        LinearLayout bulk = tk.vertical();
+        bulk.setPadding(0, tk.dp(8), 0, tk.dp(8));
+        TextView bulkTitle = tk.text("", 15, true);
+        bulk.addView(bulkTitle);
+        LinearLayout seg = new LinearLayout(tk);
+        seg.setPadding(0, tk.dp(8), 0, 0);
+        String[] keys = {"Real", "Fake", "Off"};
+        TextView[] pills = new TextView[3];
+        for (int i = 0; i < 3; i++) {
+            TextView pill = tk.text(keys[i], 13, true);
+            pill.setGravity(Gravity.CENTER);
+            pill.setPadding(0, tk.dp(9), 0, tk.dp(9));
+            stylePill(pill, keys[i], false);
+            pills[i] = pill;
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+            lp.setMargins(i == 0 ? 0 : tk.dp(4), 0, i == 2 ? 0 : tk.dp(4), 0);
+            seg.addView(pill, lp);
+        }
+        bulk.addView(seg);
+        page.addView(bulk);
+
         ListView listView = new ListView(tk);
         listView.setFastScrollEnabled(true);
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
         tk.push(title, page);
+
+        // What TinyKit knows about each app's choice (saved when it was made); the rest show allowed or not.
+        final Map<String, String> known = new HashMap<>();
+        for (String state : new String[]{"Real", "Fake", "Off"}) {
+            Set<String> saved = FakePolicy.entries(tk.prefs, state);
+            for (MainActivity.App a : apps) {
+                if (saved.contains(FakePolicy.key(a.pkg, op[0], op[2])) && a.checked == !state.equals("Off")) known.put(a.pkg, state);
+            }
+        }
         MainActivity.Adapter<MainActivity.App> adapter = tk.new Adapter<>(false, (a, row) -> {
+            String state = known.get(a.pkg);
             row.first.setText(a.label);
             row.second.setText(a.pkg);
-            row.third.setText(Tr.t(a.checked ? "Allowed" : "Not allowed"));
-            row.third.setTextColor(a.checked ? stateColor("Real") : stateColor("Off"));
+            row.third.setText(Tr.t(state != null ? state : a.checked ? "Allowed" : "Not allowed"));
+            row.third.setTextColor(stateColor(state != null ? state : a.checked ? "Real" : "Off"));
             tk.showIcon(row, a.pkg);
         });
         listView.setAdapter(adapter);
+        final List<MainActivity.App> shown = new ArrayList<>();
         Runnable filter = () -> {
             String q = search.getText().toString().toLowerCase(Locale.ROOT);
-            List<MainActivity.App> shown = new ArrayList<>();
+            shown.clear();
             for (MainActivity.App a : apps) {
                 if (a.label.toLowerCase(Locale.ROOT).contains(q) || a.pkg.toLowerCase(Locale.ROOT).contains(q)) shown.add(a);
             }
             Collections.sort(shown, (x, y) -> x.checked != y.checked ? (x.checked ? -1 : 1)
                     : x.label.compareToIgnoreCase(y.label));
-            adapter.set(shown);
+            adapter.set(new ArrayList<>(shown));
+            int has = 0;
+            for (MainActivity.App a : shown) if (a.checked) has++;
+            count.setText(shown.size() + " " + Tr.t(shown.size() == 1 ? "app" : "apps") + " · " + has + " " + Tr.t("allowed"));
+            bulkTitle.setText(Tr.t(shown.size() == apps.size() ? "Set all apps" : "Set the apps shown") + " (" + shown.size() + ")");
+            for (int i = 0; i < 3; i++) {
+                pills[i].setAlpha(shown.isEmpty() ? 0.4f : 1f);
+                boolean all = !shown.isEmpty();
+                for (MainActivity.App a : shown) if (!keys[i].equals(known.get(a.pkg))) all = false;
+                stylePill(pills[i], keys[i], all); // lit when every app shown is already set to it
+            }
         };
         search.addTextChangedListener(tk.watcher(filter));
+        for (int i = 0; i < 3; i++) {
+            final String target = keys[i];
+            pills[i].setOnClickListener(v -> confirmAll(op, new ArrayList<>(shown), target, known, filter));
+        }
         listView.setOnItemClickListener((parent, view, position, id) -> openAppPage(adapter.getItem(position).pkg));
         filter.run();
+    }
+
+    /** Asks, then sets {@code target} for {@code op} on every app in {@code targets}, and says what happened. */
+    private void confirmAll(String[] op, List<MainActivity.App> targets, String target, Map<String, String> known,
+                            Runnable refresh) {
+        if (targets.isEmpty()) return;
+        if (!Shell.ready()) {
+            tk.toast(Tr.t("Start Shizuku and allow TinyKit first."));
+            return;
+        }
+        String about = target.equals("Real") ? "The apps get this permission and your real data."
+                : target.equals("Fake") ? "The apps see it as granted but get nothing."
+                : "The apps are denied this permission.";
+        new AlertDialog.Builder(tk).setTitle(Tr.t("Set every app shown?"))
+                .setMessage(Tr.t(op[1]) + " → " + Tr.t(target) + " · " + targets.size() + " "
+                        + Tr.t(targets.size() == 1 ? "app" : "apps") + "\n\n" + Tr.t(about) + "\n" + Tr.t("Real puts each one back."))
+                .setNegativeButton(Tr.t("Cancel"), null)
+                .setPositiveButton(Tr.t("Apply"), (d, w) -> tk.withProgress(op[1], () -> setAll(op, targets, target, known, refresh)))
+                .show();
+    }
+
+    /** The work of {@link #confirmAll}, off the main thread. Returns the message to show. */
+    private String setAll(String[] op, List<MainActivity.App> targets, String target, Map<String, String> known,
+                          Runnable refresh) {
+        int done = 0, same = 0;
+        List<String> skipped = new ArrayList<>();
+        for (MainActivity.App a : targets) {
+            if (target.equals(known.get(a.pkg))) {
+                same++;
+                continue;
+            }
+            String err = setOp(a.pkg, op, true, target);
+            if (err != null) {
+                skipped.add(a.label + ": " + Tr.t(err));
+                continue;
+            }
+            FakePolicy.choose(tk.prefs, a.pkg, op[0], op[2], target);
+            String now = readState(a.pkg, op, true);
+            a.checked = !now.equals("Off");
+            known.put(a.pkg, now);
+            done++;
+        }
+        tk.main.post(refresh);
+        StringBuilder out = new StringBuilder();
+        out.append(Tr.t(op[1])).append(" → ").append(Tr.t(target)).append(" · ").append(done).append(' ')
+                .append(Tr.t(done == 1 ? "app" : "apps"));
+        if (same > 0) out.append('\n').append(same).append(' ').append(Tr.t(same == 1 ? "app" : "apps")).append(' ')
+                .append(Tr.t("already")).append(' ').append(Tr.t(target));
+        if (!skipped.isEmpty()) {
+            out.append("\n\n").append(skipped.size()).append(' ').append(Tr.t("skipped")).append(":");
+            for (int i = 0; i < Math.min(5, skipped.size()); i++) out.append("\n• ").append(skipped.get(i));
+            if (skipped.size() > 5) out.append("\n… ").append(skipped.size() - 5).append(' ').append(Tr.t("more"));
+        }
+        return out.toString();
     }
 
     void openAppList(String title, String help, MainActivity.OnText onPick) {

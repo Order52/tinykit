@@ -1171,6 +1171,18 @@ of	de
 apps have it	apps lo tienen
 Allowed	Permitido
 Not allowed	No permitido
+Set all apps	Todas las apps
+Set the apps shown	Las apps mostradas
+Set every app shown?	¿Aplicar a todas las apps mostradas?
+The apps get this permission and your real data.	Las apps reciben este permiso y tus datos reales.
+The apps see it as granted but get nothing.	Las apps lo ven como concedido pero no reciben nada.
+The apps are denied this permission.	A las apps se les niega este permiso.
+Real puts each one back.	Real devuelve cada una a su estado normal.
+Apply	Aplicar
+allowed	permitidas
+already	ya en
+skipped	omitidas
+more	más
 All permissions	Todos los permisos
 Ask before stopping	Preguntar antes de detener
 Stop selected	Detener seleccionadas
