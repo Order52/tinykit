@@ -1,0 +1,3 @@
+• Banking mode is now a Quick Settings tile: tap to turn Developer options, USB debugging and Wireless debugging off for banking apps, tap again to put back exactly what was on.
+• Banking mode shows the real state of the three settings and turns them off again if something turns them back on (opening the Privacy tab, a restart, an update).
+• If Banking mode needs Shizuku once, it now says so with a Start Shizuku button instead of a toast.

@@ -1,6 +1,6 @@
 # Quick Settings tiles
 
-TinyKit adds 19 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
+TinyKit adds 20 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
 nothing when you aren't using them: Android only binds a tile while the panel is open, and none
 of them keeps a service running.
 
@@ -21,6 +21,7 @@ of them keeps a service running.
 | <img src="images/tiles/caffeine.svg" width="40" alt=""> | **Caffeine** | Keeps the screen on: 5 min → 15 min → 30 min → never → off | The current timeout | No |
 | <img src="images/tiles/dev.svg" width="40" alt=""> | **Developer options** | Turns developer options on or off | On / off | No |
 | <img src="images/tiles/usb.svg" width="40" alt=""> | **USB debugging** | Turns USB debugging on or off | On / off | No |
+| <img src="images/tiles/banking.svg" width="40" alt=""> | **Banking mode** | Turns Developer options, USB debugging and Wireless debugging off (and stops Shizuku when TinyKit can start it again); tap again to put back exactly what was on | On / Off / Not fully off | Once³ |
 | <img src="images/tiles/hidedev.svg" width="40" alt=""> | **Hide dev options** | Makes apps see developer options as off | On / off | No |
 | <img src="images/tiles/sensors.svg" width="40" alt=""> | **Sensors off** | Blocks every sensor (motion, mic, camera) | Blocked | Yes |
 | <img src="images/tiles/grayscale.svg" width="40" alt=""> | **Grayscale** | Turns the whole screen grey | On / off | No |
@@ -40,6 +41,9 @@ of them keeps a service running.
 [Getting started](getting-started.md#starting-shizuku-from-tinykit).
 
 ² Free RAM works without Shizuku on Android 13 and older, closing cached apps only.
+
+³ Turning it on needs Shizuku once, to give TinyKit access to these settings. After that it works without Shizuku, and turning it off
+never needs it. See [Banking mode](features.md#banking-mode).
 
 Tiles marked **No** work with Shizuku stopped, because TinyKit granted itself
 `WRITE_SECURE_SETTINGS` the first time Shizuku was available. If that hasn't happened yet, they

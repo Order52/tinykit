@@ -120,6 +120,27 @@ public abstract class Tiles extends TileService {
         }
     }
 
+    /**
+     * Banking mode from the quick panel: Developer options, USB debugging and Wireless debugging off for
+     * banking apps (and Shizuku stopped when TinyKit can start it again); tapping again puts back what
+     * was on. The same code as the switch in the Privacy tab, see {@link Banking}.
+     */
+    public static final class BankingMode extends Tiles {
+        @Override
+        Object[] state() {
+            if (!Banking.on(prefs())) return state(false, "Off");
+            Banking.reapply(this, prefs());
+            return state(true, Banking.stillOn(this).isEmpty() ? "On" : "Not fully off");
+        }
+
+        @Override
+        void tap(boolean active) {
+            if (!active && !Tweak.canWrite(this)) Shell.await();
+            String error = active ? Banking.disable(this, prefs()) : Banking.enable(this, prefs());
+            if (error != null) toast(error);
+        }
+    }
+
     public static final class HideDev extends Toggle {
         @Override
         Tweak tweak() {

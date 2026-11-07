@@ -1372,3 +1372,5 @@ On, but still on: 	Activado, pero siguen activos:
 Wireless debugging	Depuración inalámbrica
 Banking mode needs Shizuku once	El modo bancario necesita Shizuku una vez
 TinyKit has to be allowed to change these settings, and only Shizuku can allow it. Start Shizuku, then turn Banking mode on again. After that it works without Shizuku.	TinyKit debe tener permiso para cambiar estos ajustes, y solo Shizuku puede dárselo. Inicia Shizuku y activa de nuevo el modo bancario. Después funciona sin Shizuku.
+Not fully off	No del todo desactivado
+Banking apps work: developer options and debugging off, back as they were when you turn it off.	Las apps bancarias funcionan: opciones de desarrollador y depuración desactivadas; vuelven como estaban al desactivarlo.

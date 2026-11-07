@@ -4322,6 +4322,7 @@ public class MainActivity extends Activity {
                 {Tiles.Timeout.class, "Screen timeout", "Cycle 30 s to never.", R.drawable.ic_tile_timeout},
                 {Tiles.Grayscale.class, "Grayscale", "Grey out the whole screen.", R.drawable.ic_tile_grayscale},
                 {Tiles.AdBlock.class, "Ad-block DNS", "Block ads with Private DNS.", R.drawable.ic_tile_adblock},
+                {Tiles.BankingMode.class, "Banking mode", "Banking apps work: developer options and debugging off, back as they were when you turn it off.", R.drawable.ic_tile_banking},
                 {Tiles.HideDev.class, "Hide dev options", "Hide developer options from apps.", R.drawable.ic_tile_hidedev},
                 {Tiles.ExtraDim.class, "Extra dim", "Dim below the usual minimum.", R.drawable.ic_tile_dim},
                 {Tiles.ClearCaches.class, "Clear caches", "Free every app's cached space.", R.drawable.ic_tile_cache},

@@ -15,6 +15,7 @@
     <string name="tile_grayscale">Оттенки серого</string>
     <string name="tile_ad_block_dns">DNS с блокировкой рекламы</string>
     <string name="tile_hide_dev_options">Скрыть меню разработчика</string>
+    <string name="tile_banking_mode">Банковский режим</string>
     <string name="tile_extra_dim">Экстра-затемнение</string>
     <string name="tile_clear_caches">Очистить кэш</string>
     <string name="tile_mic_camera_off">Микрофон и камера выкл</string>

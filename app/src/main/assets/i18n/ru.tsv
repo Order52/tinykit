@@ -1385,3 +1385,5 @@ On, but still on: 	Включено, но всё ещё включены:
 Wireless debugging	Отладка по Wi-Fi
 Banking mode needs Shizuku once	Банковскому режиму один раз нужен Shizuku
 TinyKit has to be allowed to change these settings, and only Shizuku can allow it. Start Shizuku, then turn Banking mode on again. After that it works without Shizuku.	TinyKit нужно разрешение менять эти настройки, и дать его может только Shizuku. Запустите Shizuku и снова включите банковский режим. Потом он работает без Shizuku.
+Not fully off	Выключено не полностью
+Banking apps work: developer options and debugging off, back as they were when you turn it off.	Банковские приложения работают: параметры разработчика и отладка выключены, при выключении всё возвращается как было.

@@ -15,6 +15,7 @@
     <string name="tile_grayscale">Grayscale</string>
     <string name="tile_ad_block_dns">Ad-block DNS</string>
     <string name="tile_hide_dev_options">Hide dev options</string>
+    <string name="tile_banking_mode">Banking mode</string>
     <string name="tile_extra_dim">Extra dim</string>
     <string name="tile_clear_caches">Clear caches</string>
     <string name="tile_mic_camera_off">Mic &amp; camera off</string>

@@ -131,6 +131,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | <img src="docs/images/tiles/dev.svg" width="44" alt=""><br>Developer options | <img src="docs/images/tiles/usb.svg" width="44" alt=""><br>USB debugging | <img src="docs/images/tiles/hidedev.svg" width="44" alt=""><br>Hide dev options | <img src="docs/images/tiles/sensors.svg" width="44" alt=""><br>Sensors off |
 | <img src="docs/images/tiles/grayscale.svg" width="44" alt=""><br>Grayscale | <img src="docs/images/tiles/dim.svg" width="44" alt=""><br>Extra dim | <img src="docs/images/tiles/adblock.svg" width="44" alt=""><br>Ad-block DNS | <img src="docs/images/tiles/miccam.svg" width="44" alt=""><br>Mic & camera off |
 | <img src="docs/images/tiles/timeout.svg" width="44" alt=""><br>Screen timeout | <img src="docs/images/tiles/cache.svg" width="44" alt=""><br>Clear caches | <img src="docs/images/tiles/ram.svg" width="44" alt=""><br>Free RAM | <img src="docs/images/tiles/kill.svg" width="44" alt=""><br>Close app |
+| <img src="docs/images/tiles/banking.svg" width="44" alt=""><br>Banking mode | | | |
 
 ### Privacy
 
