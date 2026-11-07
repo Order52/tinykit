@@ -1,0 +1,1 @@
+• The TinyFolder launcher icon no longer shows on phones with no work profile. Dual Messenger, Samsung's own Secure Folder and clone profiles used to count as one; now only a real work profile does.

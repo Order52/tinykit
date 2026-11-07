@@ -72,13 +72,37 @@ public final class SecureFolder extends Activity {
         return mode != null ? mode.equals("secure") : p.getBoolean(PREF_ICON, true);
     }
 
-    /** Whether a work profile exists, asked of Android itself (no shell needed), else what was seen last. */
+    /**
+     * Whether there is a work profile. Android's own list of profiles isn't enough: it also holds Dual Messenger, Samsung's
+     * Secure Folder, clone profiles and a private space, none of which TinyKit can use, and none of which should
+     * give a TinyFolder icon. So a profile counts once TinyKit has seen a managed one (what {@code pm list users} says, as the
+     * Work profile page and {@link #confirm} do), and Android still lists a second profile.
+     */
     static boolean exists(Context c, SharedPreferences p) {
+        if (!p.getBoolean(PREF_EXISTS, false)) return false;
         try {
             return ((android.os.UserManager) c.getSystemService(Context.USER_SERVICE)).getUserProfiles().size() > 1;
         } catch (RuntimeException e) {
-            return p.getBoolean(PREF_EXISTS, false);
+            return true;
         }
+    }
+
+    /**
+     * Asks Android which kind of second profile there is (a work profile made before this check or by another app, or one that
+     * went away while a clone profile stayed), so the icon doesn't wait for the Work profile page. Off the main thread; does
+     * nothing without Shizuku, and nothing for a phone with no second profile.
+     */
+    static void confirm(Context c, SharedPreferences p) {
+        if (!Shell.ready()) return;
+        try {
+            if (((android.os.UserManager) c.getSystemService(Context.USER_SERVICE)).getUserProfiles().size() < 2) return;
+        } catch (RuntimeException e) {
+            return;
+        }
+        Integer id = Work.lookup(c);
+        if (id == null) return;
+        p.edit().putBoolean(PREF_EXISTS, id >= 0).apply();
+        sync(c, p);
     }
 
     /** The icon is there only in the Secure folder look, with a work profile, unless switched off. Cheap: call it any time. */

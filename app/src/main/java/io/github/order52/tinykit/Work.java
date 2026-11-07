@@ -160,8 +160,14 @@ final class Work {
     }
 
     static int id(Context c) {
+        Integer id = lookup(c);
+        return id == null ? -1 : id;
+    }
+
+    /** Like {@link #id}, but null when the shell couldn't be asked (so "no profile" isn't guessed). */
+    static Integer lookup(Context c) {
         Shell.Result r = run("pm list users", 10_000);
-        return r.ok() ? parseId(r.out, profiles(c)) : -1;
+        return r.ok() ? parseId(r.out, profiles(c)) : null;
     }
 
     private static Set<Integer> profiles(Context c) {

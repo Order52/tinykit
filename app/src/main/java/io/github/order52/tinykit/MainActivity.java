@@ -297,6 +297,7 @@ public class MainActivity extends Activity {
         Tr.init(this);
         applySystemBarColors();
         SecureFolder.sync(this, prefs); // the Secure folder icon, if that is the look chosen (not only once the page is opened)
+        worker.execute(() -> SecureFolder.confirm(this, prefs));
         // Warm the installed-apps cache (loading labels is the slow part) so every per-app list,
         // picker and log opens instantly. Runs off the worker queue to not delay the first tap.
         thumbs.execute(this::installedApps);
