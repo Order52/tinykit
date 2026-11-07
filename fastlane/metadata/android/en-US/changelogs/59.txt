@@ -1,0 +1,2 @@
+• Extra dim safety: the strength is capped at 30 %, and unless you press Keep in the notification within 20 seconds Extra dim turns itself off (an alarm-clock alarm, also checked after a restart). A black screen now fixes itself. With notifications blocked it ends after 2 minutes.
+• Start Shizuku over adb on the network now tries port 50000 as well as 5555 (adb tcpip 50000 from a computer, once after each restart).

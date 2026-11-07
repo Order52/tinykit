@@ -15,7 +15,7 @@ every reboot.
   the one command TinyKit copies for you into Termux (once) so it can switch on `allow-external-apps`. If Termux's `adb`
   is broken, TinyKit falls back to its own adb client.
 - *With no token*: TinyKit starts Shizuku itself, through root, adb over the network or, on Android 11+,
-  Wireless debugging. On Android 10 and older without root or `adb tcpip 5555` it says so: Android
+  Wireless debugging. On Android 10 and older without root or `adb tcpip 5555` / `adb tcpip 50000` it says so: Android
   allows nothing else. On Android 11+ follow its notification: *Turn on Developer options* or *Turn on Wireless debugging* (it needs Wi-Fi),
   or *Enter the pairing code* the first time. If it says it couldn't talk to Wireless debugging,
   switch Wireless debugging off and on, then tap Start again. If you removed TinyKit under

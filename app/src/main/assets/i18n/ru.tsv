@@ -1222,7 +1222,7 @@ Sound on	Звук включён
 Couldn't change that app's sound.	Не удалось изменить звук этого приложения.
 This Android can only mute an app, not turn it down. Android 13 and newer can do both.	Этот Android может только отключить звук приложения, но не уменьшить его. Android 13 и новее умеют и то и другое.
 Pick apps Android must never kill or delay, like Termux or messengers.	Выберите приложения, которые Android никогда не должен выгружать или задерживать (например, Termux или мессенджеры).
-This Android is older than 11, so it has no Wireless debugging, and this phone has neither root nor adb over the network switched on. On Android 10 and older one of those has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).	Этот Android старше 11, поэтому в нём нет отладки по Wi-Fi, а на телефоне не включены ни root, ни adb по сети. На Android 10 и старше нужно одно из двух: root или один раз adb tcpip 5555 с компьютера (действует до перезагрузки телефона).
+This Android is older than 11, so it has no Wireless debugging, and this phone has neither root nor adb over the network switched on. On Android 10 and older one of those has to be on: root, or adb tcpip 5555 (or 50000) from a computer once (it lasts until the phone restarts).	Этот Android старше 11, поэтому в нём нет отладки по Wi-Fi, а на телефоне не включены ни root, ни adb по сети. На Android 10 и старше нужно одно из двух: root или один раз adb tcpip 5555 (или 50000) с компьютера (действует до перезагрузки телефона).
 If the phone asks to allow USB debugging, choose Allow (Always allow).	Если телефон спросит о разрешении отладки по USB, выберите «Разрешить» (всегда).
 Through Termux, in the background.	Через Termux, в фоне.
 Termux didn't answer in time.	Termux не ответил вовремя.
@@ -1303,7 +1303,7 @@ Tap to change.	Нажмите, чтобы изменить.
 Waiting for Wi-Fi	Ожидание Wi-Fi
 Turning Wireless debugging on. It needs Wi-Fi.	Включается отладка по Wi-Fi. Нужен Wi-Fi.
 Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.	Отладка по Wi-Fi включена, но нужен Wi-Fi. TinyKit продолжит сам.
-No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.	Способ запуска Shizuku не найден. Нужен root, adb по Wi-Fi (adb tcpip 5555 с компьютера, один раз после каждой перезагрузки) или отладка по Wi-Fi, которой, похоже, нет.
+No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 or adb tcpip 50000 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.	Способ запуска Shizuku не найден. Нужен root, adb по Wi-Fi (adb tcpip 5555 или adb tcpip 50000 с компьютера, один раз после каждой перезагрузки) или отладка по Wi-Fi, которой, похоже, нет.
 Add to home screen	Добавить на главный экран
 Some launchers don't show a new icon by themselves. This asks yours to add it.	Некоторые лаунчеры сами не показывают новый значок. Это просит ваш добавить его.
 Secure folder is off. Touch and hold this icon, then Remove.	Защищённая папка выключена. Нажмите и удерживайте значок, затем «Удалить».
@@ -1387,3 +1387,9 @@ Banking mode needs Shizuku once	Банковскому режиму один р�
 TinyKit has to be allowed to change these settings, and only Shizuku can allow it. Start Shizuku, then turn Banking mode on again. After that it works without Shizuku.	TinyKit нужно разрешение менять эти настройки, и дать его может только Shizuku. Запустите Shizuku и снова включите банковский режим. Потом он работает без Shizuku.
 Not fully off	Выключено не полностью
 Banking apps work: developer options and debugging off, back as they were when you turn it off.	Банковские приложения работают: параметры разработчика и отладка выключены, при выключении всё возвращается как было.
+Extra dim safety	Защита дополнительного затемнения
+Extra dim is on	Дополнительное затемнение включено
+It turns itself off in 20 seconds unless you press Keep.	Выключится само через 20 секунд, если не нажать «Оставить».
+Keep	Оставить
+
+Extra dim ends by itself in 2 minutes. Allow notifications to be able to keep it.	Дополнительное затемнение закончится само через 2 минуты. Разрешите уведомления, чтобы оставить его.

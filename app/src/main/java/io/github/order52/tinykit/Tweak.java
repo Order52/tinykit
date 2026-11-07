@@ -111,7 +111,10 @@ enum Tweak {
                         && put(c, SECURE, "accessibility_display_daltonizer_enabled", on ? "1" : "0");
                 break;
             case EXTRA_DIM:
+                // DimGuard caps the strength and starts the "press Keep or it turns off" countdown.
+                if (on) DimGuard.arm(c);
                 ok = put(c, SECURE, "reduce_bright_colors_activated", on ? "1" : "0");
+                if (!on || !ok) DimGuard.disarm(c);
                 break;
             default:
                 String verb = on ? "enable" : "disable";
@@ -181,6 +184,16 @@ enum Tweak {
 
     private static String previous(String value) {
         return value == null || value.equals("null") || value.equals(DNS_HOST) ? null : value;
+    }
+
+    /** A Secure setting's value, or null when it isn't set. */
+    static String readSecure(Context c, String key) {
+        return get(c, SECURE, key);
+    }
+
+    /** Writes a Secure setting (null deletes it). True when it worked. */
+    static boolean writeSecure(Context c, String key, String value) {
+        return put(c, SECURE, key, value);
     }
 
     /** A Global setting's value, or null when it isn't set. */

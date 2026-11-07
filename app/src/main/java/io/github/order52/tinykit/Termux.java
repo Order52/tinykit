@@ -28,7 +28,7 @@ final class Termux {
     static final int STARTED = 0, NOT_CONNECTED = 3, PAIR_FAILED = 4, NO_ADB = 5;
 
     /**
-     * Start Shizuku, the way shizuku-termux does: root? adb over the network (port 5555)? Wireless debugging (a port the
+     * Start Shizuku, the way shizuku-termux does: root? adb over the network (port 5555 or 50000)? Wireless debugging (a port the
      * network lists, or the ones TinyKit found)? Arguments: the start command, then "start" and the extra ports, or
      * "pair" with a port and the pairing code. Whether it worked is read from what the start command says (or
      * from ps, run the same way the command was): Termux can't see other users' processes, so its own ps would
@@ -46,7 +46,7 @@ final class Termux {
             + "try() { adb connect \"$1\" 2>&1 | grep -qiE 'connected to|already connected' || return 1; "
             + "adb -s \"$1\" shell \"$START\" >\"$F\" 2>&1; grep -q 'exit with 0' \"$F\" && return 0; sleep 1; "
             + "adb -s \"$1\" shell \"ps -A\" 2>/dev/null | grep -q '[s]hizuku_server'; }; "
-            + "try localhost:5555 && exit 0; "
+            + "try localhost:5555 && exit 0; try localhost:50000 && exit 0; "
             + "for p in $(adb mdns services 2>/dev/null | grep _adb-tls-connect | grep -oE '[0-9]+$'); do "
             + "try \"localhost:$p\" && exit 0; done; "
             + "for p in $3; do try \"localhost:$p\" && exit 0; done; exit 3";

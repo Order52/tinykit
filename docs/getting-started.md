@@ -85,7 +85,7 @@ background (no Termux window opens), and TinyKit prepares Termux itself the firs
    settings), makes Termux read it, installs `adb` if needed, and brings TinyKit back to the front, which then
    carries on by itself. Once only; no other repo, no folder to pick.
 3. TinyKit runs its own start script in Termux (built in; no other repo). It tries, as shizuku-termux does:
-   already running, root, adb over the network (port 5555), then Wireless debugging. It installs `adb`
+   already running, root, adb over the network (port 5555 or 50000), then Wireless debugging. It installs `adb`
    (`android-tools`) in Termux by itself the first time it needs it.
 
 If Termux can't do it (not installed, not allowed, no working `adb` there), TinyKit's own adb client takes over:
@@ -105,7 +105,7 @@ With no token saved, **Start** runs TinyKit's own adb client (`Adb.java`, no lib
 app). It tries, in this order, the same three ways shizuku-termux does, so it works on any Android:
 
 1. **Root**, if the phone has it and you allow TinyKit.
-2. **adb over the network**, if it is on (`adb tcpip 5555` from a computer once; it lasts until the phone
+2. **adb over the network**, if it is on (`adb tcpip 5555`, or `adb tcpip 50000`, from a computer once; it lasts until the phone
    restarts). The phone may ask you to allow USB debugging the first time.
 3. **Wireless debugging** (Android 11+): it finds the service (by service discovery, and by asking each port
    when that shows nothing), switches Wireless debugging on if TinyKit may, and the first time asks for the
@@ -118,7 +118,7 @@ each Wi-Fi network.
 
 **Without root, Android decides the rest.** On Android 11 and newer Wireless debugging is the way in,
 and the pairing code is the one thing an app can't do for you. On Android 10 and older there is no
-Wireless debugging, so without root one cable session with a computer is needed (`adb tcpip 5555`), once
+Wireless debugging, so without root one cable session with a computer is needed (`adb tcpip 5555` or `adb tcpip 50000`), once
 per restart. No app can start Shizuku with neither: Android doesn't allow it. TinyKit says so, in those words,
 instead of opening Shizuku.
 

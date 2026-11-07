@@ -71,6 +71,11 @@ restores the timeout you had before.
 (`accessibility_display_daltonizer_enabled=1`, `accessibility_display_daltonizer=0`).
 
 **Extra dim** uses Android's *Reduce bright colours* setting (`reduce_bright_colors_activated`).
+A screen that has gone black can't turn itself back on, so Extra dim has a safety guard. Its strength is
+capped at 30 % when TinyKit turns it on (and put back when it goes off). A notification offers **Keep**, and
+if you don't press it within 20 seconds Extra dim turns itself off. It is an alarm-clock alarm, the kind phone
+makers' battery managers let through, and it is checked again after a restart. With notifications blocked
+Keep can't be pressed, so Extra dim simply lasts two minutes.
 
 **Sensors off** and **Mic & camera off** differ. *Mic & camera off* uses Android 12+'s
 per-sensor privacy toggles (`cmd sensor_privacy`). *Sensors off* blocks **all** sensors,

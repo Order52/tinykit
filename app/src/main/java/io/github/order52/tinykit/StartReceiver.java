@@ -13,6 +13,21 @@ public final class StartReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
+        if (DimGuard.ACTION_KEEP.equals(action) || DimGuard.ACTION_REVERT.equals(action)) {
+            PendingResult result = goAsync();
+            Context app = context.getApplicationContext();
+            new Thread(() -> {
+                try {
+                    if (DimGuard.ACTION_KEEP.equals(action)) DimGuard.keep(app);
+                    else DimGuard.revert(app);
+                } catch (RuntimeException e) {
+                    android.util.Log.w("TinyKit", "dim guard: " + e);
+                } finally {
+                    result.finish();
+                }
+            }, "dim-guard").start();
+            return;
+        }
         boolean freeze = Work.ACTION_FREEZE.equals(action);
         if (freeze || Work.ACTION_LOCK.equals(action)) {
             PendingResult result = goAsync();
@@ -31,6 +46,11 @@ public final class StartReceiver extends BroadcastReceiver {
         }
         if (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) return;
         BackgroundService.sync(context);
+        // The countdown didn't survive the restart: if Extra dim was never kept, it goes off now.
+        if (DimGuard.pending(context.getSharedPreferences("tinykit", Context.MODE_PRIVATE))) {
+            Context dim = context.getApplicationContext();
+            new Thread(() -> DimGuard.revert(dim), "dim-guard-boot").start();
+        }
         // Banking mode keeps the debugging settings off across a restart, even if something turned them back on.
         android.content.SharedPreferences banking = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
         if (Banking.on(banking)) {

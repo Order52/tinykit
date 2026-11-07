@@ -47,11 +47,14 @@ public final class AdbService extends Service {
     static final String PREF_TERMUX = "termux_ready";
     private static final String TERMUX_SKIP = "skip";
     private static final String NEEDS_WIRELESS = "wireless", NEEDS_PAIRING = "pairing", NEEDS_NOTHING = "nothing";
+    /** The ports "adb tcpip" is used with: the usual one, then 50000. TinyKit tries both on the phone itself. */
+    static final int[] TCP_PORTS = {5555, 50000};
     private static final String NO_WAY = "No way to start Shizuku was found. This phone needs root, adb over Wi-Fi "
-            + "(adb tcpip 5555 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.";
+            + "(adb tcpip 5555 or adb tcpip 50000 from a computer, once after each restart) or Wireless debugging, "
+            + "which it doesn't seem to have.";
     private static final String NOTHING_AVAILABLE = "This Android is older than 11, so it has no Wireless debugging, and "
             + "this phone has neither root nor adb over the network switched on. On Android 10 and older one of those "
-            + "has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).";
+            + "has to be on: root, or adb tcpip 5555 (or 50000) from a computer once (it lasts until the phone restarts).";
     /**
      * Runs Shizuku's own starter as the adb or root user, the way Shizuku's start script does, after lifting the
      * limit Android 12+ puts on background processes (which kills a Shizuku started this way within minutes).
@@ -353,20 +356,25 @@ public final class AdbService extends Service {
             prefs.edit().putBoolean(PREF_PAIRED, true).putString(PREF_METHOD, "root").apply();
             return null;
         }
-        try {
-            say("Starting Shizuku…", "If the phone asks to allow USB debugging, choose Allow (Always allow).", false, null);
-            String out = adb.shell("127.0.0.1", 5555, START, true);
-            if (out.contains("exit with 0")) {
-                prefs.edit().putBoolean(PREF_PAIRED, true).putString(PREF_METHOD, "tcp").apply();
-                return null;
+        say("Starting Shizuku…", "If the phone asks to allow USB debugging, choose Allow (Always allow).", false, null);
+        // adb over the network can be on 5555 or 50000: the first one that answers is used.
+        String last = NEEDS_NOTHING;
+        for (int port : TCP_PORTS) {
+            try {
+                String out = adb.shell("127.0.0.1", port, START, true);
+                if (out.contains("exit with 0")) {
+                    prefs.edit().putBoolean(PREF_PAIRED, true).putString(PREF_METHOD, "tcp").apply();
+                    return null;
+                }
+                String[] lines = out.split("\n");
+                return "Shizuku didn't start: " + (lines.length == 0 ? "" : lines[lines.length - 1]);
+            } catch (Adb.Failure f) {
+                if (!f.closed) return f.getMessage();
+            } catch (Exception e) {
+                return "Couldn't start Shizuku: " + e.getMessage();
             }
-            String[] lines = out.split("\n");
-            return "Shizuku didn't start: " + (lines.length == 0 ? "" : lines[lines.length - 1]);
-        } catch (Adb.Failure f) {
-            return f.closed ? NEEDS_NOTHING : f.getMessage();
-        } catch (Exception e) {
-            return "Couldn't start Shizuku: " + e.getMessage();
         }
+        return last;
     }
 
     /** Runs the start command through su, if the phone has root and allows TinyKit. Null when there is no su. */

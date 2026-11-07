@@ -1219,7 +1219,7 @@ Sound on	Sonido activado
 Couldn't change that app's sound.	No se pudo cambiar el sonido de esa app.
 This Android can only mute an app, not turn it down. Android 13 and newer can do both.	Este Android solo puede silenciar una app, no bajarla. Android 13 y posterior pueden hacer ambas cosas.
 Pick apps Android must never kill or delay, like Termux or messengers.	Elige las apps que Android nunca debe cerrar ni retrasar, como Termux o las de mensajería.
-This Android is older than 11, so it has no Wireless debugging, and this phone has neither root nor adb over the network switched on. On Android 10 and older one of those has to be on: root, or adb tcpip 5555 from a computer once (it lasts until the phone restarts).	Este Android es anterior a 11, así que no tiene depuración inalámbrica, y este teléfono no tiene ni root ni adb por red activado. En Android 10 y anteriores hace falta una de las dos cosas: root, o adb tcpip 5555 desde un ordenador una vez (dura hasta que se reinicie el teléfono).
+This Android is older than 11, so it has no Wireless debugging, and this phone has neither root nor adb over the network switched on. On Android 10 and older one of those has to be on: root, or adb tcpip 5555 (or 50000) from a computer once (it lasts until the phone restarts).	Este Android es anterior a 11, así que no tiene depuración inalámbrica, y este teléfono no tiene ni root ni adb por red activado. En Android 10 y anteriores hace falta una de las dos cosas: root, o adb tcpip 5555 (o 50000) desde un ordenador una vez (dura hasta que se reinicie el teléfono).
 If the phone asks to allow USB debugging, choose Allow (Always allow).	Si el teléfono pide permitir la depuración USB, elige Permitir (Permitir siempre).
 Through Termux, in the background.	A través de Termux, en segundo plano.
 Termux didn't answer in time.	Termux no respondió a tiempo.
@@ -1300,7 +1300,7 @@ Tap to change.	Toca para cambiar.
 Waiting for Wi-Fi	Esperando el Wi-Fi
 Turning Wireless debugging on. It needs Wi-Fi.	Activando la depuración inalámbrica. Necesita Wi-Fi.
 Wireless debugging is on but needs Wi-Fi. TinyKit carries on by itself.	La depuración inalámbrica está activada pero necesita Wi-Fi. TinyKit sigue solo.
-No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.	No se encontró ninguna forma de iniciar Shizuku. Este teléfono necesita root, adb por Wi-Fi (adb tcpip 5555 desde un ordenador, una vez tras cada reinicio) o depuración inalámbrica, que no parece tener.
+No way to start Shizuku was found. This phone needs root, adb over Wi-Fi (adb tcpip 5555 or adb tcpip 50000 from a computer, once after each restart) or Wireless debugging, which it doesn't seem to have.	No se encontró ninguna forma de iniciar Shizuku. Este teléfono necesita root, adb por Wi-Fi (adb tcpip 5555 o adb tcpip 50000 desde un ordenador, una vez tras cada reinicio) o depuración inalámbrica, que no parece tener.
 Add to home screen	Añadir a la pantalla de inicio
 Some launchers don't show a new icon by themselves. This asks yours to add it.	Algunos lanzadores no muestran un icono nuevo por sí solos. Esto le pide al tuyo que lo añada.
 Secure folder is off. Touch and hold this icon, then Remove.	La carpeta segura está desactivada. Mantén pulsado este icono y elige Quitar.
@@ -1374,3 +1374,9 @@ Banking mode needs Shizuku once	El modo bancario necesita Shizuku una vez
 TinyKit has to be allowed to change these settings, and only Shizuku can allow it. Start Shizuku, then turn Banking mode on again. After that it works without Shizuku.	TinyKit debe tener permiso para cambiar estos ajustes, y solo Shizuku puede dárselo. Inicia Shizuku y activa de nuevo el modo bancario. Después funciona sin Shizuku.
 Not fully off	No del todo desactivado
 Banking apps work: developer options and debugging off, back as they were when you turn it off.	Las apps bancarias funcionan: opciones de desarrollador y depuración desactivadas; vuelven como estaban al desactivarlo.
+Extra dim safety	Seguridad de atenuación extra
+Extra dim is on	La atenuación extra está activada
+It turns itself off in 20 seconds unless you press Keep.	Se desactiva sola en 20 segundos si no pulsas Mantener.
+Keep	Mantener
+
+Extra dim ends by itself in 2 minutes. Allow notifications to be able to keep it.	La atenuación extra termina sola en 2 minutos. Permite las notificaciones para poder mantenerla.
