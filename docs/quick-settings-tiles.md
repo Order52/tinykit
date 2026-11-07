@@ -1,6 +1,6 @@
 # Quick Settings tiles
 
-TinyKit adds 20 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
+TinyKit adds 23 tiles to Android's Quick Settings panel. Like the rest of TinyKit, they cost
 nothing when you aren't using them: Android only binds a tile while the panel is open, and none
 of them keeps a service running.
 
@@ -35,6 +35,8 @@ of them keeps a service running.
 | <img src="images/tiles/overlays.svg" width="40" alt=""> | **HW overlays off** | Turns the "Disable HW overlays" developer option on or off | On / off | Yes |
 | <img src="images/tiles/forcedark.svg" width="40" alt=""> | **Force dark** | Dark-themes apps that have no dark mode | On / off | Yes |
 |  | **Work profile** | Pauses (locks) or resumes the work profile | On / Paused / Locked / Not set up | Yes |
+|  | **Deep sleep** | Cycles the Deep sleep profiles: Default, Light, Moderate, High, Extreme | The profile | Yes |
+|  | **Audio mixer** | Closes the panel and opens the Audio mixer | Volume per app | Yes |
 | <img src="images/tiles/kill.svg" width="40" alt=""> | **Close app** | Force-stops the app on screen | — | Yes |
 
 ¹ The Shizuku tile starts Shizuku with the auth token or, on Android 11+, with TinyKit's own adb client. See

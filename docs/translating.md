@@ -38,7 +38,7 @@ not in the file stays in English, so a partial translation is fine.
 - To test, build the app, set your phone's (or the app's) language, and open each page. A line
   that stays English is either not in the file or is built from several pieces.
 
-Spanish (`es.tsv`) is written for Latin America and is waiting for a native speaker to check it.
+Spanish (`es.tsv`) is written for Latin America and is waiting for a native speaker to check it. Russian (`ru.tsv`) is there too.
 
 ## How to send it
 

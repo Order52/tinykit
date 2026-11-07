@@ -9,7 +9,8 @@
 [![Release](https://img.shields.io/github/v/release/Order52/tinykit?label=release&color=blue)](https://github.com/Order52/tinykit/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Order52/tinykit/total?color=blue)](https://github.com/Order52/tinykit/releases)
 [![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
-[![APK size](https://img.shields.io/badge/APK-~110%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
+[![APK size](https://img.shields.io/badge/APK-~360%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
+[![CI](https://github.com/Order52/tinykit/actions/workflows/ci.yml/badge.svg)](https://github.com/Order52/tinykit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 [**Download the latest APK**](https://github.com/Order52/tinykit/releases/latest) ·
@@ -40,16 +41,34 @@ rooting your phone.
   appears.
 - **No ads, no analytics, no tracking.** It only goes online when you check for updates
   (GitHub, by tap or optionally when TinyKit opens) or open Network info (public IP lookup).
-- **Small.** About 110 KB, with a single dependency (the Shizuku API).
+- **Small.** About 360 KB, with a single dependency (the Shizuku API).
 - **Reversible.** Every change is a standard system setting or app-op, and you undo it from
   the same screen.
 
-The interface uses a pure black (AMOLED) theme and a bottom bar with five sections:
-**Shizuku · Privacy · Apps · System · Info**. A search bar on the home screen finds any tool.
+The interface uses a pure black (AMOLED) theme, or a high-contrast light one, and a bottom bar with five sections:
+**Shizuku · Privacy · Apps · System · Info**. A search bar on the home screen finds any tool. It is
+available in English, Spanish and Russian.
+
+## What's new
+
+- **Banking mode.** One switch (and a Quick Settings tile) turns Developer options, USB debugging and
+  Wireless debugging off and stops Shizuku, so banking apps that refuse to run with them on will start.
+  Turn it off and everything comes back as it was.
+- **Deep sleep profiles that work on Android 16 / ColorOS.** Each Doze timing is written on its own, so the ones
+  a phone refuses no longer stop the rest.
+- **Extra dim safety.** Its strength is capped, and unless you press **Keep** it turns itself off, so a black screen
+  fixes itself.
+- **TinyFolder** (Secure folder or plain work profile) only shows its launcher icon when there is a real work profile.
+- **Start Shizuku over adb on the network** now also tries port 50000.
+- **Send feedback** from the Info tab opens a ready-made GitHub issue.
+- **Russian translation** and a high-contrast Light theme.
+
+Every release is listed, with its changes, on the [releases page](https://github.com/Order52/tinykit/releases).
 
 ## Contents
 
 - [🎭 Fake permissions](#-fake-permissions)
+- [What's new](#whats-new)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -116,13 +135,13 @@ Find it under **Apps → App permissions**.
 
 | Tool | What it does |
 | --- | --- |
-| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly. Stop closes Shizuku fully, so a Watchdog can't start it straight back up. Without the token, Start goes through Termux if you have it (TinyKit copies one command for you to paste in Termux once, which sets everything up; after that the script runs in the background), and otherwise uses TinyKit's own adb client, the same three ways shizuku-termux does but with nothing else installed: root, adb over the network if it is on, or Wireless debugging (Android 11+), where it pairs once with a code you type into a notification and after that one tap starts Shizuku, switching Wireless debugging on by itself. Once it has worked, **Start by itself** (off until you switch it on) starts Shizuku again after a restart and when you open TinyKit, quietly. Without root, Android 10 and older need `adb tcpip 5555` from a computer once per restart: Android allows nothing else, and TinyKit says so. Works with the standard Shizuku app and its forks. |
+| **Start / Stop Shizuku** | Starts and stops Shizuku from inside TinyKit. If you have set Shizuku's auth token (in Shizuku's settings), TinyKit talks to Shizuku directly. Stop closes Shizuku fully, so a Watchdog can't start it straight back up. Without the token, Start goes through Termux if you have it (TinyKit copies one command for you to paste in Termux once, which sets everything up; after that the script runs in the background), and otherwise uses TinyKit's own adb client, the same three ways shizuku-termux does but with nothing else installed: root, adb over the network if it is on, or Wireless debugging (Android 11+), where it pairs once with a code you type into a notification and after that one tap starts Shizuku, switching Wireless debugging on by itself. Once it has worked, **Start by itself** (off until you switch it on) starts Shizuku again after a restart and when you open TinyKit, quietly. Without root, Android 10 and older need `adb tcpip 5555` (or `50000`, which TinyKit tries too) from a computer once per restart: Android allows nothing else, and TinyKit says so. Works with the standard Shizuku app and its forks. |
 | **Search** | Find any TinyKit setting or tool from the top of the home screen. |
 
 ### Quick Settings tiles
 
 Add any of these from **System → TinyKit tiles**. On Android 13 and newer, adding one takes a
-single tap. Eight of them keep working with Shizuku stopped.
+single tap. Most of them keep working with Shizuku stopped. There are 23 tiles in all.
 [All tiles →](docs/quick-settings-tiles.md)
 
 | | | | |
@@ -131,7 +150,9 @@ single tap. Eight of them keep working with Shizuku stopped.
 | <img src="docs/images/tiles/dev.svg" width="44" alt=""><br>Developer options | <img src="docs/images/tiles/usb.svg" width="44" alt=""><br>USB debugging | <img src="docs/images/tiles/hidedev.svg" width="44" alt=""><br>Hide dev options | <img src="docs/images/tiles/sensors.svg" width="44" alt=""><br>Sensors off |
 | <img src="docs/images/tiles/grayscale.svg" width="44" alt=""><br>Grayscale | <img src="docs/images/tiles/dim.svg" width="44" alt=""><br>Extra dim | <img src="docs/images/tiles/adblock.svg" width="44" alt=""><br>Ad-block DNS | <img src="docs/images/tiles/miccam.svg" width="44" alt=""><br>Mic & camera off |
 | <img src="docs/images/tiles/timeout.svg" width="44" alt=""><br>Screen timeout | <img src="docs/images/tiles/cache.svg" width="44" alt=""><br>Clear caches | <img src="docs/images/tiles/ram.svg" width="44" alt=""><br>Free RAM | <img src="docs/images/tiles/kill.svg" width="44" alt=""><br>Close app |
-| <img src="docs/images/tiles/banking.svg" width="44" alt=""><br>Banking mode | | | |
+| <img src="docs/images/tiles/banking.svg" width="44" alt=""><br>Banking mode | <img src="docs/images/tiles/firewall.svg" width="44" alt=""><br>Internet block | <img src="docs/images/tiles/overlays.svg" width="44" alt=""><br>HW overlays off | <img src="docs/images/tiles/forcedark.svg" width="44" alt=""><br>Force dark |
+
+And **Work profile**, **Deep sleep** and **Audio mixer**.
 
 ### Privacy
 
@@ -144,7 +165,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
 | **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code, export them all to a file and import them on another phone. |
 | **Send feedback** | Info tab > TinyKit. Write a feature request, bug report or question and it opens as a ready-made GitHub issue in your browser (you press Submit; TinyKit sends nothing itself). |
-| **Banking mode** | One switch for banking apps that refuse to run with developer options or debugging on: turns Developer options, USB debugging and Wireless debugging off and stops Shizuku. Turn it off and everything comes back as it was. |
+| **Banking mode** | One switch (and a Quick Settings tile) for banking apps that refuse to run with developer options or debugging on: turns Developer options, USB debugging and Wireless debugging off and stops Shizuku, so the apps start. Turn it off and everything comes back as it was, and Shizuku starts again. It needs Shizuku once, to give TinyKit access to those settings. |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |
 
 ### Apps
@@ -154,10 +175,10 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **App permissions** | Set each permission and hidden app-op for each app to **Real**, **Fake** or **Off**, one at a time or all at once. **Permissions by type** shows which apps have a permission. [See above](#-fake-permissions). |
 | **Default apps** | Choose the launcher, browser, phone, SMS and assistant apps, and see which app opens each file type. |
 | **Work profile** | Makes a work profile in one tap (no setup screens, no extra app inside it) and manages it like Shelter, Island and Samsung's Secure Folder together: separate copies of apps, freeze one or all, **auto-freeze** chosen apps, a **PIN of its own** that locks it, **auto-lock** when the screen is off or after a restart, **pause** (switch or Quick Settings tile), **launcher shortcuts** that unfreeze and open an app, install APKs straight into it. |
-| **Deep sleep** | Makes the phone doze sooner after the screen goes off and wake up less often, with Comatose's Light, Moderate, High and Extreme profiles. Writes where your Android version reads them, checks Android is really using it, and can doze right now. A Quick Settings tile cycles the profiles. |
+| **Deep sleep** | Makes the phone doze sooner after the screen goes off and wake up less often, with Comatose's Light, Moderate, High and Extreme profiles. Writes where your Android version reads them, checks Android is really using it, and can doze right now. A Quick Settings tile cycles the profiles. Phones that refuse some of the timings (Android 16, ColorOS) still get the ones they accept, and TinyKit says which it couldn't set. |
 | **Running services** | Lists every running service with its app and whether it is foreground, started or bound. Stop one, stop its app, or block it for good (and unblock it later). |
 | **Audio mixer** | A volume slider for each app, so you can turn YouTube down and leave your music up, with the phone's media volume at the top. Shows the apps open now, and every app below with search, **including apps in the work profile**. Volumes stick for each new video or song. Has a Quick Settings tile. Real sliders on Android 8+: exact on Android 13+, audio effects before that. |
-| **Secure folder** | A Samsung-style front door to the work profile: its own launcher icon that opens the work apps behind your lock screen, hides them from the launcher when you want, and locks again when you leave. |
+| **TinyFolder** | A front door to the work profile, in two looks: **Secure folder** (Samsung-style: its own launcher icon that opens the work apps behind your lock screen, hides them from the launcher when you want, and locks again when you leave) or the plain **Work profile**. The icon only appears when there is a real work profile. |
 | **Share menu pins** | Pins the apps you share to most in the top row of Android's share menu, so there is no scrolling to find them (Android 10+). |
 | **Hide apps** | Removes apps from the launcher, and they stop running until you restore them. |
 | **Unused apps** | Lists apps by how long since you last used them. |
@@ -198,7 +219,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Device info** | Phone info · Charging info · Temperatures (every thermal sensor) · Device IDs |
 | **Network info** | Shows IP addresses, Wi-Fi details, DNS and your public IP. *Open router settings* opens your default gateway's page. |
 | **Usage logs** | Screen time · Battery usage · Wake-ups · Vibration log, as plain readable lists |
-| **Diagnostics** | App log · Crash log · Report a problem · What's new · Check for updates (by tap, or optionally on start with a popup) · About |
+| **Diagnostics** | App log · Crash log · Report a problem · Send feedback · What's new · Check for updates (by tap, or optionally on start with a popup) · About |
 
 The [feature reference](docs/features.md) lists the exact command behind every tool.
 
@@ -247,7 +268,7 @@ TinyKit or Android's own settings. The first time Shizuku is available, TinyKit 
 | [Getting started](docs/getting-started.md) | Setting up Shizuku and TinyKit |
 | [Fake permissions](docs/fake-permissions.md) | The full guide, with commands and how to verify them |
 | [Feature reference](docs/features.md) | Every tool and the command it runs |
-| [Quick Settings tiles](docs/quick-settings-tiles.md) | All 18 tiles |
+| [Quick Settings tiles](docs/quick-settings-tiles.md) | All 23 tiles |
 | [Privacy & security](docs/privacy-and-security.md) | What TinyKit can access, stores and sends |
 | [Troubleshooting & FAQ](docs/troubleshooting.md) | Common problems and Huawei notes |
 | [Architecture](docs/architecture.md) · [Building](docs/building.md) · [Contributing](docs/contributing.md) | For developers |
@@ -272,10 +293,12 @@ Bug reports and feature requests are welcome. Please
 [open an issue](https://github.com/Order52/tinykit/issues) and include your Android version,
 your device or ROM, and your Shizuku version. Pull requests are welcome too. Please keep
 TinyKit small: no background services, no new dependencies, and every change must be
-reversible. See [Contributing](docs/contributing.md).
+reversible. See [Contributing](docs/contributing.md). Each push is checked by
+[CI](https://github.com/Order52/tinykit/actions/workflows/ci.yml) (build, lint, unit tests and an emulator run on five
+Android versions), and pushing a `v*` tag builds, signs and publishes the release.
 
-**Translations:** TinyKit is available in English and Spanish (Latin America, still being checked by a
-native speaker). A translation is one plain text file, so adding or fixing a language is easy. See
+**Translations:** TinyKit is available in English, Spanish (Latin America, still being checked by a
+native speaker) and Russian. A translation is one plain text file, so adding or fixing a language is easy. See
 [Translating TinyKit](docs/translating.md).
 
 ## License

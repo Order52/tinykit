@@ -22,7 +22,7 @@
 | | |
 | --- | --- |
 | 🧰 **[Feature reference](features.md)** | Every tool, tab by tab, with the exact command it runs |
-| 🔲 **[Quick Settings tiles](quick-settings-tiles.md)** | All 18 tiles, and which ones work without Shizuku |
+| 🔲 **[Quick Settings tiles](quick-settings-tiles.md)** | All 23 tiles, and which ones work without Shizuku |
 | 🔒 **[Privacy & security](privacy-and-security.md)** | Permissions, network requests, stored data, and what TinyKit never does |
 | 🩺 **[Troubleshooting & FAQ](troubleshooting.md)** | Common problems, and Huawei/EMUI notes |
 

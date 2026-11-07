@@ -30,13 +30,15 @@ Poor fits:
 2. Keep changes focused: one feature or fix per pull request.
 3. Follow the code's existing style:
    - Plain Java, no new libraries, no XML layouts. Build UI with the helpers in
-     `MainActivity`'s *Rows and widgets* section.
+     `MainActivity`'s *Rows and widgets* section. Each page is its own `<Name>Screen` class: add yours as a new file and
+     open it from `MainActivity`.
    - Shell commands run on the `worker` thread. Update views with `main.post`.
    - Quote any value that comes from outside the app with `Shell.quote()`.
    - Short, plain-English UI text that says what will happen. Error messages should say what
      to do next.
    - Comments explain *why*, especially manufacturer quirks.
 4. Add the feature to the home search (`features()` in `MainActivity`) if it opens a page.
+   CI runs the build, lint, unit tests and an emulator crawl on every push: run `scripts/check-repo.sh` first.
 5. Build the **release** variant and test on a real device. Mention which devices and Android
    versions you tested on.
 6. Update the docs in `docs/` and the README if behaviour changes.

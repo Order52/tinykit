@@ -1,6 +1,6 @@
 # Architecture
 
-How TinyKit is built, and why it's about 110 KB with a single dependency. Read this before
+How TinyKit is built, and why it's about 360 KB with a single dependency. Read this before
 changing the code.
 
 ## Contents
@@ -51,12 +51,13 @@ tinykit/
 │   ├── build.gradle.kts            App module: SDK levels, signing, R8, dependencies
 │   ├── proguard-rules.pro          Keeps the reflection and app_process entry points
 │   └── src/main/
-│       ├── AndroidManifest.xml     Activity, 16 tile services, Shizuku provider
+│       ├── AndroidManifest.xml     Activity, 23 tile services, Shizuku provider
 │       ├── java/io/github/order52/tinykit/
-│       │   ├── MainActivity.java   The whole UI and every tool (~4,900 lines)
+│       │   ├── MainActivity.java   The home screen, tabs, navigation and the shared row/dialog helpers (~2,500 lines)
+│       │   ├── *Screen.java        One class per page (DeepSleepScreen, MixerScreen, WorkProfileScreen, QuickPanelScreen …), each holding a reference to MainActivity for the shared helpers
 │       │   ├── Shell.java          Runs shell commands through Shizuku
 │       │   ├── Tweak.java          Settings toggles shared by the app and its tiles
-│       │   ├── Tiles.java          14 Quick Settings tiles on one base class
+│       │   ├── Tiles.java          Most of the Quick Settings tiles on one base class
 │       │   ├── Adb.java            Own adb client: wireless pairing, connect and shell (pure Java, no libraries)
 │       │   ├── Spake2.java         The pairing key exchange (Ed25519 SPAKE2, BoringSSL's flavour)
 │       │   ├── Termux.java         Starts Shizuku through Termux: permission, allow-external-apps via its file provider, start script
@@ -79,6 +80,9 @@ tinykit/
 │       │   ├── Work.java           Work profile: create, add apps, freeze, pause, auto-freeze, shortcuts (pm commands)
 │       │   ├── WorkOpen.java       No-screen activity a work-app shortcut starts: unfreeze and open
 │       │   ├── SecureFolder.java   Secure folder icon: work apps behind the lock screen, grid, open and freeze
+│       │   ├── Banking.java        Banking mode: turns developer options and debugging off, stops Shizuku, puts it all back
+│       │   ├── DimGuard.java       Extra dim safety: strength cap and a timed revert unless Keep is pressed
+│       │   ├── ShizukuControl.java Starts and stops Shizuku (token, adb, root), shared by the app, the tile and Banking mode
 │       │   ├── Doze.java           Deep sleep: Comatose's profiles written where each Android reads them, read back and verified
 │       │   ├── Services.java       Running services from dumpsys activity services, stop and block
 │       │   ├── MixerFx.java        Mixer volume on Android 12 and older: audio effects on the lowered apps' sessions
@@ -98,10 +102,11 @@ tinykit/
 └── settings.gradle.kts
 ```
 
-`MainActivity` is organised into sections marked with `// ---- Name ----` comments: *Pages*,
-*Shizuku*, *Home*, *Per-app tools*, *Running apps*, *Phone info*,
-*Recover deleted files*, *Apps: permissions & app-ops*, *Quick panel editor*, *Rows and
-widgets*, *Helpers* and so on. Search for the marker to jump to a feature.
+`MainActivity` keeps the sections marked with `// ---- Name ----` comments for *Pages*, *Shizuku*, *Home*,
+*Rows and widgets* and *Helpers*. Every other page (Deep sleep, Audio mixer, Debloater, Work profile, Quick panel
+editor and the rest) lives in its own `<Name>Screen.java`. A screen reaches the shared helpers (`row`, `text`,
+`push`, `worker`, `main`, `prefs`) through its `tk` field; a page that another page opens has a one-line method in
+`MainActivity` that forwards to it.
 
 ## How a command runs
 

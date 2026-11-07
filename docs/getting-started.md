@@ -7,8 +7,6 @@ This guide takes you from nothing installed to TinyKit running in about five min
 - [What you need](#what-you-need)
 - [1. Install Shizuku](#1-install-shizuku)
 - [2. Start Shizuku](#2-start-shizuku)
-- [3. Install TinyKit](#3-install-tinykit)
-- [4. First run](#4-first-run)
 - [Starting Shizuku from TinyKit](#starting-shizuku-from-tinykit)
 - [What works without Shizuku](#what-works-without-shizuku)
 - [Finding your way around](#finding-your-way-around)
