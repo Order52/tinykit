@@ -1343,42 +1343,6 @@ deleted %s of cache	se eliminaron %s de caché
 started storage maintenance	se inició el mantenimiento del almacenamiento
 closed cached apps	se cerraron aplicaciones en caché
 %s memory free now	%s de memoria libre ahora
-Certificates	Certificados
-Every authority this phone trusts, the ones installed by you, and any website's certificate chain.	Todas las autoridades en las que confía este teléfono, las que instalaste tú y la cadena de certificados de cualquier sitio web.
-The authorities this phone trusts to vouch for websites and apps. Anything installed by you or an app comes first: a certificate you don't know there can let someone read your traffic.	Las autoridades en las que este teléfono confía para dar fe de sitios web y apps. Lo instalado por ti o por una app va primero: un certificado que no conoces ahí puede permitir que alguien lea tu tráfico.
-Check a website	Revisar un sitio web
-Install or remove	Instalar o quitar
-Reading certificates…	Leyendo certificados…
-Search certificates	Buscar certificados
-Issued by 	Emitido por 
-expires 	vence 
-Installed by you or an app	Instalado por ti o por una app
-Expired	Vencido
-Root authority	Autoridad raíz
-Intermediate authority	Autoridad intermedia
-trusted	de confianza
-installed by you or an app	instalados por ti o por una app
-Couldn't read this phone's certificates.	No se pudieron leer los certificados de este teléfono.
-Open Settings > Security > Encryption and credentials.	Abre Ajustes > Seguridad > Cifrado y credenciales.
-Issued to	Emitido para
-Issued by	Emitido por
-Kind	Tipo
-Root authority (signs itself)	Autoridad raíz (se firma a sí misma)
-Where from	Origen
-Built into Android	Incluido en Android
-Valid	Válido
-expired	vencido
-Signed with	Firmado con
-Key	Clave
-Type a website, like example.com	Escribe un sitio web, como example.com
-Connecting…	Conectando…
-Couldn't connect	No se pudo conectar
-This phone trusts this website's certificate.	Este teléfono confía en el certificado de este sitio web.
-This phone does NOT trust it	Este teléfono NO confía en él
-Website	Sitio web
-The root that signed it is in this phone's trust store.	La raíz que lo firmó está en el almacén de confianza de este teléfono.
-The root that signed it is not in this phone's trust store.	La raíz que lo firmó no está en el almacén de confianza de este teléfono.
-Check	Revisar
 Send feedback	Enviar comentarios
 Ask for a feature, report a problem or say anything. It opens GitHub, ready to send.	Pide una función, informa de un problema o di lo que quieras. Abre GitHub, listo para enviar.
 Your message opens as a new issue on GitHub, in your browser. You read it, change it if you like and press Submit there. TinyKit sends nothing itself. You need a free GitHub account.	Tu mensaje se abre como un nuevo issue en GitHub, en tu navegador. Lo lees, lo cambias si quieres y pulsas Enviar allí. TinyKit no envía nada por sí mismo. Necesitas una cuenta gratuita de GitHub.

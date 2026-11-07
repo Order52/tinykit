@@ -202,23 +202,6 @@ title gets the matching tag, like `[FEATURE REQUEST]`). Optionally it adds your 
 and TinyKit version, which you can read and delete before pressing Submit. TinyKit has no server and
 no token: it only opens the link, the same way the crash report does, so you need a free GitHub account.
 
-### Certificates
-
-Privacy > Network > **Certificates** lists every certificate in Android's trust store: the root and
-intermediate authorities that ship with the phone, and the ones installed later by you or an app
-(shown first, because a certificate you don't recognise there can let someone read your traffic).
-Tap one for who it was issued to and by, whether it is a root (it signs itself) or an intermediate,
-its dates, key and signature type, and its **SHA-256 fingerprint**. It reads the store through
-`AndroidCAStore`, so no Shizuku is needed.
-
-**Check a website** connects to a host (`example.com`, a full link or `host:port`), shows the chain
-it sends from its own certificate up through the intermediates to the root, and says whether the
-phone trusts it, and if not, why (expired, wrong name, unknown authority). This is the one place
-TinyKit opens a connection for you to look at, and it sends nothing but the TLS handshake.
-
-**Install or remove** opens the phone's own security settings: Android keeps the trust store, so
-adding or removing an authority is done there.
-
 ### Saved Wi-Fi networks
 
 Lists every saved network with its security type and password, with search. Tap a network to
