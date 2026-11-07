@@ -134,7 +134,7 @@ final class Doze {
             m = Pattern.compile("mLightState=(\\w+)").matcher(line);
             if (m.find()) light = m.group(1);
         }
-        status.state = deep.isEmpty() ? "" : Tr.t("Deep sleep") + ": " + deep + " · " + Tr.t("Light") + ": " + light;
+        status.state = deep.isEmpty() ? "" : Tr.t("Deep") + ": " + Tr.t(deep) + " · " + Tr.t("Light") + ": " + Tr.t(light);
         return status;
     }
 

@@ -276,7 +276,7 @@ Don't keep mobile data running while connected to Wi-Fi. Saves battery.	No manti
 Done.	Listo.
 Done: 	Listo: 
 Downlink	Descarga
-Download	Descargas
+Download	Descargar
 Draw over other apps	Mostrar sobre otras apps
 Draws everything with the GPU instead of the display's overlay layers (the same as the developer option). Android forgets it at a restart; TinyKit puts it back once Shizuku is running.	Dibuja todo con la GPU en lugar de las capas de superposición de la pantalla (igual que la opción de desarrollador). Android lo olvida al reiniciar; TinyKit lo vuelve a poner cuando Shizuku se está ejecutando.
 Edit quick panel	Editar panel rápido
@@ -1325,3 +1325,21 @@ Set a screen lock in Android first.	Primero configura un bloqueo de pantalla en 
 Use phone lock screen	Usar el bloqueo del teléfono
 Only the folder is locked by this: the apps in the work profile can still be opened from the launcher while they aren't hidden. If you forget it, the phone's lock screen opens the folder.	Esto solo bloquea la carpeta: las apps del perfil de trabajo se pueden abrir desde el lanzador mientras no estén ocultas. Si la olvidas, el bloqueo del teléfono abre la carpeta.
 Nothing here yet. Tap Add apps.	Aún no hay nada. Toca Añadir apps.
+
+Root / Kernel	Root / Kernel
+Screen	Pantalla
+Idle	Inactividad
+Cell	Red móvil
+Wakelock	Wakelocks
+Estimated battery capacity	Capacidad estimada
+Last learned battery capacity	Última capacidad aprendida
+Min learned battery capacity	Capacidad mínima aprendida
+%d service running	%d servicio en ejecución
+%d services running	%d servicios en ejecución
+times	veces
+Deep	Profundo
+trimmed and compacted memory	memoria optimizada y compactada
+deleted %s of cache	se eliminaron %s de caché
+started storage maintenance	se inició el mantenimiento del almacenamiento
+closed cached apps	se cerraron aplicaciones en caché
+%s memory free now	%s de memoria libre ahora

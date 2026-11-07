@@ -68,6 +68,27 @@ final class Ram {
      * 3. trims storage (TRIM) and, once a day, starts Android's idle maintenance.
      * Returns a short result for the user. Runs off the main thread.
      */
+    private static String formatClosedApps(int closed) {
+        String lang = java.util.Locale.getDefault().getLanguage();
+        if ("ru".equals(lang)) {
+            int c10 = Math.abs(closed) % 10;
+            int c100 = Math.abs(closed) % 100;
+            String word;
+            if (c10 == 1 && c100 != 11) {
+                word = "фоновое приложение";
+            } else if (c10 >= 2 && c10 <= 4 && (c100 < 10 || c100 >= 20)) {
+                word = "фоновых приложения";
+            } else {
+                word = "фоновых приложений";
+            }
+            return "закрыто " + closed + " " + word;
+        }
+        if ("es".equals(lang)) {
+            return "se " + (closed == 1 ? "cerró 1 app en caché" : "cerraron " + closed + " apps en caché");
+        }
+        return "closed " + closed + " cached app" + (closed == 1 ? "" : "s");
+    }
+
     static String free(Context c) {
         long beforeRam = available(c);
         long beforeStorage = freeStorage();
@@ -76,17 +97,21 @@ final class Ram {
         if (Shell.ready()) {
             Shell.Result caches = Shell.run("pm trim-caches 999G");
             long cleared = Math.max(0, freeStorage() - beforeStorage);
-            if (caches.ok() && cleared > 0) did.add("deleted " + Formatter.formatShortFileSize(c, cleared) + " of cache");
+            if (caches.ok() && cleared > 0) {
+                String size = Formatter.formatShortFileSize(c, cleared);
+                String pattern = Tr.t("deleted %s of cache");
+                did.add(pattern.contains("%s") ? String.format(pattern, size) : "deleted " + size + " of cache");
+            }
             Shell.Result r = Shell.run(script());
             String[] lines = r.out.split("\n");
             try {
                 closed = Math.max(0, Integer.parseInt(lines[lines.length - 1].trim()));
             } catch (NumberFormatException e) {
-                if (!r.ok()) return "Failed: " + r.out;
+                if (!r.ok()) return Tr.t("Failed: ") + r.out;
             }
-            if (closed > 0) did.add("closed " + closed + " cached app" + (closed == 1 ? "" : "s"));
+            if (closed > 0) did.add(formatClosedApps(closed));
             Shell.run("sm fstrim");
-            if (maintenance(c)) did.add("started storage maintenance");
+            if (maintenance(c)) did.add(Tr.t("started storage maintenance"));
         } else if (!needsShizuku()) {
             ActivityManager am = c.getSystemService(ActivityManager.class);
             for (ApplicationInfo app : c.getPackageManager().getInstalledApplications(0)) {
@@ -99,16 +124,18 @@ final class Ram {
                 }
             }
             SystemClock.sleep(1000);
-            did.add("closed cached apps");
+            did.add(Tr.t("closed cached apps"));
         } else {
-            return "Start Shizuku first.";
+            return Tr.t("Start Shizuku first.");
         }
         long freed = Math.max(0, available(c) - beforeRam);
-        String memory = Formatter.formatShortFileSize(c, available(c)) + " memory free now"
-                + (freed >= 1024 * 1024 ? " (+" + Formatter.formatShortFileSize(c, freed) + ")" : "") + ".";
-        if (!Shell.ready()) return (did.isEmpty() ? "Done." : "Done: " + String.join(", ", did) + ".") + " " + memory;
-        did.add(0, "trimmed and compacted memory");
-        return "Done: " + String.join(", ", did) + ". " + memory;
+        String avail = Formatter.formatShortFileSize(c, available(c));
+        String plus = freed >= 1024 * 1024 ? " (+" + Formatter.formatShortFileSize(c, freed) + ")" : "";
+        String memPattern = Tr.t("%s memory free now");
+        String memory = (memPattern.contains("%s") ? String.format(memPattern, avail) : avail + " " + Tr.t("memory free now")) + plus + ".";
+        if (!Shell.ready()) return (did.isEmpty() ? Tr.t("Done.") : Tr.t("Done: ") + String.join(", ", did) + ".") + " " + memory;
+        did.add(0, Tr.t("trimmed and compacted memory"));
+        return Tr.t("Done: ") + String.join(", ", did) + ". " + memory;
     }
 
     /** Starts Android's idle maintenance (TRIM, compiling) in the system, at most once a day. */
@@ -130,8 +157,8 @@ final class Ram {
         long before = freeStorage();
         // Asking for far more free space than any phone has makes Android clear every cache.
         Shell.Result r = Shell.run("pm trim-caches 999G");
-        if (!r.ok()) return "Failed: " + r.out;
-        return "Freed " + Formatter.formatShortFileSize(c, Math.max(0, freeStorage() - before));
+        if (!r.ok()) return Tr.t("Failed: ") + r.out;
+        return Tr.t("Freed ") + Formatter.formatShortFileSize(c, Math.max(0, freeStorage() - before));
     }
 
     private static long freeStorage() {
