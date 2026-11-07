@@ -533,7 +533,7 @@ public class MainActivity extends Activity {
             autoStartPending = false;
             // Shizuku's connection can take a moment to arrive when TinyKit has just started: look again before starting it.
             main.postDelayed(() -> {
-                if (alive() && !starting && !Shell.running() && prefs.getBoolean(ShizukuControl.PREF_AUTO, false)
+                if (alive() && !starting && !Shell.running() && !Banking.on(prefs) && prefs.getBoolean(ShizukuControl.PREF_AUTO, false)
                         && ShizukuControl.canRestart(this, prefs)) {
                     if (ShizukuControl.intents(this, prefs)) ShizukuControl.start(this, prefs);
                     else AdbService.begin(this, true);
@@ -956,6 +956,10 @@ public class MainActivity extends Activity {
     }
 
     private void startShizuku() {
+        if (Banking.on(prefs)) {
+            toast(Tr.t("Banking mode is on. Turn it off (Privacy tab) to start Shizuku."));
+            return;
+        }
         if (starting) return;
         if (Shell.running()) { // already up: starting it again would only restart it
             refreshShizuku();
@@ -1411,6 +1415,35 @@ public class MainActivity extends Activity {
                 });
 
         section(list, "Developer options");
+        Switch bankingSwitch = new Switch(this);
+        bankingSwitch.setClickable(false);
+        bankingSwitch.setFocusable(false);
+        TextView bankingStatus = text("", 13, false);
+        bankingStatus.setPadding(dp(16), dp(0), dp(16), dp(8));
+        Runnable showBanking = () -> {
+            boolean on = Banking.on(prefs);
+            bankingSwitch.setChecked(on);
+            bankingStatus.setText(Tr.t(!on ? "Off. Nothing is changed."
+                    : prefs.getBoolean(Banking.PREF_SHIZUKU, false) && !Shell.running()
+                    ? "On. Developer options and debugging are off, and Shizuku is stopped until you turn this off."
+                    : "On. Developer options, USB debugging and Wireless debugging are off."));
+        };
+        showBanking.run();
+        row(list, "Banking mode", "One switch for banking and payment apps that refuse to run on a phone with "
+                + "developer options or debugging on. Turns them off (and stops Shizuku, when TinyKit can start "
+                + "it again). Turn it off and everything comes back as it was.", bankingSwitch, () -> {
+                    boolean on = !Banking.on(prefs);
+                    bankingSwitch.setChecked(on);
+                    worker.execute(() -> {
+                        String error = on ? Banking.enable(this, prefs) : Banking.disable(this, prefs);
+                        main.post(() -> {
+                            showBanking.run();
+                            refreshShizuku();
+                            if (error != null) toast(Tr.t(error));
+                        });
+                    });
+                }, false);
+        list.addView(bankingStatus);
         toggle(list, "Hide developer options",
                 "Every app sees Developer options as off. adb and Shizuku keep working.",
                 s -> "0".equals(s.get("development_settings_enabled")),

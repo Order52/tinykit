@@ -1,0 +1,2 @@
+• Banking mode (Privacy tab > Developer options): one switch that turns Developer options, USB debugging and Wireless debugging off (and stops Shizuku when TinyKit can start it again) so banking apps run. Turn it off and everything comes back as it was.
+• While it is on, Start Shizuku and Start by itself wait for you to turn it off.

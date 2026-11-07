@@ -62,6 +62,8 @@ public class ShizukuTile extends TileService {
                     Toast.makeText(app, Tr.t(error), Toast.LENGTH_LONG).show();
                 });
             });
+        } else if (!on && Banking.on(p)) {
+            Toast.makeText(this, Tr.t("Banking mode is on. Turn it off in TinyKit first."), Toast.LENGTH_LONG).show();
         } else if (!on && ShizukuControl.canStart(this, p)) {
             ShizukuControl.start(this, p);
         } else {

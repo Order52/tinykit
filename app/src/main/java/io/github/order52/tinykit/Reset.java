@@ -203,6 +203,9 @@ final class Reset {
         if (p.getBoolean(ShutUp.PREF_ON, false)) {
             (ShutUp.setEnabled(c, p, false) == null ? done : failed).add("Shut Up");
         }
+        if (Banking.on(p)) {
+            (Banking.disable(c, p) == null ? done : failed).add("Banking mode");
+        }
         if (BackgroundService.on(p)) {
             BackgroundService.setEnabled(c, p, false);
             done.add("Run in the background");

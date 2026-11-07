@@ -1356,3 +1356,14 @@ Add my phone model, Android and TinyKit version	Añadir el modelo de mi teléfon
 Open on GitHub	Abrir en GitHub
 Write a title and a message first.	Escribe primero un título y un mensaje.
 No browser to open GitHub.	No hay navegador para abrir GitHub.
+Banking mode	Modo bancario
+One switch for banking and payment apps that refuse to run on a phone with developer options or debugging on. Turns them off (and stops Shizuku, when TinyKit can start it again). Turn it off and everything comes back as it was.	Un solo interruptor para apps bancarias y de pago que no funcionan en un teléfono con opciones de desarrollador o depuración activas. Las desactiva (y detiene Shizuku, cuando TinyKit puede volver a iniciarlo). Desactívalo y todo vuelve como estaba.
+Off. Nothing is changed.	Desactivado. No se cambia nada.
+On. Developer options and debugging are off, and Shizuku is stopped until you turn this off.	Activado. Las opciones de desarrollador y la depuración están desactivadas, y Shizuku está detenido hasta que lo desactives.
+On. Developer options, USB debugging and Wireless debugging are off.	Activado. Las opciones de desarrollador, la depuración USB y la depuración inalámbrica están desactivadas.
+Start Shizuku and allow TinyKit once, so Banking mode can change these settings.	Inicia Shizuku y permite a TinyKit una vez, para que el modo bancario pueda cambiar estos ajustes.
+Couldn't change the settings.	No se pudieron cambiar los ajustes.
+Couldn't put the settings back. Turn them on in Settings > Developer options.	No se pudieron restaurar los ajustes. Actívalos en Ajustes > Opciones de desarrollador.
+Banking mode is off. Start Shizuku again from the Shizuku tab.	El modo bancario está desactivado. Inicia Shizuku de nuevo desde la pestaña Shizuku.
+Banking mode is on. Turn it off (Privacy tab) to start Shizuku.	El modo bancario está activado. Desactívalo (pestaña Privacidad) para iniciar Shizuku.
+Banking mode is on. Turn it off in TinyKit first.	El modo bancario está activado. Desactívalo primero en TinyKit.

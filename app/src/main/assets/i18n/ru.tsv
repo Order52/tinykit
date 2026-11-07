@@ -1369,3 +1369,14 @@ Add my phone model, Android and TinyKit version	Добавить модель т
 Open on GitHub	Открыть на GitHub
 Write a title and a message first.	Сначала напишите заголовок и сообщение.
 No browser to open GitHub.	Нет браузера для открытия GitHub.
+Banking mode	Банковский режим
+One switch for banking and payment apps that refuse to run on a phone with developer options or debugging on. Turns them off (and stops Shizuku, when TinyKit can start it again). Turn it off and everything comes back as it was.	Один переключатель для банковских и платёжных приложений, которые не работают, если включены параметры разработчика или отладка. Отключает их (и останавливает Shizuku, если TinyKit может запустить его снова). Выключите режим, и всё вернётся как было.
+Off. Nothing is changed.	Выключено. Ничего не меняется.
+On. Developer options and debugging are off, and Shizuku is stopped until you turn this off.	Включено. Параметры разработчика и отладка выключены, Shizuku остановлен, пока вы не выключите режим.
+On. Developer options, USB debugging and Wireless debugging are off.	Включено. Параметры разработчика, отладка по USB и по Wi-Fi выключены.
+Start Shizuku and allow TinyKit once, so Banking mode can change these settings.	Запустите Shizuku и разрешите TinyKit один раз, чтобы банковский режим мог менять эти настройки.
+Couldn't change the settings.	Не удалось изменить настройки.
+Couldn't put the settings back. Turn them on in Settings > Developer options.	Не удалось вернуть настройки. Включите их в Настройки > Для разработчиков.
+Banking mode is off. Start Shizuku again from the Shizuku tab.	Банковский режим выключен. Снова запустите Shizuku на вкладке Shizuku.
+Banking mode is on. Turn it off (Privacy tab) to start Shizuku.	Банковский режим включён. Выключите его (вкладка «Приватность»), чтобы запустить Shizuku.
+Banking mode is on. Turn it off in TinyKit first.	Банковский режим включён. Сначала выключите его в TinyKit.

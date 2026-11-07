@@ -95,7 +95,7 @@ final class ShutUp {
     static void startShizuku(Context c, SharedPreferences p) {
         if (!p.getBoolean(PREF_SHIZUKU_STOPPED, false)) return;
         p.edit().putBoolean(PREF_SHIZUKU_STOPPED, false).commit();
-        if (Shell.running()) return; // something else already started it
+        if (Shell.running() || Banking.on(p)) return; // something else already started it, or Banking mode keeps it off
         boolean ok = ShizukuControl.start(c, p);
         android.util.Log.i("TinyKit", "Shut Up: started Shizuku ok=" + ok);
     }

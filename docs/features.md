@@ -142,6 +142,25 @@ no shell command.
 IConnectivityManager.setUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_3, uid, DENY)
 ```
 
+### Banking mode
+
+Privacy > Developer options > **Banking mode**: one switch for banking and payment apps that won't
+run when developer options or debugging are on. Turning it on writes down which of **Developer
+options**, **USB debugging** and **Wireless debugging** are on, turns them off, and stops Shizuku
+when TinyKit can start it again by itself (some apps notice it running). Turning it off puts back
+exactly what was on, Developer options first, and starts Shizuku again.
+
+- It is a state, not a watcher: nothing runs in the background, unlike **Shut Up**, which does it
+  only for chosen apps and only while they are open.
+- What was on is saved before anything changes, so a restart or crash never loses it. Turning it off
+  works without Shizuku (TinyKit uses its own `WRITE_SECURE_SETTINGS`); turning it on needs Shizuku
+  once to grant that.
+- While it is on, Start Shizuku, the Quick Settings tile and Start by itself do nothing, because starting
+  Shizuku needs debugging. Turn Banking mode off first. **Reset switches** turns it off too.
+- If Shizuku can't be started by TinyKit on its own (no auth token, not paired), turning debugging off may
+  end it, and it stays off until you start it from the Shizuku tab after turning Banking mode off.
+- An app that remembers an earlier check can still see it, and an ADB session ends for a moment.
+
 ### Shut Up
 
 The per-app version of **Hide developer options**. Pick the apps, and while one of them is on
