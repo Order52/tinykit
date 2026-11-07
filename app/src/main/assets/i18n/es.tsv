@@ -1367,3 +1367,8 @@ Couldn't put the settings back. Turn them on in Settings > Developer options.	No
 Banking mode is off. Start Shizuku again from the Shizuku tab.	El modo bancario está desactivado. Inicia Shizuku de nuevo desde la pestaña Shizuku.
 Banking mode is on. Turn it off (Privacy tab) to start Shizuku.	El modo bancario está activado. Desactívalo (pestaña Privacidad) para iniciar Shizuku.
 Banking mode is on. Turn it off in TinyKit first.	El modo bancario está activado. Desactívalo primero en TinyKit.
+On, but still on: 	Activado, pero siguen activos: 
+. Tap here to turn them off again.	. Toca aquí para desactivarlos de nuevo.
+Wireless debugging	Depuración inalámbrica
+Banking mode needs Shizuku once	El modo bancario necesita Shizuku una vez
+TinyKit has to be allowed to change these settings, and only Shizuku can allow it. Start Shizuku, then turn Banking mode on again. After that it works without Shizuku.	TinyKit debe tener permiso para cambiar estos ajustes, y solo Shizuku puede dárselo. Inicia Shizuku y activa de nuevo el modo bancario. Después funciona sin Shizuku.

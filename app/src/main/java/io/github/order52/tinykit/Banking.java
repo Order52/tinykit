@@ -22,6 +22,7 @@ final class Banking {
 
     /** Developer options first when putting back: the debugging switches need it. */
     private static final String[] KEYS = {"development_settings_enabled", "adb_enabled", "adb_wifi_enabled"};
+    private static final String[] NAMES = {"Developer options", "USB debugging", "Wireless debugging"};
 
     private Banking() {
     }
@@ -34,6 +35,38 @@ final class Banking {
     static boolean has(String saved, String key) {
         for (String k : saved.split(",")) if (k.equals(key)) return true;
         return false;
+    }
+
+    /** Names of the settings that are on right now (what a banking app would see), "" when all are off. */
+    static String stillOn(Context c) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < KEYS.length; i++) {
+            if ("1".equals(Tweak.readGlobal(c, KEYS[i]))) sb.append(sb.length() == 0 ? "" : ", ").append(NAMES[i]);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * While Banking mode is on, turns off again whatever has come back on (a restart, Shizuku's own
+     * auto-start, the phone's USB settings) and remembers it for turning Banking mode off. Returns
+     * true when nothing is on afterwards. Needs no Shizuku. Call off the main thread.
+     */
+    static synchronized boolean reapply(Context c, SharedPreferences p) {
+        if (!on(p)) return true;
+        String saved = p.getString(PREF_SAVED, "");
+        StringBuilder now = new StringBuilder(saved);
+        for (String key : KEYS) {
+            if ("1".equals(Tweak.readGlobal(c, key)) && !has(now.toString(), key)) now.append(now.length() == 0 ? "" : ",").append(key);
+        }
+        if (stillOn(c).isEmpty()) return true;
+        if (!Tweak.canWrite(c)) return false;
+        p.edit().putString(PREF_SAVED, now.toString()).commit();
+        boolean ok = true;
+        for (int i = KEYS.length - 1; i >= 0; i--) {
+            if ("1".equals(Tweak.readGlobal(c, KEYS[i]))) ok &= Tweak.writeGlobal(c, KEYS[i], "0");
+        }
+        android.util.Log.i("TinyKit", "Banking mode: turned off again " + stillOn(c) + " ok=" + ok);
+        return ok && stillOn(c).isEmpty();
     }
 
     /**
@@ -58,9 +91,10 @@ final class Banking {
         for (int i = KEYS.length - 1; i >= 0; i--) {
             if (has(saved.toString(), KEYS[i])) ok &= Tweak.writeGlobal(c, KEYS[i], "0");
         }
-        if (!ok) {
+        String left = stillOn(c);
+        if (!ok || !left.isEmpty()) {
             disable(c, p);
-            return "Couldn't change the settings.";
+            return "Couldn't turn these off: " + left + ". Android or the phone's maker may block it.";
         }
         // Some apps notice Shizuku running. Only stopped when TinyKit can bring it back.
         if (shizuku && Shell.running() && ShizukuControl.canRestart(c, p)) ShizukuControl.stop(c, p);

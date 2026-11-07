@@ -1380,3 +1380,8 @@ Couldn't put the settings back. Turn them on in Settings > Developer options.	Н
 Banking mode is off. Start Shizuku again from the Shizuku tab.	Банковский режим выключен. Снова запустите Shizuku на вкладке Shizuku.
 Banking mode is on. Turn it off (Privacy tab) to start Shizuku.	Банковский режим включён. Выключите его (вкладка «Приватность»), чтобы запустить Shizuku.
 Banking mode is on. Turn it off in TinyKit first.	Банковский режим включён. Сначала выключите его в TinyKit.
+On, but still on: 	Включено, но всё ещё включены: 
+. Tap here to turn them off again.	. Нажмите здесь, чтобы выключить их снова.
+Wireless debugging	Отладка по Wi-Fi
+Banking mode needs Shizuku once	Банковскому режиму один раз нужен Shizuku
+TinyKit has to be allowed to change these settings, and only Shizuku can allow it. Start Shizuku, then turn Banking mode on again. After that it works without Shizuku.	TinyKit нужно разрешение менять эти настройки, и дать его может только Shizuku. Запустите Shizuku и снова включите банковский режим. Потом он работает без Shizuku.

@@ -31,6 +31,12 @@ public final class StartReceiver extends BroadcastReceiver {
         }
         if (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) return;
         BackgroundService.sync(context);
+        // Banking mode keeps the debugging settings off across a restart, even if something turned them back on.
+        android.content.SharedPreferences banking = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
+        if (Banking.on(banking)) {
+            Context app = context.getApplicationContext();
+            new Thread(() -> Banking.reapply(app, banking), "banking-reapply").start();
+        }
         // After a restart Shizuku is gone: start it again by itself, if it can be done with nobody there.
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
             android.content.SharedPreferences prefs = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE);

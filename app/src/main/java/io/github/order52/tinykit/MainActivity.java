@@ -1423,12 +1423,26 @@ public class MainActivity extends Activity {
         Runnable showBanking = () -> {
             boolean on = Banking.on(prefs);
             bankingSwitch.setChecked(on);
-            bankingStatus.setText(Tr.t(!on ? "Off. Nothing is changed."
-                    : prefs.getBoolean(Banking.PREF_SHIZUKU, false) && !Shell.running()
+            String left = on ? Banking.stillOn(this) : "";
+            bankingStatus.setText(!on ? Tr.t("Off. Nothing is changed.")
+                    : !left.isEmpty() ? Tr.t("On, but still on: ") + translatedList(left) + Tr.t(". Tap here to turn them off again.")
+                    : Tr.t(prefs.getBoolean(Banking.PREF_SHIZUKU, false) && !Shell.running()
                     ? "On. Developer options and debugging are off, and Shizuku is stopped until you turn this off."
                     : "On. Developer options, USB debugging and Wireless debugging are off."));
         };
         showBanking.run();
+        bankingStatus.setOnClickListener(v -> {
+            if (!Banking.on(prefs)) return;
+            worker.execute(() -> {
+                Banking.reapply(this, prefs);
+                main.post(showBanking);
+            });
+        });
+        // Whatever came back on while Banking mode is on goes off again when TinyKit opens this page.
+        if (Banking.on(prefs)) worker.execute(() -> {
+            Banking.reapply(this, prefs);
+            main.post(showBanking);
+        });
         row(list, "Banking mode", "One switch for banking and payment apps that refuse to run on a phone with "
                 + "developer options or debugging on. Turns them off (and stops Shizuku, when TinyKit can start "
                 + "it again). Turn it off and everything comes back as it was.", bankingSwitch, () -> {
@@ -1439,7 +1453,18 @@ public class MainActivity extends Activity {
                         main.post(() -> {
                             showBanking.run();
                             refreshShizuku();
-                            if (error != null) toast(Tr.t(error));
+                            if (error == null) return;
+                            if (error.startsWith("Start Shizuku")) {
+                                new AlertDialog.Builder(this).setTitle(Tr.t("Banking mode needs Shizuku once"))
+                                        .setMessage(Tr.t("TinyKit has to be allowed to change these settings, and only Shizuku "
+                                                + "can allow it. Start Shizuku, then turn Banking mode on again. After "
+                                                + "that it works without Shizuku."))
+                                        .setPositiveButton(Tr.t("Start Shizuku"), (d, w) -> startShizuku())
+                                        .setNegativeButton(Tr.t("Cancel"), null).show();
+                            } else {
+                                new AlertDialog.Builder(this).setTitle(Tr.t("Banking mode"))
+                                        .setMessage(Tr.t(error)).setPositiveButton(Tr.t("OK"), null).show();
+                            }
                         });
                     });
                 }, false);
@@ -7362,6 +7387,12 @@ public class MainActivity extends Activity {
                         .show();
             });
         }));
+    }
+
+    private static String translatedList(String commaList) {
+        String[] parts = commaList.split(", ");
+        for (int i = 0; i < parts.length; i++) parts[i] = Tr.t(parts[i]);
+        return TextUtils.join(", ", parts);
     }
 
     /** A feature request, bug report or question that goes to GitHub as an issue, through the browser. */
