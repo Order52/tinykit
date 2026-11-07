@@ -1862,7 +1862,9 @@ public class MainActivity extends Activity {
             Doze.Status now = Doze.read();
             main.post(() -> {
                 String text = Tr.t("Profile") + ": " + Tr.t(Doze.NAMES[chosen[0]]);
-                if (chosen[0] > 0) text += " · " + Tr.t(now.matches(chosen[0]) ? "Android is using it." : "Android isn't using it yet.");
+                java.util.Set<String> refused = Doze.refused(prefs);
+                if (chosen[0] > 0) text += " · " + Tr.t(now.matches(chosen[0], refused) ? "Android is using it." : "Android isn't using it yet.");
+                if (chosen[0] > 0 && !refused.isEmpty()) text += "\n" + Tr.t("Your phone's Android refused some of the timings, so it uses its own for those.");
                 status.setText(text + (now.state.isEmpty() ? "" : "\n" + now.state));
             });
         });

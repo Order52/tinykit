@@ -471,6 +471,9 @@ DeviceConfig from Android 12), then reads `dumpsys deviceidle` back and tells yo
 it**, with the current Doze state. **Deep sleep now** forces Doze (`dumpsys deviceidle force-idle`) until you use
 the phone again; **Wake up** ends it. A Quick Settings tile cycles the profiles, and TinyKit puts your profile back
 when Shizuku starts if Android lost it. **Apps that ignore deep sleep** opens *Keep apps alive*.
+Android 16 and some makers' builds (ColorOS) only let the shell change some of the `device_idle` flags, and refuse the rest
+with *"flag must be added to the allowlist"*. TinyKit writes each timing on its own, so one refusal no longer stops the others,
+then tells you the system kept its own for those and compares only what it accepted.
 
 ### Running apps
 

@@ -60,7 +60,24 @@ final class Doze {
         return out.toString();
     }
 
-    /** Puts a profile in force, where this Android reads it. Returns null when written, else why not. Off the main thread. */
+    static final String REFUSED = "doze_refused";
+
+    /** One command whose complaint, if any, is noted: Android 16 and some makers' builds refuse flags outside their allowlist. */
+    private static void step(StringBuilder script, String name, String command) {
+        script.append("o=$(").append(command).append(" 2>&1) || o=failed; case \"$o\" in ")
+                .append("failed|*xception*|*denial*|*[Dd]enied*) echo \"REFUSED:").append(name).append("\";; esac; ");
+    }
+
+    /** Keys the system refused the last time a profile was applied. */
+    static java.util.Set<String> refused(SharedPreferences p) {
+        return new java.util.HashSet<>(p.getStringSet(REFUSED, java.util.Collections.<String>emptySet()));
+    }
+
+    /**
+     * Puts a profile in force, where this Android reads it. Every setting is written on its own, so one the system
+     * refuses (Android 16 and ColorOS only allow some DeviceConfig flags) doesn't stop the others. Returns null when
+     * written, else why not. Off the main thread.
+     */
     static String apply(Context c, int profile) {
         StringBuilder script = new StringBuilder();
         boolean config = Build.VERSION.SDK_INT >= 31; // Android 12 on reads DeviceConfig; before that, the global setting
@@ -71,22 +88,33 @@ final class Doze {
                 script.append("device_config set_sync_disabled_for_tests none >/dev/null 2>&1; ");
             }
         } else {
-            script.append("settings put global ").append(SETTING).append(" \"").append(constants(profile)).append("\"; ");
+            step(script, "global", "settings put global " + SETTING + " \"" + constants(profile) + "\"");
             if (config) {
-                script.append("device_config set_sync_disabled_for_tests persistent; ");
+                script.append("device_config set_sync_disabled_for_tests persistent >/dev/null 2>&1; ");
                 for (Object[] row : TABLE) {
                     int v = (Integer) row[profile];
                     if (v < 0) {
                         script.append("device_config delete device_idle ").append(row[0]).append(" >/dev/null 2>&1; ");
                     } else {
-                        script.append("device_config put device_idle ").append(row[0]).append(' ')
-                                .append(row[0].equals("location_accuracy") ? v : v * 1000L).append("; ");
+                        step(script, (String) row[0], "device_config put device_idle " + row[0] + ' '
+                                + (row[0].equals("location_accuracy") ? v : v * 1000L));
                     }
                 }
             }
         }
+        script.append("true");
         Shell.Result r = Shell.run(script.toString());
-        return r.ok() ? null : "Couldn't change deep sleep. Is Shizuku running?";
+        if (r.code != 0) return "Couldn't change deep sleep. Is Shizuku running?";
+        java.util.Set<String> refused = new java.util.HashSet<>();
+        for (String line : r.out.split("\n")) if (line.startsWith("REFUSED:")) refused.add(line.substring(8).trim());
+        Tiles.prefs(c).edit().putStringSet(REFUSED, refused).apply();
+        int wanted = 0;
+        for (Object[] row : TABLE) if ((Integer) row[profile] >= 0) wanted++;
+        // On Android 12 and newer only DeviceConfig counts; if it took none of them there is nothing to wait for.
+        if (profile > 0 && config && refused.size() >= wanted) {
+            return "This phone's Android won't let TinyKit change the Doze timings.";
+        }
+        return null;
     }
 
     /** What Android is using right now: its Doze settings (milliseconds) and the two states. */
@@ -96,11 +124,16 @@ final class Doze {
 
         /** Whether those settings are the profile's. Default has nothing to compare, so it counts. */
         boolean matches(int profile) {
+            return matches(profile, java.util.Collections.<String>emptySet());
+        }
+
+        /** Same, leaving out the settings the system refused to take. */
+        boolean matches(int profile, java.util.Set<String> refused) {
             if (profile <= 0) return true;
             for (Object[] row : TABLE) {
                 int v = (Integer) row[profile];
                 Long now = settings.get(row[0]);
-                if (v < 0 || now == null || row[0].equals("location_accuracy")) continue;
+                if (v < 0 || now == null || row[0].equals("location_accuracy") || refused.contains(row[0])) continue;
                 if (now != v * 1000L) return false;
             }
             return true;
@@ -168,6 +201,6 @@ final class Doze {
     /** After Shizuku starts: puts the chosen profile back if Android lost it (a restart can reset it). */
     static void restore(Context c, SharedPreferences p) {
         int profile = p.getInt(PREF, 0);
-        if (profile > 0 && !read().matches(profile)) apply(c, profile);
+        if (profile > 0 && !read().matches(profile, refused(p))) apply(c, profile);
     }
 }

@@ -1242,6 +1242,8 @@ Doze after a minute, wakes every 2 hours. Notifications arrive a little later.	D
 Doze after 30 seconds, wakes every 4 hours. Background work is delayed.	Doze tras 30 segundos, despierta cada 4 horas. El trabajo en segundo plano se retrasa.
 Doze as soon as the screen is off, wakes every 6 hours. The most battery saved, the most delayed.	Doze en cuanto se apaga la pantalla, despierta cada 6 horas. El máximo ahorro, el máximo retraso.
 Couldn't change deep sleep. Is Shizuku running?	No se pudo cambiar el sueño profundo. ¿Shizuku está en marcha?
+Your phone's Android refused some of the timings, so it uses its own for those.	El Android de tu teléfono rechazó algunos tiempos, así que usa los suyos para esos.
+This phone's Android won't let TinyKit change the Doze timings.	El Android de este teléfono no deja que TinyKit cambie los tiempos de Doze.
 Deep sleep now	Sueño profundo ahora
 Puts the phone into Doze right now, until you use it again. Turn the screen off to see it work.	Pone el teléfono en Doze ahora mismo, hasta que lo uses de nuevo. Apaga la pantalla para verlo.
 Done. Doze is on.	Hecho. Doze activado.

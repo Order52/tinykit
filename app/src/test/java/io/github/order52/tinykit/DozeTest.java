@@ -37,4 +37,14 @@ public class DozeTest {
         assertFalse(s.matches(3));
         assertTrue(s.matches(0));
     }
+
+    @Test
+    public void ignoresTimingsTheSystemRefused() {
+        Doze.Status s = new Doze.Status();
+        s.settings.put("inactive_to", 600_000L); // Android 16 wouldn't take this one
+        s.settings.put("light_after_inactive_to", 5_000L);
+        s.settings.put("idle_to", 14_400_000L);
+        assertFalse(s.matches(3));
+        assertTrue(s.matches(3, java.util.Collections.singleton("inactive_to")));
+    }
 }

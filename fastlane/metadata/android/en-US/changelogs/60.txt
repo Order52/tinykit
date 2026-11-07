@@ -1,0 +1,1 @@
+• Deep sleep profiles work on Android 16 / ColorOS: each Doze timing is written on its own, so the ones the system refuses (not on its allowlist) no longer make the whole profile fail with "Is Shizuku running?". TinyKit now says when the system kept its own timing for some.
