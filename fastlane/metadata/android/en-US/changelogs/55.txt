@@ -1,0 +1,4 @@
+• Send feedback (Info > TinyKit): write a feature request, problem or question and it opens as a ready-made GitHub issue in your browser. TinyKit sends nothing itself.
+• Wireless debugging pairing no longer crashes on Android 11 and 12.
+• Better Russian and Spanish: plurals for wake-ups and closed apps, translated Doze states and tile names, "Root / Kernel" for UID 0.
+• Battery capacity lines are cleaner. Builds are now checked by CI on Android 7 to 14.

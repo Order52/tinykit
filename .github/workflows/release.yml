@@ -6,8 +6,8 @@ name: Release
 # Needs four repository secrets (Settings > Secrets and variables > Actions):
 #   KEYSTORE_BASE64    the release keystore, `base64 -i release.jks`
 #   KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
-# Without them the release is refused rather than signed with the wrong key: an APK signed with
-# another key can't update the installed one.
+# Without them this workflow does nothing (the release is then made by hand): an APK signed with
+# another key can't update the installed one, so it is never built unsigned.
 
 on:
   push:
@@ -39,6 +39,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Signing key
+        id: key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -46,8 +47,13 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           for v in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            [ -n "${!v}" ] || { echo "Secret $v is not set, see the top of this file"; exit 1; }
+            if [ -z "${!v}" ]; then
+              echo "::notice::Secret $v is not set, so no release was built here. See the top of release.yml."
+              echo "have=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           done
+          echo "have=true" >> "$GITHUB_OUTPUT"
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           {
             echo "storeFile=$RUNNER_TEMP/release.jks"
@@ -57,12 +63,15 @@ jobs:
           } > keystore.properties
 
       - name: Unit tests and lint
+        if: steps.key.outputs.have == 'true'
         run: ./gradlew testDebugUnitTest lintDebug
 
       - name: Release build
+        if: steps.key.outputs.have == 'true'
         run: ./gradlew assembleRelease
 
       - name: Check the APK and name it
+        if: steps.key.outputs.have == 'true'
         run: |
           apk=app/build/outputs/apk/release/app-release.apk
           size=$(stat -c %s "$apk")
@@ -80,6 +89,7 @@ jobs:
           } > notes.md
 
       - name: Publish the release
+        if: steps.key.outputs.have == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
