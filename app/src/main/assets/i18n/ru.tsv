@@ -1171,7 +1171,7 @@ Permissions by type	Разрешения по типу
 Pick a permission, like location or camera, and see every app that asks for it and which ones have it.	Выберите разрешение, например геолокацию или камеру, и посмотрите, какие приложения его запрашивают и у каких оно есть.
 Pick a permission to see which apps ask for it and which have it.	Выберите разрешение, чтобы увидеть, какие приложения его запрашивают и у каких оно есть.
 of	из
-apps have it	приложений используют
+apps have it	приложений с доступом
 Allowed	Разрешено
 Not allowed	Не разрешено
 All permissions	Все разрешения
@@ -1356,3 +1356,39 @@ deleted %s of cache	удалено %s кэша
 started storage maintenance	запущено обслуживание хранилища
 closed cached apps	закрыты фоновые приложения
 %s memory free now	сейчас свободно %s памяти
+Certificates	Сертификаты
+Every authority this phone trusts, the ones installed by you, and any website's certificate chain.	Все центры сертификации, которым доверяет телефон, установленные вами и цепочка сертификатов любого сайта.
+The authorities this phone trusts to vouch for websites and apps. Anything installed by you or an app comes first: a certificate you don't know there can let someone read your traffic.	Центры сертификации, которым телефон доверяет подтверждать сайты и приложения. Сначала то, что установили вы или приложение: незнакомый сертификат там может позволить читать ваш трафик.
+Check a website	Проверить сайт
+Install or remove	Установить или удалить
+Reading certificates…	Чтение сертификатов…
+Search certificates	Поиск сертификатов
+Issued by 	Выдан: 
+expires 	истекает 
+Installed by you or an app	Установлен вами или приложением
+Expired	Истёк
+Root authority	Корневой центр
+Intermediate authority	Промежуточный центр
+trusted	доверенных
+installed by you or an app	установлено вами или приложением
+Couldn't read this phone's certificates.	Не удалось прочитать сертификаты телефона.
+Open Settings > Security > Encryption and credentials.	Откройте Настройки > Безопасность > Шифрование и учётные данные.
+Issued to	Кому выдан
+Issued by	Кем выдан
+Kind	Тип
+Root authority (signs itself)	Корневой центр (подписывает сам себя)
+Where from	Источник
+Built into Android	Встроен в Android
+Valid	Действителен
+expired	истёк
+Signed with	Подпись
+Key	Ключ
+Type a website, like example.com	Введите сайт, например example.com
+Connecting…	Подключение…
+Couldn't connect	Не удалось подключиться
+This phone trusts this website's certificate.	Телефон доверяет сертификату этого сайта.
+This phone does NOT trust it	Телефон НЕ доверяет ему
+Website	Сайт
+The root that signed it is in this phone's trust store.	Корневой центр, подписавший его, есть в хранилище доверенных сертификатов телефона.
+The root that signed it is not in this phone's trust store.	Корневой центр, подписавший его, отсутствует в хранилище доверенных сертификатов телефона.
+Check	Проверить

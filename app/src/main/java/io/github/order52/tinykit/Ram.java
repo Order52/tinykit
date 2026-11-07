@@ -71,17 +71,8 @@ final class Ram {
     private static String formatClosedApps(int closed) {
         String lang = java.util.Locale.getDefault().getLanguage();
         if ("ru".equals(lang)) {
-            int c10 = Math.abs(closed) % 10;
-            int c100 = Math.abs(closed) % 100;
-            String word;
-            if (c10 == 1 && c100 != 11) {
-                word = "фоновое приложение";
-            } else if (c10 >= 2 && c10 <= 4 && (c100 < 10 || c100 >= 20)) {
-                word = "фоновых приложения";
-            } else {
-                word = "фоновых приложений";
-            }
-            return "закрыто " + closed + " " + word;
+            String[] word = {"фоновое приложение", "фоновых приложения", "фоновых приложений"};
+            return "закрыто " + closed + " " + word[Tr.ruPlural(closed)];
         }
         if ("es".equals(lang)) {
             return "se " + (closed == 1 ? "cerró 1 app en caché" : "cerraron " + closed + " apps en caché");

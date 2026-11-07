@@ -94,6 +94,14 @@ final class Tr {
         return s.replace("\\n", "\n").replace("\\t", "\t");
     }
 
+    /** Russian plural form for n: 0 one (1, 21), 1 few (2-4, 22-24), 2 many (0, 5-20, 25...). */
+    static int ruPlural(int n) {
+        int c10 = Math.abs(n) % 10;
+        int c100 = Math.abs(n) % 100;
+        if (c10 == 1 && c100 != 11) return 0;
+        return c10 >= 2 && c10 <= 4 && (c100 < 10 || c100 >= 20) ? 1 : 2;
+    }
+
     static String t(String text) {
         Map<String, String> map = words;
         if (text == null || map.isEmpty() || text.isEmpty()) return text;
