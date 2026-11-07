@@ -1444,8 +1444,8 @@ public class MainActivity extends Activity {
             main.post(showBanking);
         });
         row(list, "Banking mode", "One switch for banking and payment apps that refuse to run on a phone with "
-                + "developer options or debugging on. Turns them off (and stops Shizuku, when TinyKit can start "
-                + "it again). Turn it off and everything comes back as it was.", bankingSwitch, () -> {
+                + "developer options or debugging on, or with Shizuku running. Turns them off and stops Shizuku. "
+                + "Turn it off and everything comes back as it was, Shizuku included.", bankingSwitch, () -> {
                     boolean on = !Banking.on(prefs);
                     bankingSwitch.setChecked(on);
                     worker.execute(() -> {

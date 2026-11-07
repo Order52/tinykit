@@ -74,6 +74,21 @@ final class ShizukuControl {
         }
     }
 
+    /**
+     * Stops Shizuku and waits until it is really gone, ending its server by force if the polite stop
+     * didn't work within 3 seconds. True when it is no longer running. Call off the main thread.
+     */
+    static boolean stopAndWait(Context c, SharedPreferences p) {
+        if (!Shell.running()) return true;
+        stop(c, p);
+        for (int i = 0; i < 30 && Shell.running(); i++) android.os.SystemClock.sleep(100);
+        if (Shell.running() && Shell.ready()) {
+            Shell.run(KILL);
+            for (int i = 0; i < 30 && Shell.running(); i++) android.os.SystemClock.sleep(100);
+        }
+        return !Shell.running();
+    }
+
     /** Starts Shizuku. True when a start was requested; false when only the Shizuku app can. */
     static boolean start(Context c, SharedPreferences p) {
         try {

@@ -122,7 +122,7 @@ public abstract class Tiles extends TileService {
 
     /**
      * Banking mode from the quick panel: Developer options, USB debugging and Wireless debugging off for
-     * banking apps (and Shizuku stopped when TinyKit can start it again); tapping again puts back what
+     * banking apps and Shizuku stopped; tapping again puts back what
      * was on. The same code as the switch in the Privacy tab, see {@link Banking}.
      */
     public static final class BankingMode extends Tiles {

@@ -144,7 +144,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
 | **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code, export them all to a file and import them on another phone. |
 | **Send feedback** | Info tab > TinyKit. Write a feature request, bug report or question and it opens as a ready-made GitHub issue in your browser (you press Submit; TinyKit sends nothing itself). |
-| **Banking mode** | One switch for banking apps that refuse to run with developer options or debugging on: turns Developer options, USB debugging and Wireless debugging off (and stops Shizuku when TinyKit can start it again). Turn it off and everything comes back as it was. |
+| **Banking mode** | One switch for banking apps that refuse to run with developer options or debugging on: turns Developer options, USB debugging and Wireless debugging off and stops Shizuku. Turn it off and everything comes back as it was. |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |
 
 ### Apps

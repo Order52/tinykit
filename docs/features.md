@@ -146,9 +146,10 @@ IConnectivityManager.setUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_3, uid, DENY)
 
 Privacy > Developer options > **Banking mode** (also a Quick Settings tile of the same name): one switch for banking and payment apps that won't
 run when developer options or debugging are on. Turning it on writes down which of **Developer
-options**, **USB debugging** and **Wireless debugging** are on, turns them off, and stops Shizuku
-when TinyKit can start it again by itself (some apps notice it running). Turning it off puts back
-exactly what was on, Developer options first, and starts Shizuku again.
+options**, **USB debugging** and **Wireless debugging** are on, turns them off, and **always stops
+Shizuku** (banking apps notice it running; it is stopped first, checked, and ended by force if the
+polite stop doesn't work). Turning it off puts back exactly what was on, Developer options first, and
+starts Shizuku again if it was running.
 
 - It is a state, not a watcher: nothing runs in the background, unlike **Shut Up**, which does it
   only for chosen apps and only while they are open.
@@ -157,8 +158,12 @@ exactly what was on, Developer options first, and starts Shizuku again.
   once to grant that.
 - While it is on, Start Shizuku, the Quick Settings tile and Start by itself do nothing, because starting
   Shizuku needs debugging. Turn Banking mode off first. **Reset switches** turns it off too.
-- If Shizuku can't be started by TinyKit on its own (no auth token, not paired), turning debugging off may
-  end it, and it stays off until you start it from the Shizuku tab after turning Banking mode off.
+- If Shizuku is started again while Banking mode is on (for example from the Shizuku app), TinyKit stops
+  it again the next time you open the Privacy tab or the Quick Settings panel, and the line under the
+  switch says "still on: Shizuku" until it is. If TinyKit isn't allowed in Shizuku it can't stop it, and
+  says so: stop it in the Shizuku app.
+- Turning Banking mode off starts Shizuku with the same Start TinyKit uses, once the debugging is back.
+  If that can't be done by TinyKit alone, it says to start Shizuku from the Shizuku tab.
 - An app that remembers an earlier check can still see it, and an ADB session ends for a moment.
 
 ### Shut Up

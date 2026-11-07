@@ -1357,7 +1357,7 @@ Open on GitHub	Abrir en GitHub
 Write a title and a message first.	Escribe primero un título y un mensaje.
 No browser to open GitHub.	No hay navegador para abrir GitHub.
 Banking mode	Modo bancario
-One switch for banking and payment apps that refuse to run on a phone with developer options or debugging on. Turns them off (and stops Shizuku, when TinyKit can start it again). Turn it off and everything comes back as it was.	Un solo interruptor para apps bancarias y de pago que no funcionan en un teléfono con opciones de desarrollador o depuración activas. Las desactiva (y detiene Shizuku, cuando TinyKit puede volver a iniciarlo). Desactívalo y todo vuelve como estaba.
+One switch for banking and payment apps that refuse to run on a phone with developer options or debugging on, or with Shizuku running. Turns them off and stops Shizuku. Turn it off and everything comes back as it was, Shizuku included.	Un solo interruptor para apps bancarias y de pago que no funcionan en un teléfono con opciones de desarrollador o depuración activas, o con Shizuku en ejecución. Las desactiva y detiene Shizuku. Desactívalo y todo vuelve como estaba, Shizuku incluido.
 Off. Nothing is changed.	Desactivado. No se cambia nada.
 On. Developer options and debugging are off, and Shizuku is stopped until you turn this off.	Activado. Las opciones de desarrollador y la depuración están desactivadas, y Shizuku está detenido hasta que lo desactives.
 On. Developer options, USB debugging and Wireless debugging are off.	Activado. Las opciones de desarrollador, la depuración USB y la depuración inalámbrica están desactivadas.

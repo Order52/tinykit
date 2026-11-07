@@ -1,0 +1,3 @@
+• Banking mode now always stops Shizuku (banking apps notice it running): it stops it first, checks it is gone and ends it by force if needed. Before, it only did so when TinyKit could restart it by itself.
+• Turning Banking mode off starts Shizuku again if it was running, and puts back everything that was on.
+• If Shizuku comes back while Banking mode is on, TinyKit stops it again when you open the Privacy tab or the quick panel.
