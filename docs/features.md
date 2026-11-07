@@ -194,6 +194,14 @@ its paste suggestions stop working. ♻️
 appops set <pkg> READ_CLIPBOARD ignore   # unchecking sets it back to default
 ```
 
+### Send feedback
+
+Info > TinyKit > **Send feedback**: pick Feature request, Problem, Question or Anything else, write a
+title and a message, and **Open on GitHub** opens a new issue in your browser with it filled in (the
+title gets the matching tag, like `[FEATURE REQUEST]`). Optionally it adds your phone model, Android
+and TinyKit version, which you can read and delete before pressing Submit. TinyKit has no server and
+no token: it only opens the link, the same way the crash report does, so you need a free GitHub account.
+
 ### Certificates
 
 Privacy > Network > **Certificates** lists every certificate in Android's trust store: the root and

@@ -70,6 +70,8 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -1607,6 +1609,8 @@ public class MainActivity extends Activity {
         link(list, "Crash log", "See why an app crashed or closed by itself.", this::openCrashes);
 
         section(list, "TinyKit");
+        link(list, "Send feedback", "Ask for a feature, report a problem or say anything. It opens GitHub, ready to send.",
+                this::openFeedback);
         Switch lightThemeSwitch = new Switch(this);
         lightThemeSwitch.setChecked(lightTheme);
         lightThemeSwitch.setClickable(false);
@@ -7328,6 +7332,64 @@ public class MainActivity extends Activity {
                         .show();
             });
         }));
+    }
+
+    /** A feature request, bug report or question that goes to GitHub as an issue, through the browser. */
+    private void openFeedback() {
+        LinearLayout page = vertical();
+        page.setPadding(dp(16), dp(12), dp(16), dp(24));
+        TextView help = text("Your message opens as a new issue on GitHub, in your browser. You read it, change it if you "
+                + "like and press Submit there. TinyKit sends nothing itself. You need a free GitHub account.", 13, false);
+        setDim(help, 0.7f);
+        page.addView(help);
+        String[] kinds = {"[FEATURE REQUEST]", "[BUG]", "[QUESTION]", "[FEEDBACK]"};
+        String[] names = {"Feature request", "Problem", "Question", "Anything else"};
+        RadioGroup group = new RadioGroup(this);
+        int[] ids = new int[names.length];
+        for (int i = 0; i < names.length; i++) {
+            RadioButton b = new RadioButton(this);
+            ids[i] = View.generateViewId();
+            b.setId(ids[i]);
+            b.setText(Tr.t(names[i]));
+            group.addView(b);
+        }
+        group.check(ids[0]);
+        page.addView(group);
+        EditText title = new EditText(this);
+        title.setHint(Tr.t("Short title"));
+        title.setSingleLine();
+        title.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        page.addView(title, fieldMargin());
+        EditText message = new EditText(this);
+        message.setHint(Tr.t("What do you want, or what went wrong?"));
+        message.setMinLines(5);
+        message.setGravity(Gravity.TOP);
+        message.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        page.addView(message, fieldMargin());
+        CheckBox phone = new CheckBox(this);
+        phone.setText(Tr.t("Add my phone model, Android and TinyKit version"));
+        phone.setChecked(true);
+        page.addView(phone);
+        Button send = button("Open on GitHub", null);
+        send.setOnClickListener(v -> {
+            if (title.getText().toString().trim().isEmpty() || message.getText().toString().trim().isEmpty()) {
+                toast(Tr.t("Write a title and a message first."));
+                return;
+            }
+            try {
+                int kind = 0;
+                for (int i = 0; i < ids.length; i++) if (ids[i] == group.getCheckedRadioButtonId()) kind = i;
+                startActivity(CrashReport.feedback(this, kinds[kind],
+                        title.getText().toString(), message.getText().toString(), phone.isChecked()));
+            } catch (RuntimeException e) {
+                toast(Tr.t("No browser to open GitHub."));
+            }
+        });
+        page.addView(send);
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(page);
+        push("Send feedback", scroll);
     }
 
     /** The phone's trusted certificate authorities, with a way to check any website's chain. */

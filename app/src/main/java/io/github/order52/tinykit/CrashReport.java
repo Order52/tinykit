@@ -121,6 +121,18 @@ final class CrashReport {
         return new Intent(Intent.ACTION_VIEW, Uri.parse(url));
     }
 
+    /**
+     * An intent that opens a new GitHub issue with what the user wrote, for a feature request, a bug or a
+     * question. Nothing is sent from the app: GitHub opens in the browser, the user reads it and presses Submit.
+     */
+    static Intent feedback(Context c, String kind, String title, String message, boolean withPhone) {
+        String msg = message.length() > 5000 ? message.substring(0, 5000) + "\n… (trimmed)" : message;
+        String body = msg.trim() + "\n";
+        if (withPhone) body += "\n---\n```\n" + header(c) + "```\n";
+        String url = ISSUES + "?title=" + Uri.encode(kind + " " + title.trim()) + "&body=" + Uri.encode(body);
+        return new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+    }
+
     private static void notifyCrash(Context c) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null || !nm.areNotificationsEnabled()) return;

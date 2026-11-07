@@ -143,6 +143,7 @@ single tap. Eight of them keep working with Shizuku stopped.
 | **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
 | **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code, export them all to a file and import them on another phone. |
 | **Certificates** | Every certificate authority the phone trusts (roots and intermediates), the ones installed by you or an app listed first, with details and SHA-256 fingerprints. Check any website to see its certificate chain and whether the phone trusts it. |
+| **Send feedback** | Info tab > TinyKit. Write a feature request, bug report or question and it opens as a ready-made GitHub issue in your browser (you press Submit; TinyKit sends nothing itself). |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |
 
 ### Apps

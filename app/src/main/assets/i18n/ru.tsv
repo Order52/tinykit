@@ -1392,3 +1392,16 @@ Website	Сайт
 The root that signed it is in this phone's trust store.	Корневой центр, подписавший его, есть в хранилище доверенных сертификатов телефона.
 The root that signed it is not in this phone's trust store.	Корневой центр, подписавший его, отсутствует в хранилище доверенных сертификатов телефона.
 Check	Проверить
+Send feedback	Отправить отзыв
+Ask for a feature, report a problem or say anything. It opens GitHub, ready to send.	Предложите функцию, сообщите о проблеме или напишите что угодно. Откроется GitHub, всё готово к отправке.
+Your message opens as a new issue on GitHub, in your browser. You read it, change it if you like and press Submit there. TinyKit sends nothing itself. You need a free GitHub account.	Ваше сообщение откроется как новый issue на GitHub в браузере. Вы прочитаете его, при желании измените и нажмёте «Submit» там. TinyKit сам ничего не отправляет. Нужна бесплатная учётная запись GitHub.
+Feature request	Предложение функции
+Problem	Проблема
+Question	Вопрос
+Anything else	Что-то другое
+Short title	Короткий заголовок
+What do you want, or what went wrong?	Что вы хотите или что пошло не так?
+Add my phone model, Android and TinyKit version	Добавить модель телефона, версию Android и TinyKit
+Open on GitHub	Открыть на GitHub
+Write a title and a message first.	Сначала напишите заголовок и сообщение.
+No browser to open GitHub.	Нет браузера для открытия GitHub.

@@ -1379,3 +1379,16 @@ Website	Sitio web
 The root that signed it is in this phone's trust store.	La raíz que lo firmó está en el almacén de confianza de este teléfono.
 The root that signed it is not in this phone's trust store.	La raíz que lo firmó no está en el almacén de confianza de este teléfono.
 Check	Revisar
+Send feedback	Enviar comentarios
+Ask for a feature, report a problem or say anything. It opens GitHub, ready to send.	Pide una función, informa de un problema o di lo que quieras. Abre GitHub, listo para enviar.
+Your message opens as a new issue on GitHub, in your browser. You read it, change it if you like and press Submit there. TinyKit sends nothing itself. You need a free GitHub account.	Tu mensaje se abre como un nuevo issue en GitHub, en tu navegador. Lo lees, lo cambias si quieres y pulsas Enviar allí. TinyKit no envía nada por sí mismo. Necesitas una cuenta gratuita de GitHub.
+Feature request	Solicitud de función
+Problem	Problema
+Question	Pregunta
+Anything else	Cualquier otra cosa
+Short title	Título corto
+What do you want, or what went wrong?	¿Qué quieres, o qué salió mal?
+Add my phone model, Android and TinyKit version	Añadir el modelo de mi teléfono, Android y la versión de TinyKit
+Open on GitHub	Abrir en GitHub
+Write a title and a message first.	Escribe primero un título y un mensaje.
+No browser to open GitHub.	No hay navegador para abrir GitHub.
