@@ -187,7 +187,7 @@ Charging info	Информация о зарядке
 Check for updates	Проверить обновления
 Check for updates on start	Проверять обновления при запуске
 Check for updates?	Проверять обновления?
-Checked apps are disabled: they leave the launcher and stop running. Uncheck to bring one back. On this phone only disabling works to hide an app.	Отмеченные приложения отключаются: они исчезают из лаунчера и прекращают работу. Снимите отметку, чтобы вернуть их. На этом телефоне скрыть приложение можно только отключением.
+Checked apps are disabled: they leave the launcher and stop running. Uncheck to bring one back. On this phone only disabling works to hide an app.	Отмеченные приложения отключаются (замораживаются): они исчезают из лаунчера и полностью перестают работать в фоне. Снимите отметку, чтобы вернуть их (разморозить). На этом устройстве скрытие работает через отключение пакета.
 Checked apps are exempt from battery optimization and background limits, so Android doesn't kill them or delay their notifications.	Отмеченные приложения исключены из оптимизации батареи и фоновых ограничений, поэтому Android не будет закрывать их или задерживать уведомления.
 Checked apps are restricted like Settings > Battery > Restricted: no background work, alarms or wake-locks until you open them. Their notifications may arrive late, so leave messengers unchecked.	Отмеченные приложения ограничиваются, как в Настройки > Батарея > Ограничено: никакой фоновой работы, будильников или вейклоков до их открытия. Их уведомления могут приходить с задержкой, поэтому не отмечайте мессенджеры.
 Checked apps can't read what you copy, even when they're open. Android already stops apps from reading it in the background. Don't check your keyboard, or pasting suggestions stop working.	Отмеченные приложения не могут читать то, что вы копируете, даже когда они открыты. Android уже запрещает чтение в фоновом режиме. Не отмечайте клавиатуру, иначе перестанут работать подсказки при вставке.
@@ -278,7 +278,7 @@ Don't keep mobile data running while connected to Wi-Fi. Saves battery.	Не п�
 Done.	Готово.
 Done: 	Готово: 
 Downlink	Скорость загрузки
-Download	Загрузки
+Download	Скачать
 Draw over other apps	Поверх других приложений
 Draws everything with the GPU instead of the display's overlay layers (the same as the developer option). Android forgets it at a restart; TinyKit puts it back once Shizuku is running.	Отрисовывает всё с помощью GPU вместо слоёв наложения экрана (аналогично опции для разработчиков). Android сбрасывает эту настройку при перезагрузке; TinyKit восстанавливает её после запуска Shizuku.
 Edit quick panel	Изменить панель быстрых настроек
@@ -336,9 +336,9 @@ Hearing devices	Слуховые аппараты
 Held 	Удерживалось 
 HiCloud	HiCloud
 Hidden app-ops	Скрытые app-ops
-Hide apps	Скрыть приложения
+Hide apps	Скрытие приложений
 Hide apps from the launcher	Скрыть приложения из лаунчера
-Hide apps from the launcher by disabling them.	Скрыть приложения из лаунчера, отключив их.
+Hide apps from the launcher by disabling them.	Скрытие из лаунчера (заморозка) неиспользуемых приложений.
 Hide dev options	Скрыть параметры разработчика
 Hide developer options	Скрыть параметры для разработчиков
 Hide developer options from apps.	Скрывать параметры разработчика от приложений.
@@ -965,7 +965,7 @@ Wi-Fi sign-in pages	Страницы входа в сети Wi-Fi
 Work profiles and device setup	Рабочие профили и настройка устройства
 Work setup	Настройка рабочего профиля
 Xiaomi push services	Службы push-уведомлений Xiaomi
- is out (you have 	 уже доступна (у вас 
+ is out (you have 	 уже доступен (у вас 
 just now	только что
 under a minute	меньше минуты
 not installed	не установлено
@@ -1171,7 +1171,7 @@ Permissions by type	Разрешения по типу
 Pick a permission, like location or camera, and see every app that asks for it and which ones have it.	Выберите разрешение, например геолокацию или камеру, и посмотрите, какие приложения его запрашивают и у каких оно есть.
 Pick a permission to see which apps ask for it and which have it.	Выберите разрешение, чтобы увидеть, какие приложения его запрашивают и у каких оно есть.
 of	из
-apps have it	приложений имеют его
+apps have it	приложений используют
 Allowed	Разрешено
 Not allowed	Не разрешено
 All permissions	Все разрешения
@@ -1232,34 +1232,34 @@ Termux returned no result.	Termux не вернул результата.
 Command copied. Paste it in Termux (hold, Paste) and press Enter.	Команда скопирована. Вставьте её в Termux (удерживайте, «Вставить») и нажмите Enter.
 Start by itself	Запускать самостоятельно
 After a restart, and when you open TinyKit, start Shizuku if that needs nobody (it has worked before, or the auth token is saved).	После перезагрузки и при открытии TinyKit запускать Shizuku, если для этого никто не нужен (раньше уже получалось или сохранён токен авторизации).
-Deep sleep	Глубокий сон
+Deep sleep	Управление спящим режимом (Doze)
 Light	Лёгкий
 Moderate	Умеренный
 High	Высокий
 Extreme	Экстремальный
 Android is using it.	Android его использует.
 Android isn't using it yet.	Android пока его не использует.
-Android's own timing.	Собственные тайминги Android.
-Doze 10 minutes after the screen goes off. Doesn't change day-to-day use.	Doze через 10 минут после выключения экрана. Не меняет повседневное использование.
-Doze after a minute, wakes every 2 hours. Notifications arrive a little later.	Doze через минуту, просыпается каждые 2 часа. Уведомления приходят чуть позже.
-Doze after 30 seconds, wakes every 4 hours. Background work is delayed.	Doze через 30 секунд, просыпается каждые 4 часа. Фоновая работа откладывается.
-Doze as soon as the screen is off, wakes every 6 hours. The most battery saved, the most delayed.	Doze сразу после выключения экрана, просыпается каждые 6 часов. Максимум экономии и максимум задержек.
-Couldn't change deep sleep. Is Shizuku running?	Не удалось изменить глубокий сон. Shizuku запущен?
-Deep sleep now	Глубокий сон сейчас
-Puts the phone into Doze right now, until you use it again. Turn the screen off to see it work.	Переводит телефон в Doze прямо сейчас, пока вы им не воспользуетесь. Выключите экран, чтобы увидеть.
-Done. Doze is on.	Готово. Doze включён.
+Android's own timing.	Стандартные параметры Android.
+Doze 10 minutes after the screen goes off. Doesn't change day-to-day use.	Засыпание через 10 минут после выключения экрана. Не влияет на обычное использование.
+Doze after a minute, wakes every 2 hours. Notifications arrive a little later.	Сон через 1 минуту, просыпается каждые 2 часа. Уведомления приходят чуть позже.
+Doze after 30 seconds, wakes every 4 hours. Background work is delayed.	Сон через 30 секунд, просыпается каждые 4 часа. Фоновая работа откладывается.
+Doze as soon as the screen is off, wakes every 6 hours. The most battery saved, the most delayed.	Сон сразу при выключении экрана, просыпается каждые 6 часов. Максимум экономии и максимум задержек.
+Couldn't change deep sleep. Is Shizuku running?	Не удалось изменить спящий режим. Shizuku запущен?
+Deep sleep now	Перевести в спящий режим сейчас
+Puts the phone into Doze right now, until you use it again. Turn the screen off to see it work.	Немедленно переводит телефон в спящий режим (Doze). Режим активируется после выключения экрана.
+Done. Doze is on.	Готово. Режим сна включён.
 Wake up	Разбудить
-Takes the phone out of deep sleep.	Выводит телефон из глубокого сна.
-Apps that ignore deep sleep	Приложения, игнорирующие глубокий сон
+Takes the phone out of deep sleep.	Выводит телефон из спящего режима.
+Apps that ignore deep sleep	Приложения, игнорирующие спящий режим
 Apps you keep alive (and the system's own) don't doze.	Приложения, которые вы оставляете живыми (и системные), не засыпают.
-Make the phone doze sooner after the screen goes off, and wake up less often, like Comatose. Pick a profile, or doze right now.	Телефон засыпает раньше после выключения экрана и просыпается реже, как в Comatose. Выберите профиль или усыпите сейчас.
+Make the phone doze sooner after the screen goes off, and wake up less often, like Comatose. Pick a profile, or doze right now.	Управление спящим режимом Doze: ускоряет засыпание после выключения экрана и сокращает пробуждения для экономии батареи.
 Running services	Запущенные службы
 Every service running now, with its app. Stop one, or block it for good.	Все запущенные сейчас службы с их приложениями. Остановите службу или заблокируйте её насовсем.
 Tap a service to stop it, stop its app, or block it. Stopping can be undone by the app; blocking can't, until you unblock it.	Нажмите на службу, чтобы остановить её, остановить приложение или заблокировать. Приложение может запустить остановленную службу снова; заблокированную — нет, пока вы не разблокируете.
 Search services	Поиск служб
 Show system services	Показывать системные службы
-service running	служба запущена
-services running	служб запущено
+service running	служба активна
+services running	активных служб
 Foreground	Передний план
 Started	Запущена
 Bound	Привязана
@@ -1328,3 +1328,31 @@ Set a screen lock in Android first.	Сначала настройте блоки
 Use phone lock screen	Использовать экран блокировки
 Only the folder is locked by this: the apps in the work profile can still be opened from the launcher while they aren't hidden. If you forget it, the phone's lock screen opens the folder.	Этим блокируется только папка: приложения рабочего профиля можно открыть из лаунчера, пока они не скрыты. Если забудете пароль, папку откроет экран блокировки телефона.
 Nothing here yet. Tap Add apps.	Пока ничего нет. Нажмите «Добавить приложения».
+
+ACTIVE	Активен
+INACTIVE	Неактивен
+IDLE	Режим ожидания
+IDLE_MAINTENANCE	Обслуживание
+IDLE_PENDING	Ожидание сна
+SENSING	Датчики
+LOCATING	Локация
+QUICK_DOZE_DELAY	Задержка сна
+WAITING_FOR_NETWORK	Ожидание сети
+OVERRIDE	Принудительный режим
+Wakelock	Вейклоки
+Screen	Экран
+Idle	Режим ожидания
+Cell	Мобильная связь
+Root / Kernel	Root / Ядро
+Estimated battery capacity	Расчётная ёмкость
+Last learned battery capacity	Фактическая ёмкость (замер)
+Min learned battery capacity	Минимальная замеренная ёмкость
+%d service running	Активна %d служба
+%d services running	Активных служб: %d
+times	раз
+Deep	Глубокий
+trimmed and compacted memory	память оптимизирована и сжата
+deleted %s of cache	удалено %s кэша
+started storage maintenance	запущено обслуживание хранилища
+closed cached apps	закрыты фоновые приложения
+%s memory free now	сейчас свободно %s памяти
