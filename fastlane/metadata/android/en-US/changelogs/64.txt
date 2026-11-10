@@ -1,0 +1,2 @@
+• Saved Wi-Fi > Import opens Android's file picker, so a backup can be loaded from anywhere, not only Download/TinyKit (#7).
+• Fix: the last saved network disappeared from the Saved Wi-Fi list and from an export when it was an open one.

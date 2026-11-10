@@ -84,6 +84,7 @@ public final class WifiDump {
             String line;
             while ((line = in.readLine()) != null) {
                 String[] part = line.split("\t", -1);
+                if (part.length == 2) part = new String[]{part[0], part[1], ""}; // an open network, its empty password cut off
                 if (part.length < 3 || part[0].isEmpty() || have.contains(part[0]) || part[1].equals("EAP")) continue;
                 WifiConfiguration c = new WifiConfiguration();
                 c.SSID = "\"" + part[0] + "\"";

@@ -59,6 +59,7 @@ available in English, Spanish and Russian.
 - **Extra dim safety.** Its strength is capped, and unless you press **Keep** it turns itself off, so a black screen
   fixes itself.
 - **TinyFolder** (Secure folder or plain work profile) only shows its launcher icon when there is a real work profile.
+- **Import Wi-Fi networks from any file.** Saved Wi-Fi > Import now opens Android's file picker instead of looking only in Download/TinyKit.
 - **Special access works the same way.** Install unknown apps, Draw over other apps and the others get a **Set the apps shown** bar to allow or take away the access for every app listed. Also fixes a crash when choosing Default on the Deep sleep screen.
 - **Set a permission for every app in one tap.** In **Permissions by type**, pick a permission and set Real, Fake or Off for all the apps listed, or only the ones a search shows.
 - **Start Shizuku over adb on the network** now also tries port 50000.
@@ -165,7 +166,7 @@ And **Work profile**, **Deep sleep** and **Audio mixer**.
 | **Block internet per app** | Cuts chosen apps off Wi-Fi and mobile data (Android 14+) with Android's own per-app firewall, or blocks everything except the apps you allow. Nothing runs in the background unless you turn on *Run in the background*: the system enforces it, and TinyKit puts it back after a restart as soon as Shizuku is running. |
 | **Shut Up** | Pick apps (banking apps, games) that refuse to run with Developer options or USB or Wireless debugging on. While one is open they look off, and they come back when you leave it. Off by default; turning it on also turns on Run in the background, which it needs. |
 | **Clipboard guard** | Stops chosen apps from reading what you copy, even while they're open. |
-| **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code, export them all to a file and import them on another phone. |
+| **Saved Wi-Fi networks** | Lists saved networks with their passwords, with search. Share any network as a QR code, export them all to a file and import them on another phone, picking the file with Android's file picker. |
 | **Send feedback** | Info tab > TinyKit. Write a feature request, bug report or question and it opens as a ready-made GitHub issue in your browser (you press Submit; TinyKit sends nothing itself). |
 | **Banking mode** | One switch (and a Quick Settings tile) for banking apps that refuse to run with developer options or debugging on: turns Developer options, USB debugging and Wireless debugging off and stops Shizuku, so the apps start. Turn it off and everything comes back as it was, and Shizuku starts again. It needs Shizuku once, to give TinyKit access to those settings. |
 | **More** | Hide developer options · Ad-blocking DNS · Stop background scanning |

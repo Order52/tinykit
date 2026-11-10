@@ -217,35 +217,82 @@ final class SavedWifiScreen {
                     .setNegativeButton(Tr.t("Cancel"), null)
                     .show();
         });
-        importButton.setOnClickListener(v -> tk.worker.execute(() -> {
-            List<String> files = new ArrayList<>();
-            for (String line : Shell.run("ls -1t " + MainActivity.BACKUP_DIR + "/wifi-*.txt 2>/dev/null").out.split("\n")) {
-                if (!line.trim().isEmpty()) files.add(line.trim());
+        reloadList = reload[0];
+        importButton.setOnClickListener(v -> {
+            if (!Shell.ready()) {
+                tk.toast(Tr.t("Start Shizuku and allow TinyKit first."));
+                return;
             }
-            tk.main.post(() -> {
-                if (files.isEmpty()) {
-                    tk.toast(Tr.t("No exported networks yet. Export first, or put a wifi-….txt file in Download/TinyKit."));
-                    return;
-                }
-                String[] names = new String[files.size()];
-                for (int i = 0; i < names.length; i++) names[i] = files.get(i).substring(files.get(i).lastIndexOf('/') + 1);
-                new AlertDialog.Builder(tk)
-                        .setTitle(Tr.t("Import which file?"))
-                        .setItems(names, (d, which) -> tk.worker.execute(() -> {
-                            String apk = Shell.run("pm path " + tk.getPackageName() + " | head -1 | sed 's/^package://'").out.trim();
-                            Shell.Result r = Shell.run("CLASSPATH=" + Shell.quote(apk)
-                                    + " app_process /system/bin io.github.order52.tinykit.WifiDump add "
-                                    + Shell.quote(files.get(which)));
-                            tk.main.post(() -> {
-                                tk.toast(r.ok() ? Tr.t("Added ") + r.out.trim() + Tr.t(" networks that weren't saved yet.")
-                                        : Tr.t("This phone doesn't let TinyKit add networks."));
-                                reload[0].run();
-                            });
-                        }))
-                        .setNegativeButton(Tr.t("Cancel"), null)
-                        .show();
-            });
-        }));
+            // The system file picker, so a backup can be loaded from wherever it is (Downloads, a USB stick, a cloud drive).
+            Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+            try {
+                tk.startActivityForResult(pick, MainActivity.REQUEST_PICK_WIFI);
+            } catch (ActivityNotFoundException e) {
+                tk.toast(Tr.t("No file picker found on this phone."));
+            }
+        });
+    }
+
+    /** Refreshes the open Saved Wi-Fi list, if there is one. */
+    private Runnable reloadList;
+
+    private static final int MAX_IMPORT = 1 << 20;
+    private static final String IMPORT_TMP = "/data/local/tmp/tinykit-wifi-import.txt";
+
+    /** Adds the networks in a file the user picked that this phone doesn't have yet. Off the main thread. */
+    void importFrom(Uri uri) {
+        String text;
+        try (InputStream in = tk.getContentResolver().openInputStream(uri)) {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int n;
+            while (in != null && (n = in.read(buffer)) > 0 && bytes.size() <= MAX_IMPORT) bytes.write(buffer, 0, n);
+            if (bytes.size() > MAX_IMPORT) {
+                tk.main.post(() -> tk.toast(Tr.t("That file doesn't have any Wi-Fi networks in it.")));
+                return;
+            }
+            text = new String(bytes.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException | RuntimeException e) {
+            tk.main.post(() -> tk.toast(Tr.t("Couldn't read that file.")));
+            return;
+        }
+        if (countNetworks(text) == 0) {
+            tk.main.post(() -> tk.toast(Tr.t("That file doesn't have any Wi-Fi networks in it.")));
+            return;
+        }
+        // The shell user adds them, and can't read the picked file itself, so the text goes to a file it can.
+        String apk = Shell.run("pm path " + tk.getPackageName() + " | head -1 | sed 's/^package://'").out.trim();
+        Shell.Result write = Shell.run("cat > " + IMPORT_TMP,
+                new java.io.ByteArrayInputStream(text.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        Shell.Result r = write.ok() ? Shell.run("CLASSPATH=" + Shell.quote(apk)
+                + " app_process /system/bin io.github.order52.tinykit.WifiDump add " + IMPORT_TMP) : write;
+        Shell.run("rm -f " + IMPORT_TMP);
+        tk.main.post(() -> {
+            tk.toast(r.ok() ? Tr.t("Added ") + r.out.trim() + Tr.t(" networks that weren't saved yet.")
+                    : Tr.t("This phone doesn't let TinyKit add networks."));
+            if (reloadList != null) reloadList.run();
+        });
+    }
+
+    /**
+     * One line of a network list ("name, type, password", tab separated) as three fields, or null when it isn't one.
+     * An open network's empty password is the last field, and a line read from the shell comes back without it.
+     */
+    static String[] fields(String line) {
+        String[] part = line.replace("\r", "").split("\t", -1);
+        if (part.length == 2) part = new String[]{part[0], part[1], ""};
+        if (part.length < 3 || part[0].trim().isEmpty()) return null;
+        switch (part[1]) {
+            case "WPA": case "WEP": case "nopass": case "EAP": return part;
+            default: return null;
+        }
+    }
+
+    /** Lines of an export that could be a network. */
+    static int countNetworks(String text) {
+        int n = 0;
+        for (String line : text.split("\n")) if (fields(line) != null) n++;
+        return n;
     }
 
     /** A feature request, bug report or question that goes to GitHub as an issue, through the browser. */
@@ -315,10 +362,8 @@ final class SavedWifiScreen {
                 + " app_process /system/bin io.github.order52.tinykit.WifiDump");
         if (!r.ok()) return nets;
         for (String line : r.out.split("\n")) {
-            String[] parts = line.split("\t", -1);
-            if (parts.length >= 3 && !parts[0].trim().isEmpty()) {
-                nets.add(new String[]{parts[0], parts[1], parts[2]});
-            }
+            String[] parts = fields(line);
+            if (parts != null) nets.add(parts);
         }
         Collections.sort(nets, (a, b) -> a[0].compareToIgnoreCase(b[0]));
         return nets;

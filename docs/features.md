@@ -238,8 +238,9 @@ network are involved.
 
 **Export** saves every network and its password as plain text in `Download/TinyKit/wifi-….txt`
 (one `name, type, password` line each; TinyKit warns you, because anyone who gets the file can read
-the passwords). **Import** reads such a file and saves the networks this phone doesn't have yet,
-through `IWifiManager.addOrUpdateNetwork` as the `shell` user. Open and WPA networks come back;
+the passwords). **Import** opens Android's file picker, so the backup can be anywhere (Downloads, a
+USB stick, a cloud drive) and doesn't have to be in `Download/TinyKit`. It saves the networks this
+phone doesn't have yet, through `IWifiManager.addOrUpdateNetwork` as the `shell` user. Open and WPA networks come back;
 enterprise (EAP) networks have no password to export, and old WEP ones are refused by newer
 Android. Tried on Android 14.
 

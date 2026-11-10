@@ -117,6 +117,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_NOTIFICATIONS = 2;
     private static final int REQUEST_RUN_COMMAND = 3;
     static final int REQUEST_PICK_APK = 4;
+    static final int REQUEST_PICK_WIFI = 5;
     private static final String[] TAB_NAMES = {"Shizuku", "Privacy", "Apps", "System", "Info"};
     private static final String DNS_HOST = "dns.adguard-dns.com";
     static final String BACKUP_DIR = "/sdcard/Download/TinyKit";
@@ -1784,6 +1785,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_PICK_WIFI && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            Uri wifi = data.getData();
+            worker.execute(() -> savedWifiScreen.importFrom(wifi));
+            return;
+        }
         if (requestCode != REQUEST_PICK_APK || resultCode != RESULT_OK || data == null) return;
         List<Uri> uris = new ArrayList<>();
         if (data.getClipData() != null) {
