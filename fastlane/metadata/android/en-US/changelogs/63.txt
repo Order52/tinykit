@@ -1,0 +1,2 @@
+• Fix: tapping Default on the Deep sleep screen closed TinyKit (#15).
+• Special access: a bar to allow or take away the access for every app the list shows, after a confirmation (#9).

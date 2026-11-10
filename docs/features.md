@@ -558,7 +558,9 @@ pm install-existing --user 0 <pkg>   # restore
 
 The permissions Android hides on separate screens: **Install unknown apps**, **Draw over other
 apps**, **Modify system settings**, **All files access** and **Usage access**. Pick one to see
-only the apps that ask for it, then allow or take it away.
+only the apps that ask for it, then allow or take it away. The **Set the apps shown** bar at the top
+allows or takes away the access for every app the list shows (after a confirmation), so a search
+narrows it to a few. Each skipped app is listed with the reason.
 
 ```sh
 appops set <pkg> REQUEST_INSTALL_PACKAGES allow   # unchecking sets it back to default

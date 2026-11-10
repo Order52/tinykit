@@ -154,7 +154,7 @@ final class SpecialAccessScreen {
                     () -> tk.packages(Shell.run("appops query-op " + s[0] + " allow").out),
                     (pkg, on) -> tk.error(Shell.run("appops set " + Shell.quote(pkg) + " " + s[0]
                             + (on ? " allow" : " default"))),
-                    () -> requesting(s[3])), true);
+                    () -> requesting(s[3]), false, true), true);
         }
         tk.push("Special access", tk.scroll(list));
     }

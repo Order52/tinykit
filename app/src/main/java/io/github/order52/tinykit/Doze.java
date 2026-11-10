@@ -62,6 +62,13 @@ final class Doze {
 
     static final String REFUSED = "doze_refused";
 
+    /** How many timings the profile sets (Default sets none: column 0 of the table is the name, not a number). */
+    static int wanted(int profile) {
+        int n = 0;
+        if (profile > 0) for (Object[] row : TABLE) if ((Integer) row[profile] >= 0) n++;
+        return n;
+    }
+
     /** One command whose complaint, if any, is noted: Android 16 and some makers' builds refuse flags outside their allowlist. */
     private static void step(StringBuilder script, String name, String command) {
         script.append("o=$(").append(command).append(" 2>&1) || o=failed; case \"$o\" in ")
@@ -108,10 +115,8 @@ final class Doze {
         java.util.Set<String> refused = new java.util.HashSet<>();
         for (String line : r.out.split("\n")) if (line.startsWith("REFUSED:")) refused.add(line.substring(8).trim());
         Tiles.prefs(c).edit().putStringSet(REFUSED, refused).apply();
-        int wanted = 0;
-        for (Object[] row : TABLE) if ((Integer) row[profile] >= 0) wanted++;
         // On Android 12 and newer only DeviceConfig counts; if it took none of them there is nothing to wait for.
-        if (profile > 0 && config && refused.size() >= wanted) {
+        if (profile > 0 && config && refused.size() >= wanted(profile)) {
             return "This phone's Android won't let TinyKit change the Doze timings.";
         }
         return null;

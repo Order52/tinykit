@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
     private final MixedAudioScreen mixedAudioScreen = new MixedAudioScreen(this);
     private final MixerScreen mixerScreen = new MixerScreen(this);
     private final NetworkScreen networkScreen = new NetworkScreen(this);
-    private final PermissionsScreen permissionsScreen = new PermissionsScreen(this);
+    final PermissionsScreen permissionsScreen = new PermissionsScreen(this);
     private final PhoneInfoScreen phoneInfoScreen = new PhoneInfoScreen(this);
     private final QuickPanelScreen quickPanelScreen = new QuickPanelScreen(this);
     private final RebootScreen rebootScreen = new RebootScreen(this);
@@ -2383,6 +2383,10 @@ public class MainActivity extends Activity {
 
     void openPicker(String title, String help, boolean checkable, Loader loader, AppChange change, Loader eligible, boolean internetFilter) {
         installScreen.openPicker(title, help, checkable, loader, change, eligible, internetFilter);
+    }
+
+    void openPicker(String title, String help, boolean checkable, Loader loader, AppChange change, Loader eligible, boolean internetFilter, boolean bulk) {
+        installScreen.openPicker(title, help, checkable, loader, change, eligible, internetFilter, bulk);
     }
 
     void reloadApps() {

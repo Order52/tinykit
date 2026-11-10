@@ -59,6 +59,7 @@ available in English, Spanish and Russian.
 - **Extra dim safety.** Its strength is capped, and unless you press **Keep** it turns itself off, so a black screen
   fixes itself.
 - **TinyFolder** (Secure folder or plain work profile) only shows its launcher icon when there is a real work profile.
+- **Special access works the same way.** Install unknown apps, Draw over other apps and the others get a **Set the apps shown** bar to allow or take away the access for every app listed. Also fixes a crash when choosing Default on the Deep sleep screen.
 - **Set a permission for every app in one tap.** In **Permissions by type**, pick a permission and set Real, Fake or Off for all the apps listed, or only the ones a search shows.
 - **Start Shizuku over adb on the network** now also tries port 50000.
 - **Send feedback** from the Info tab opens a ready-made GitHub issue.

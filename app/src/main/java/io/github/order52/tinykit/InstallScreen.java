@@ -184,6 +184,12 @@ final class InstallScreen {
     /** As above; {@code internetFilter} adds the "Only apps with internet permission" checkbox. */
     void openPicker(String title, String help, boolean checkable, MainActivity.Loader loader, MainActivity.AppChange change,
                             MainActivity.Loader eligible, boolean internetFilter) {
+        openPicker(title, help, checkable, loader, change, eligible, internetFilter, false);
+    }
+
+    /** As above; {@code bulk} adds a bar that allows or takes away the access for every app the list shows. */
+    void openPicker(String title, String help, boolean checkable, MainActivity.Loader loader, MainActivity.AppChange change,
+                            MainActivity.Loader eligible, boolean internetFilter, boolean bulk) {
         LinearLayout page = tk.vertical();
         page.setPadding(tk.dp(16), tk.dp(12), tk.dp(16), 0);
         TextView helpView = tk.text(help, 14, false);
@@ -207,6 +213,28 @@ final class InstallScreen {
         final int[] sort = {0};
         TextView loading = tk.text("Loading apps…", 14, false);
         page.addView(loading);
+        final List<MainActivity.App> shownNow = new ArrayList<>();
+        final TextView bulkTitle = tk.text("", 15, true);
+        final TextView[] bulkPills = new TextView[2];
+        final String[] bulkLabels = {"Allow", "Take away"};
+        if (checkable && bulk) {
+            LinearLayout bar = tk.vertical();
+            bar.setPadding(0, tk.dp(8), 0, tk.dp(8));
+            bar.addView(bulkTitle);
+            LinearLayout seg = new LinearLayout(tk);
+            seg.setPadding(0, tk.dp(8), 0, 0);
+            for (int i = 0; i < 2; i++) {
+                TextView pill = tk.text(bulkLabels[i], 13, true);
+                pill.setGravity(Gravity.CENTER);
+                pill.setPadding(0, tk.dp(9), 0, tk.dp(9));
+                bulkPills[i] = pill;
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+                lp.setMargins(i == 0 ? 0 : tk.dp(4), 0, i == 1 ? 0 : tk.dp(4), 0);
+                seg.addView(pill, lp);
+            }
+            bar.addView(seg);
+            page.addView(bar);
+        }
         ListView listView = new ListView(tk);
         listView.setFastScrollEnabled(true);
         page.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -222,6 +250,7 @@ final class InstallScreen {
             tk.showIcon(row, app.pkg);
         });
         listView.setAdapter(adapter);
+        final Runnable[] adapterRefresh = new Runnable[1];
         Runnable filter = () -> {
             String q = search.getText().toString().toLowerCase(Locale.ROOT);
             List<MainActivity.App> shown = new ArrayList<>();
@@ -239,7 +268,27 @@ final class InstallScreen {
             Collections.sort(shown, (x, y) -> x.checked != y.checked ? (x.checked ? -1 : 1)
                     : (sort[0] == 1 ? x.pkg.compareToIgnoreCase(y.pkg) : x.label.compareToIgnoreCase(y.label)));
             adapter.set(shown);
+            if (checkable && bulk) {
+                shownNow.clear();
+                shownNow.addAll(shown);
+                bulkTitle.setText(Tr.t("Set the apps shown") + " (" + shown.size() + ")");
+                for (int i = 0; i < 2; i++) {
+                    boolean lit = !shown.isEmpty();
+                    for (MainActivity.App a : shown) if (a.checked == (i == 1)) lit = false;
+                    bulkPills[i].setAlpha(shown.isEmpty() ? 0.4f : 1f);
+                    tk.permissionsScreen.stylePill(bulkPills[i], i == 0 ? "Real" : "Off", lit);
+                }
+            }
         };
+        if (checkable && bulk) {
+            for (int i = 0; i < 2; i++) {
+                final boolean on = i == 0;
+                tk.permissionsScreen.stylePill(bulkPills[i], on ? "Real" : "Off", false);
+                bulkPills[i].setOnClickListener(v -> confirmAll(title, new ArrayList<>(shownNow), on, change,
+                        () -> adapterRefresh[0].run()));
+            }
+        }
+        adapterRefresh[0] = filter;
         if (checkable) {
             page.addView(tk.sortBar(new String[]{"Name", "Package"}, i -> {
                 sort[0] = i;
@@ -321,6 +370,53 @@ final class InstallScreen {
                 });
             });
         }
+    }
+
+    /** Asks, then allows or takes away the access for every app in {@code targets} that doesn't have that already. */
+    private void confirmAll(String title, List<MainActivity.App> targets, boolean on, MainActivity.AppChange change,
+                            Runnable refresh) {
+        if (targets.isEmpty()) return;
+        if (!Shell.ready()) {
+            tk.toast(Tr.t("Start Shizuku and allow TinyKit first."));
+            return;
+        }
+        String action = on ? "Allow" : "Take away";
+        String about = on ? "Every app shown gets this access. Only do this for apps you trust."
+                : "Every app shown loses this access.";
+        new AlertDialog.Builder(tk).setTitle(Tr.t("Set every app shown?"))
+                .setMessage(Tr.t(title) + " → " + Tr.t(action) + " · " + targets.size() + " "
+                        + Tr.t(targets.size() == 1 ? "app" : "apps") + "\n\n" + Tr.t(about))
+                .setNegativeButton(Tr.t("Cancel"), null)
+                .setPositiveButton(Tr.t("Apply"), (d, w) -> tk.withProgress(title, () -> {
+                    int done = 0, same = 0;
+                    List<String> skipped = new ArrayList<>();
+                    for (MainActivity.App a : targets) {
+                        if (a.checked == on) {
+                            same++;
+                            continue;
+                        }
+                        String err = change.apply(a.pkg, on);
+                        if (err != null) {
+                            skipped.add(a.label + ": " + Tr.t(err));
+                            continue;
+                        }
+                        a.checked = on;
+                        done++;
+                    }
+                    tk.main.post(refresh);
+                    StringBuilder out = new StringBuilder();
+                    out.append(Tr.t(title)).append(" → ").append(Tr.t(action)).append(" · ").append(done).append(' ')
+                            .append(Tr.t(done == 1 ? "app" : "apps"));
+                    if (same > 0) out.append('\n').append(same).append(' ').append(Tr.t(same == 1 ? "app" : "apps"))
+                            .append(' ').append(Tr.t("already")).append(' ').append(Tr.t(action));
+                    if (!skipped.isEmpty()) {
+                        out.append("\n\n").append(skipped.size()).append(' ').append(Tr.t("skipped")).append(":");
+                        for (int i = 0; i < Math.min(5, skipped.size()); i++) out.append("\n• ").append(skipped.get(i));
+                        if (skipped.size() > 5) out.append("\n… ").append(skipped.size() - 5).append(' ').append(Tr.t("more"));
+                    }
+                    return out.toString();
+                }))
+                .show();
     }
 
     static final String PREF_NET_ONLY = "fw_net_only";

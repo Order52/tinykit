@@ -1394,3 +1394,6 @@ It turns itself off in 20 seconds unless you press Keep.	Se desactiva sola en 20
 Keep	Mantener
 
 Extra dim ends by itself in 2 minutes. Allow notifications to be able to keep it.	La atenuación extra termina sola en 2 minutos. Permite las notificaciones para poder mantenerla.
+Take away	Quitar
+Every app shown gets this access. Only do this for apps you trust.	Todas las apps mostradas obtienen este acceso. Hazlo solo con apps de confianza.
+Every app shown loses this access.	Todas las apps mostradas pierden este acceso.

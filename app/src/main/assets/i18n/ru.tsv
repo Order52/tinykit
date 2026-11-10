@@ -1407,3 +1407,6 @@ It turns itself off in 20 seconds unless you press Keep.	Выключится с
 Keep	Оставить
 
 Extra dim ends by itself in 2 minutes. Allow notifications to be able to keep it.	Дополнительное затемнение закончится само через 2 минуты. Разрешите уведомления, чтобы оставить его.
+Take away	Забрать
+Every app shown gets this access. Only do this for apps you trust.	Все показанные приложения получат этот доступ. Делайте это только для приложений, которым доверяете.
+Every app shown loses this access.	Все показанные приложения потеряют этот доступ.

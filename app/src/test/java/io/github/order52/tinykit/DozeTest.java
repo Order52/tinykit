@@ -47,4 +47,10 @@ public class DozeTest {
         assertFalse(s.matches(3));
         assertTrue(s.matches(3, java.util.Collections.singleton("inactive_to")));
     }
+
+    @Test
+    public void defaultSetsNoTimingsAndCountingThemDoesNotCrash() {
+        assertEquals(0, Doze.wanted(0)); // Default used to read the name column as a number (#15)
+        for (int p = 1; p <= 4; p++) assertTrue(Doze.wanted(p) > 0);
+    }
 }
