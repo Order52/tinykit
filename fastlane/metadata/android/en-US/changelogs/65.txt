@@ -1,0 +1,1 @@
+• Fix: a crash (RejectedExecutionException) when a delayed refresh fired as a screen was closing, seen on the Work profile screen (#18).

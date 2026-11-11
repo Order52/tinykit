@@ -54,7 +54,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 import rikka.shizuku.Shizuku;
@@ -201,13 +200,23 @@ public class MainActivity extends Activity {
         float cpu; // percent of the CPU in the recent past, from dumpsys cpuinfo
     }
 
+    /**
+     * A pool that quietly drops work handed to it after it was shut down. A delayed callback can
+     * still fire as the screen closes, and the default policy would crash with
+     * RejectedExecutionException (#13, #18).
+     */
+    static ExecutorService quiet(int threads) {
+        return new java.util.concurrent.ThreadPoolExecutor(threads, threads, 0L, java.util.concurrent.TimeUnit.MILLISECONDS,
+                new java.util.concurrent.LinkedBlockingQueue<>(), new java.util.concurrent.ThreadPoolExecutor.DiscardPolicy());
+    }
+
     final Handler main = new Handler(Looper.getMainLooper());
-    final ExecutorService worker = Executors.newSingleThreadExecutor();
+    final ExecutorService worker = quiet(1);
     /** Reads of switch states, kept off {@link #worker} because some take a second. */
-    final ExecutorService reads = Executors.newSingleThreadExecutor();
+    final ExecutorService reads = quiet(1);
     // Icons and recover-page thumbnails load off the main thread and are cached as small bitmaps,
     // both bounded (so memory stays low) and cleared when the app is sent to the background.
-    final ExecutorService thumbs = Executors.newFixedThreadPool(3);
+    final ExecutorService thumbs = quiet(3);
     final Map<String, Bitmap> thumbCache = Collections.synchronizedMap(
             new LinkedHashMap<String, Bitmap>(16, 0.75f, true) {
                 @Override
