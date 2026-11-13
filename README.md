@@ -249,6 +249,18 @@ The [getting started guide](docs/getting-started.md) covers each way to start Sh
 Or in Obtainium choose **Add App** and paste `https://github.com/Order52/tinykit`.
 Releases are signed with the same key as the GitHub APK, so Obtainium updates it in place.
 
+### Install with F-Droid, Droid-ify or Neo Store
+
+Open **[order52.github.io/fdroid](https://order52.github.io/fdroid/)** on your phone and tap **Add**, or add this repository
+address by hand:
+
+```
+https://order52.github.io/fdroid/repo
+```
+
+Fingerprint (SHA-256): `DF8806214799828EF5D7D11FD62D101FE0239D43B85964A23449EC66222A3011`.
+It serves the same signed APK as the GitHub release, so it updates in place for GitHub and Obtainium installs too.
+
 ## How it works
 
 Shizuku runs a small process with ADB (`shell` user) privileges, and TinyKit sends commands to
