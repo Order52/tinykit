@@ -1,0 +1,1 @@
+• Quick panel editor: if your phone puts the quick panel back right after a change, TinyKit now says so instead of looking like it saved (#19).

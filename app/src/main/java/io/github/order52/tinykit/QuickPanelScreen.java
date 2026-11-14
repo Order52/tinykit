@@ -653,18 +653,50 @@ final class QuickPanelScreen {
         saveTiles(list, tiles, next);
     }
 
-    /** Shows the new order at once, then writes it; goes back to the old order if that fails. */
+    /**
+     * Shows the new order at once, then writes it; goes back to the old order if that fails, or if the
+     * phone puts the old panel back right after (some phones do), so it never looks saved when it isn't.
+     */
     void saveTiles(LinearLayout list, List<String> old, List<String> next) {
         renderQuickPanel(list, next);
         tk.worker.execute(() -> {
             Shell.Result r = Shell.run("settings put secure " + QS_TILES + " "
                     + Shell.quote(TextUtils.join(",", next)));
-            if (r.ok()) return;
+            if (r.ok()) {
+                try {
+                    Thread.sleep(700); // give SystemUI time to react to the change
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                Shell.Result now = Shell.run("settings get secure " + QS_TILES);
+                if (!now.ok() || !undone(now.out, old, next)) return;
+                tk.main.post(() -> {
+                    tk.toast(Tr.t("Your phone put the quick panel back, so that change didn't stay."));
+                    renderQuickPanel(list, old);
+                });
+                return;
+            }
             tk.main.post(() -> {
                 tk.toast(Tr.t(r.out.isEmpty() ? "Couldn't change the quick panel." : r.out));
                 renderQuickPanel(list, old);
             });
         });
+    }
+
+    /**
+     * True when the setting no longer holds what was just written but is back to the old panel (or to
+     * nothing). A value that is merely different, say because SystemUI tidied it, doesn't count.
+     */
+    static boolean undone(String now, List<String> old, List<String> next) {
+        String value = now.trim();
+        if (value.equals(joined(next))) return false;
+        return value.equals(joined(old)) || value.isEmpty() || value.equals("null");
+    }
+
+    private static String joined(List<String> tiles) {
+        StringBuilder sb = new StringBuilder();
+        for (String spec : tiles) sb.append(sb.length() == 0 ? "" : ",").append(spec);
+        return sb.toString();
     }
 
     List<QsTile> availableTiles(List<String> tiles) {
