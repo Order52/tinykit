@@ -660,9 +660,18 @@ final class QuickPanelScreen {
     void saveTiles(LinearLayout list, List<String> old, List<String> next) {
         renderQuickPanel(list, next);
         tk.worker.execute(() -> {
-            Shell.Result r = Shell.run("settings put secure " + QS_TILES + " "
-                    + Shell.quote(TextUtils.join(",", next)));
-            if (r.ok()) {
+            String value = Shell.quote(TextUtils.join(",", next));
+            // Android 16 throws away a change written to the setting, but accepts SystemUI's own command.
+            // Older phones may not have that command, so each way is tried and checked in turn.
+            String[] ways = {"cmd statusbar set-tiles ", "settings put secure " + QS_TILES + " "};
+            Shell.Result failed = null;
+            boolean putBack = false;
+            for (String way : ways) {
+                Shell.Result r = Shell.run(way + value);
+                if (!r.ok()) {
+                    failed = r;
+                    continue;
+                }
                 try {
                     Thread.sleep(700); // give SystemUI time to react to the change
                 } catch (InterruptedException e) {
@@ -670,14 +679,13 @@ final class QuickPanelScreen {
                 }
                 Shell.Result now = Shell.run("settings get secure " + QS_TILES);
                 if (!now.ok() || !undone(now.out, old, next)) return;
-                tk.main.post(() -> {
-                    tk.toast(Tr.t("Your phone put the quick panel back, so that change didn't stay."));
-                    renderQuickPanel(list, old);
-                });
-                return;
+                putBack = true;
             }
+            boolean undone = putBack;
+            Shell.Result error = failed;
             tk.main.post(() -> {
-                tk.toast(Tr.t(r.out.isEmpty() ? "Couldn't change the quick panel." : r.out));
+                tk.toast(Tr.t(undone ? "Your phone put the quick panel back, so that change didn't stay."
+                        : error == null || error.out.isEmpty() ? "Couldn't change the quick panel." : error.out));
                 renderQuickPanel(list, old);
             });
         });

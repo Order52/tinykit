@@ -1,0 +1,1 @@
+• Quick panel editor: adding, moving and removing tiles now sticks on Android 16 (Motorola and others), where the phone threw the change away (#19).
