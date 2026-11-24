@@ -1,0 +1,1 @@
+• New language: Brazilian Portuguese (Português do Brasil). TinyKit now follows a phone set to Portuguese (#21).

@@ -9,7 +9,7 @@
 [![Release](https://img.shields.io/github/v/release/Order52/tinykit?label=release&color=blue)](https://github.com/Order52/tinykit/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Order52/tinykit/total?color=blue)](https://github.com/Order52/tinykit/releases)
 [![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
-[![APK size](https://img.shields.io/badge/APK-~360%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
+[![APK size](https://img.shields.io/badge/APK-~410%20KB-blue)](https://github.com/Order52/tinykit/releases/latest)
 [![CI](https://github.com/Order52/tinykit/actions/workflows/ci.yml/badge.svg)](https://github.com/Order52/tinykit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -41,16 +41,18 @@ rooting your phone.
   appears.
 - **No ads, no analytics, no tracking.** It only goes online when you check for updates
   (GitHub, by tap or optionally when TinyKit opens) or open Network info (public IP lookup).
-- **Small.** About 360 KB, with a single dependency (the Shizuku API).
+- **Small.** About 410 KB, with a single dependency (the Shizuku API).
 - **Reversible.** Every change is a standard system setting or app-op, and you undo it from
   the same screen.
 
 The interface uses a pure black (AMOLED) theme, or a high-contrast light one, and a bottom bar with five sections:
 **Shizuku · Privacy · Apps · System · Info**. A search bar on the home screen finds any tool. It is
-available in English, Spanish and Russian.
+available in English, Spanish, Brazilian Portuguese and Russian.
 
 ## What's new
 
+- **Brazilian Portuguese translation.** TinyKit follows a phone set to Portuguese.
+- **Quick panel editor works on Android 16.** Adding, moving and removing tiles now sticks there.
 - **Banking mode.** One switch (and a Quick Settings tile) turns Developer options, USB debugging and
   Wireless debugging off and stops Shizuku, so banking apps that refuse to run with them on will start.
   Turn it off and everything comes back as it was.
@@ -312,7 +314,7 @@ reversible. See [Contributing](docs/contributing.md). Each push is checked by
 [CI](https://github.com/Order52/tinykit/actions/workflows/ci.yml) (build, lint, unit tests and an emulator run on five
 Android versions), and pushing a `v*` tag builds, signs and publishes the release.
 
-**Translations:** TinyKit is available in English, Spanish (Latin America, still being checked by a
+**Translations:** TinyKit is available in English, Spanish (Latin America), Brazilian Portuguese (both still being checked by a
 native speaker) and Russian. A translation is one plain text file, so adding or fixing a language is easy. See
 [Translating TinyKit](docs/translating.md).
 

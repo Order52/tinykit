@@ -262,6 +262,9 @@ final class BatteryScreen {
         if ("es".equals(lang)) {
             return count + " " + (count == 1 ? "vez" : "veces");
         }
+        if ("pt".equals(lang)) {
+            return count + " " + (count == 1 ? "vez" : "vezes");
+        }
         return count + " " + (count == 1 ? "time" : "times");
     }
 

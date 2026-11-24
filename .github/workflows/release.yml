@@ -76,7 +76,7 @@ jobs:
           apk=app/build/outputs/apk/release/app-release.apk
           size=$(stat -c %s "$apk")
           echo "APK size: $size bytes"
-          [ "$size" -lt 400000 ] || { echo "APK grew past 400 KB"; exit 1; }
+          [ "$size" -lt 420000 ] || { echo "APK grew past 420 KB"; exit 1; }
           bt=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
           "$bt/apksigner" verify --print-certs "$apk" | tee certs.txt
           grep -q "CN=Order52" certs.txt || { echo "Not signed with the Order52 key"; exit 1; }

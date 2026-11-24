@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TinyKit</string>
+    <string name="widget_name">Acelerar</string>
+    <string name="widget_hint">Toque para acelerar</string>
+    <string name="widget_description">Um toque libera RAM e limpa o cache dos apps, sem abrir o TinyKit.</string>
+    <string name="tile_shizuku">Shizuku</string>
+    <string name="tile_screenshot">Captura de tela</string>
+    <string name="tile_caffeine">Cafeína</string>
+    <string name="tile_developer_options">Opções do desenvolvedor</string>
+    <string name="tile_usb_debugging">Depuração USB</string>
+    <string name="tile_close_app">Fechar app</string>
+    <string name="tile_sensors_off">Sensores desligados</string>
+    <string name="tile_screen_timeout">Tempo limite da tela</string>
+    <string name="tile_grayscale">Escala de cinza</string>
+    <string name="tile_ad_block_dns">DNS bloqueador de anúncios</string>
+    <string name="tile_hide_dev_options">Ocultar opções do desenvolvedor</string>
+    <string name="tile_banking_mode">Modo bancário</string>
+    <string name="tile_extra_dim">Escurecimento extra</string>
+    <string name="tile_clear_caches">Limpar caches</string>
+    <string name="tile_mic_camera_off">Microfone e câmera desligados</string>
+    <string name="tile_internet_block">Bloqueio de internet</string>
+    <string name="tile_hw_overlays_off">Sobreposições de HW desativadas</string>
+    <string name="tile_force_dark">Forçar modo escuro</string>
+    <string name="share_pinned">Apps fixados</string>
+    <string name="tile_work_profile">Perfil de trabalho</string>
+    <string name="tile_free_ram">Liberar RAM</string>
+    <string name="tile_screen_record">Gravar tela</string>
+    <string name="tile_mixer">Mixer de áudio</string>
+    <string name="tile_deep_sleep">Sono profundo</string>
+    <string name="secure_folder">Pasta segura</string>
+    <string name="work_folder">Trabalho</string>
+    <string name="tiny_folder">TinyFolder</string>
+</resources>

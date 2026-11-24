@@ -77,6 +77,9 @@ final class Ram {
         if ("es".equals(lang)) {
             return "se " + (closed == 1 ? "cerró 1 app en caché" : "cerraron " + closed + " apps en caché");
         }
+        if ("pt".equals(lang)) {
+            return closed == 1 ? "1 app em cache fechado" : closed + " apps em cache fechados";
+        }
         return "closed " + closed + " cached app" + (closed == 1 ? "" : "s");
     }
 

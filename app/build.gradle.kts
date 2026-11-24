@@ -19,8 +19,8 @@ android {
         applicationId = "io.github.order52.tinykit"
         minSdk = 24
         targetSdk = 34
-        versionCode = 67
-        versionName = "1.23.12"
+        versionCode = 68
+        versionName = "1.24.0"
     }
 
     signingConfigs {

@@ -18,7 +18,7 @@ cd tinykit
 ./gradlew assembleRelease
 ```
 
-The APK is written to `app/build/outputs/apk/release/app-release.apk` (about 360 KB).
+The APK is written to `app/build/outputs/apk/release/app-release.apk` (about 410 KB).
 
 On macOS with Homebrew's JDK:
 
@@ -77,7 +77,7 @@ On an emulator you can start Shizuku over adb (see [Getting started](getting-sta
    changes.
 3. Commit, then tag the commit `v<versionName>` (for example `v1.8.0`) and push the tag.
 4. The **Release** workflow (`.github/workflows/release.yml`) then builds the signed APK, checks it is signed with the
-   Order52 key and under 400 KB, names it `TinyKit-<versionName>.apk`, and publishes the GitHub release with the
+   Order52 key and under 420 KB, names it `TinyKit-<versionName>.apk`, and publishes the GitHub release with the
    changelog as its notes. It needs four repository secrets: `KEYSTORE_BASE64` (`base64 -i release.jks`),
    `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`. Without them it does nothing, and you build the signed APK by
    hand and attach it to a release for the tag. TinyKit's **Check for updates** reads the latest GitHub release.

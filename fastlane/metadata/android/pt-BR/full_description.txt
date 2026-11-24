@@ -1,0 +1,30 @@
+O TinyKit é uma coleção pequena e rápida de ajustes e ferramentas do sistema Android com
+tecnologia do Shizuku. Sem root, sem anúncios, sem análises, e nada roda em segundo plano
+a menos que você ative o único interruptor opcional para isso: cada mudança é gravada direto
+nas próprias configurações ou app-ops do Android e pronto.
+
+Interface em preto puro, organizada em uma barra inferior (Shizuku, Privacidade, Apps, Sistema,
+Info) com pesquisa em todas as ferramentas.
+
+Blocos das Configurações rápidas: Cafeína, Opções do desenvolvedor, Depuração USB, Ocultar
+opções do desenvolvedor, Sensores desligados, Escala de cinza, Escurecimento extra, DNS
+bloqueador de anúncios, Microfone e câmera desligados, Tempo limite da tela, Limpar
+caches, Liberar RAM, Fechar o app na tela, Captura de tela, Gravar tela.
+
+Privacidade: defina as permissões de qualquer app como Real, Falsa (aparece como concedida,
+mas o app não recebe nada) ou Desativada; desligue todos os sensores; pare as análises da
+Huawei e do Google e o HiCloud; veja as senhas de Wi-Fi salvas e compartilhe-as como códigos QR.
+
+Apps: oculte apps do launcher, escolha apps padrão, encontre apps sem uso, veja o
+armazenamento por app e o acesso recente aos sensores, e toque o áudio dos apps ao mesmo
+tempo ou silencie um app.
+
+Sistema: modo escuro forçado em apps que não têm modo escuro, edite o painel rápido, execute
+um comando, recupere arquivos excluídos (com miniaturas) de todas as lixeiras, e faça backup ou
+restaure as configurações.
+
+Info: bateria, rede (com IP público e um atalho para as configurações do seu roteador), carga,
+temperaturas, IDs do dispositivo, uso da bateria, despertares, vibração e logs de apps,
+tudo em listas legíveis.
+
+Requer o Shizuku em execução. Grátis e de código aberto (MIT).

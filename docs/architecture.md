@@ -1,6 +1,6 @@
 # Architecture
 
-How TinyKit is built, and why it's about 360 KB with a single dependency. Read this before
+How TinyKit is built, and why it's about 410 KB with a single dependency. Read this before
 changing the code.
 
 ## Contents
