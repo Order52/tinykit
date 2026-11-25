@@ -24,7 +24,7 @@ for f in README.md docs/*.md fdroid/*.md; do
 done | tee /tmp/tinykit-links.$$ ; grep -q FAIL /tmp/tinykit-links.$$ && fail=1; rm -f /tmp/tinykit-links.$$
 
 # Every <activity>/<service>/<receiver> in the manifest must have a source class.
-aliases=$(tr '\n' ' ' < app/src/main/AndroidManifest.xml | grep -o '<activity-alias[^>]*' | grep -o 'android:name="\.[A-Za-z]*"' | sed 's/android:name="\.//; s/"//')
+aliases=$(tr '\n' ' ' < app/src/main/AndroidManifest.xml | grep -o '<activity-alias[^>]*' | grep -o 'android:name="\.[A-Za-z]*"' | sed 's/android:name="\.//; s/"//' | tr '\n' ' ')
 grep -o 'android:name="\.[A-Za-z$.]*"' app/src/main/AndroidManifest.xml | sed 's/android:name="\.//; s/"//' | while read -r c; do
   base=${c%%\$*}
   # An activity-alias is only a second launcher entry for a class that is there.
