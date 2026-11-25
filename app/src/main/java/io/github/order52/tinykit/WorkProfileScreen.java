@@ -698,10 +698,23 @@ final class WorkProfileScreen {
         }
     }
 
+    /** Apps TinyKit must not freeze, clear or remove: itself, Shizuku, the system UI and the home screen. */
+    boolean protectedApp(String pkg) {
+        if (pkg.equals(tk.getPackageName()) || pkg.equals("moe.shizuku.privileged.api")
+                || pkg.equals("com.android.systemui") || pkg.equals("android")) return true;
+        ResolveInfo home = tk.getPackageManager().resolveActivity(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0);
+        return home != null && home.activityInfo != null && pkg.equals(home.activityInfo.packageName);
+    }
+
+    /** The apps of the work profile (id above 0), or of the main profile (id 0). */
     void openWorkApps(int id) {
+        boolean main = id == 0;
         LinearLayout page = tk.vertical();
         page.setPadding(tk.dp(16), tk.dp(12), tk.dp(16), 0);
-        TextView help = tk.text("Tap an app to open it, freeze it, set it to freeze by itself, or add a launcher "
+        TextView help = tk.text(main ? "Tap an app to open it, freeze it, add a launcher shortcut, clear its data "
+                + "or remove it. A frozen app is off and keeps its data."
+                : "Tap an app to open it, freeze it, set it to freeze by itself, or add a launcher "
                 + "shortcut. A frozen app is off and keeps its data.", 13, false);
         tk.setDim(help, 0.7f);
         page.addView(help);
@@ -720,7 +733,7 @@ final class WorkProfileScreen {
             row.second.setText(a.pkg);
             List<String> tags = new ArrayList<>();
             if (a.frozen) tags.add(Tr.t("Frozen"));
-            if (Work.auto(tk.prefs).contains(a.pkg)) tags.add(Tr.t("Auto-freeze"));
+            if (!main && Work.auto(tk.prefs).contains(a.pkg)) tags.add(Tr.t("Auto-freeze"));
             row.third.setText(TextUtils.join(" · ", tags));
             tk.showIcon(row, a.pkg);
         });
@@ -735,7 +748,7 @@ final class WorkProfileScreen {
                 if (show && (tk.label(a.pkg).toLowerCase(Locale.ROOT).contains(q) || a.pkg.contains(q))) shown.add(a);
             }
             adapter.set(shown);
-            loading.setText(Tr.t(all.isEmpty() ? "No apps in the work profile yet."
+            loading.setText(Tr.t(all.isEmpty() ? main ? "No apps found." : "No apps in the work profile yet."
                     : "No match. Tick Show system apps to see more."));
             loading.setVisibility(shown.isEmpty() ? View.VISIBLE : View.GONE);
         };
@@ -753,29 +766,49 @@ final class WorkProfileScreen {
         Runnable reload = load;
         listView.setOnItemClickListener((parentView, view, position, rowId) -> {
             Work.App a = adapter.getItem(position);
+            if (main && protectedApp(a.pkg)) {
+                tk.toast(Tr.t("TinyKit needs this app to work, so it is left alone here."));
+                return;
+            }
             boolean auto = Work.auto(tk.prefs).contains(a.pkg);
-            String[] items = {a.frozen ? "Unfreeze and open" : "Open", a.frozen ? "Unfreeze" : "Freeze",
-                    auto ? "Stop auto-freezing" : "Auto-freeze when the screen is off", "Add launcher shortcut",
-                    "Clear data", "Remove from work profile"};
+            // Every action by name, so the main profile can leave some out.
+            List<String> acts = new ArrayList<>(Arrays.asList(a.frozen ? "Unfreeze and open" : "Open",
+                    a.frozen ? "Unfreeze" : "Freeze"));
+            if (!main) acts.add(auto ? "Stop auto-freezing" : "Auto-freeze when the screen is off");
+            acts.add("Add launcher shortcut");
+            if (!main) acts.add("Copy to main profile");
+            acts.add("Clear data");
+            if (!main || !systemApp(a.pkg)) acts.add(main ? "Remove from phone" : "Remove from work profile");
             new AlertDialog.Builder(tk)
                     .setTitle(tk.label(a.pkg))
-                    .setItems(Tr.all(items), (d, which) -> {
-                        if (which == 2) {
+                    .setItems(Tr.all(acts.toArray(new String[0])), (d, which) -> {
+                        String act = acts.get(which);
+                        if (act.startsWith("Stop auto") || act.startsWith("Auto-freeze")) {
                             toggleAutoFreeze(a.pkg, reload);
-                        } else if (which == 3) {
-                            String error = Work.pin(tk, a.pkg, tk.label(a.pkg));
+                        } else if (act.equals("Add launcher shortcut")) {
+                            String error = Work.pin(tk, id, a.pkg, tk.label(a.pkg));
                             if (error != null) tk.toast(Tr.t(error));
-                        } else if (which >= 4) {
-                            boolean wipe = which == 4;
+                        } else if (act.equals("Copy to main profile")) {
+                            tk.worker.execute(() -> {
+                                String error = Work.add(0, a.pkg);
+                                tk.main.post(() -> tk.toast(Tr.t(error != null ? error
+                                        : "Copied. It is on your main profile now, with its own empty data.")));
+                            });
+                        } else if (act.equals("Clear data") || act.startsWith("Remove")) {
+                            boolean wipe = act.equals("Clear data");
                             new AlertDialog.Builder(tk)
                                     .setTitle(Tr.t((wipe ? "Clear data of " : "Remove ") + tk.label(a.pkg) + "?"))
-                                    .setMessage(Tr.t(wipe ? "Everything the app saved in the work profile is "
+                                    .setMessage(Tr.t(main ? wipe ? "Everything the app saved is deleted: accounts, "
+                                            + "files and settings. The app stays."
+                                            : "The app and everything it saved are deleted from your main profile. "
+                                            + "Its copy in the work profile, if any, stays."
+                                            : wipe ? "Everything the app saved in the work profile is "
                                             + "deleted: accounts, files and settings. The app stays."
                                             : "Its copy in the work profile and that copy's data are deleted. The "
                                             + "app on your main profile stays."))
                                     .setPositiveButton(Tr.t(wipe ? "Clear" : "Remove"), (d2, w2) -> tk.worker.execute(() -> {
                                         String error = wipe ? Work.clear(id, a.pkg) : Work.delete(id, a.pkg);
-                                        if (error == null && !wipe) forgetAutoFreeze(a.pkg);
+                                        if (error == null && !wipe && !main) forgetAutoFreeze(a.pkg);
                                         tk.main.post(() -> {
                                             if (error != null) tk.toast(Tr.t(error));
                                             reload.run();
@@ -785,7 +818,7 @@ final class WorkProfileScreen {
                                     .show();
                         } else {
                             tk.worker.execute(() -> {
-                                String error = which == 0 ? Work.launch(tk, a.pkg)
+                                String error = which == 0 ? Work.launch(tk, id, a.pkg)
                                         : Work.freeze(id, a.pkg, !a.frozen);
                                 tk.main.post(() -> {
                                     if (error != null) tk.toast(Tr.t(error));
@@ -797,7 +830,7 @@ final class WorkProfileScreen {
                     .setNegativeButton(Tr.t("Cancel"), null)
                     .show();
         });
-        tk.push("Work apps", page);
+        tk.push(main ? "Main profile apps" : "Work apps", page);
         load.run();
     }
 

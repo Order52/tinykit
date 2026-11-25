@@ -1527,6 +1527,8 @@ public class MainActivity extends Activity {
                 this::openSharePins, false);
         link(list, "Default apps", "Set the default launcher, browser, phone and more.", this::openDefaults);
         link(list, "Hide apps", "Hide apps from the launcher by disabling them.", this::openHide);
+        link(list, "Main profile apps", "Open, freeze, add a launcher shortcut to, clear or remove the apps on "
+                + "your phone's main profile.", () -> workProfileScreen.openWorkApps(0));
         link(list, "Unused apps", "Apps you haven't opened in a long time.", this::openUnused);
         link(list, "Storage by app", "Which apps take the most space.", this::openStorage);
         link(list, "App language", "Give any app its own language (Android 13+).", this::openAppLanguage);

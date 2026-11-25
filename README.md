@@ -51,6 +51,9 @@ available in English, Spanish, Brazilian Portuguese and Russian.
 
 ## What's new
 
+- **Main profile apps, and copy from the work profile.** **Apps > Main profile apps** opens the same
+  screen as Work apps for your phone's own apps: open, freeze, add a shortcut, clear data or remove. In
+  Work apps, **Copy to main profile** puts a copy of a work app on your main profile.
 - **Brazilian Portuguese translation.** TinyKit follows a phone set to Portuguese.
 - **Quick panel editor works on Android 16.** Adding, moving and removing tiles now sticks there.
 - **Banking mode.** One switch (and a Quick Settings tile) turns Developer options, USB debugging and

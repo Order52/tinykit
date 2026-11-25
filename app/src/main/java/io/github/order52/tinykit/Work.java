@@ -406,7 +406,7 @@ final class Work {
 
     /** Starts the app in the profile, waking the profile first if it was paused or stopped. */
     static String open(Context c, int id, String component) {
-        String blocked = wake(c, id);
+        String blocked = id == 0 ? null : wake(c, id);
         if (blocked != null) return blocked;
         Shell.Result r = run("am start --user " + id + " -n " + Shell.quote(component), 20_000);
         return r.ok() && !r.out.contains("Error") ? null : r.out.isEmpty() ? "Failed." : r.out;
@@ -415,13 +415,17 @@ final class Work {
     /** Opens an app of the profile, unfreezing it first when it is frozen. Used by shortcuts and the app list. */
     static String launch(Context c, String pkg) {
         int id = id(c);
-        if (id < 0) return "There is no work profile.";
+        return id < 0 ? "There is no work profile." : launch(c, id, pkg);
+    }
+
+    /** Same for any profile, the main one (id 0) included. */
+    static String launch(Context c, int id, String pkg) {
         for (App a : apps(c, id)) {
             if (!a.pkg.equals(pkg)) continue;
             String error = a.frozen ? freeze(id, pkg, false) : null;
             return error != null ? error : open(c, id, a.component);
         }
-        return "That app isn't in the work profile any more.";
+        return id == 0 ? "That app isn't on your phone any more." : "That app isn't in the work profile any more.";
     }
 
     // ---- Its own PIN (the work challenge) -----------------------------------------------------------
@@ -568,6 +572,11 @@ final class Work {
      * a frozen app is gone from the launcher. Returns null when the launcher was asked, else why not.
      */
     static String pin(Context c, String pkg, String label) {
+        return pin(c, id(c), pkg, label);
+    }
+
+    /** {@code id} 0 pins an app of the main profile (no "work" in its name). */
+    static String pin(Context c, int id, String pkg, String label) {
         if (Build.VERSION.SDK_INT < 26) return "Needs Android 8 or newer.";
         try {
             ShortcutManager manager = c.getSystemService(ShortcutManager.class);
@@ -581,10 +590,11 @@ final class Work {
             Bitmap bitmap = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888);
             icon.setBounds(0, 0, 192, 192);
             icon.draw(new Canvas(bitmap));
-            ShortcutInfo info = new ShortcutInfo.Builder(c, "work:" + pkg)
-                    .setShortLabel(label + " (" + Tr.t("work") + ")")
+            ShortcutInfo info = new ShortcutInfo.Builder(c, (id == 0 ? "main:" : "work:") + pkg)
+                    .setShortLabel(id == 0 ? label : label + " (" + Tr.t("work") + ")")
                     .setIcon(Icon.createWithBitmap(bitmap))
-                    .setIntent(new Intent(c, WorkOpen.class).setAction(Intent.ACTION_VIEW).putExtra("pkg", pkg))
+                    .setIntent(new Intent(c, WorkOpen.class).setAction(Intent.ACTION_VIEW).putExtra("pkg", pkg)
+                            .putExtra("main", id == 0))
                     .build();
             return manager.requestPinShortcut(info, null) ? null : "Your launcher didn't add it.";
         } catch (RuntimeException | OutOfMemoryError e) {

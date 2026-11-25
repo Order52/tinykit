@@ -16,12 +16,13 @@ public final class WorkOpen extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         String pkg = getIntent().getStringExtra("pkg");
+        boolean main = getIntent().getBooleanExtra("main", false);
         Context app = getApplicationContext();
         if (pkg != null) {
             new Thread(() -> {
                 String error;
                 try {
-                    error = !Shell.await() ? "Start Shizuku first." : Work.launch(app, pkg);
+                    error = !Shell.await() ? "Start Shizuku first." : (main ? Work.launch(app, 0, pkg) : Work.launch(app, pkg));
                 } catch (RuntimeException e) {
                     error = "Couldn't open it.";
                 }

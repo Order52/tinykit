@@ -317,8 +317,17 @@ does the same.
   - **Add launcher shortcut**: a home-screen icon (`Chrome (work)`) that unfreezes and opens the app
     in one tap, so a frozen app is never lost.
   - **Clear data** and **Remove from work profile**, each asking first.
+- **Copy to main profile** (in the Work apps menu): puts a copy of that app on your main profile,
+  with its own empty data. It works for apps that exist only in the work profile.
 - **Install APK in the work profile**: the same installer as *Install APK files* (split apps,
   `.xapk`, `.apkm`), but the app goes into the work profile only.
+
+#### Main profile apps
+
+**Apps > Main profile apps** is the Work apps screen for your phone's own apps: **Open**, **Freeze /
+Unfreeze**, **Add launcher shortcut** (it unfreezes and opens the app), **Clear data** and **Remove from
+phone**, each destructive one asking first. System apps have no Remove here (use the Debloater), and
+TinyKit, Shizuku, System UI and your home screen are left alone so you can't lock yourself out.
 
 #### Freeze
 

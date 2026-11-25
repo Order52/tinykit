@@ -1409,3 +1409,14 @@ Every app shown loses this access.	Todos os apps exibidos perdem este acesso.
 That file doesn't have any Wi-Fi networks in it.	Esse arquivo não tem nenhuma rede Wi-Fi.
 Couldn't read that file.	Não foi possível ler esse arquivo.
 Your phone put the quick panel back, so that change didn't stay.	O celular restaurou o painel rápido, então essa alteração não permaneceu.
+Main profile apps	Apps do perfil principal
+Open, freeze, add a launcher shortcut to, clear or remove the apps on your phone's main profile.	Abra, congele, adicione um atalho, limpe ou remova os apps do perfil principal do seu celular.
+Tap an app to open it, freeze it, add a launcher shortcut, clear its data or remove it. A frozen app is off and keeps its data.	Toque em um app para abri-lo, congelá-lo, adicionar um atalho, limpar os dados ou removê-lo. Um app congelado fica desligado e mantém os dados.
+No apps found.	Nenhum app encontrado.
+TinyKit needs this app to work, so it is left alone here.	O TinyKit precisa deste app para funcionar, então ele não é alterado aqui.
+Copy to main profile	Copiar para o perfil principal
+Copied. It is on your main profile now, with its own empty data.	Copiado. O app agora está no perfil principal, com dados próprios e vazios.
+Remove from phone	Remover do celular
+Everything the app saved is deleted: accounts, files and settings. The app stays.	Tudo o que o app salvou é apagado: contas, arquivos e configurações. O app permanece.
+The app and everything it saved are deleted from your main profile. Its copy in the work profile, if any, stays.	O app e tudo o que ele salvou são apagados do perfil principal. A cópia no perfil de trabalho, se houver, permanece.
+That app isn't on your phone any more.	Esse app não está mais no seu celular.

@@ -1,0 +1,2 @@
+• New: Apps > Main profile apps, with open, freeze, shortcut, clear data and remove for your phone's own apps (#22).
+• New: Copy to main profile, in Work apps, copies a work app to your main profile (#23).
