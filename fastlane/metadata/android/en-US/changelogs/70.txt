@@ -1,0 +1,2 @@
+• New: Permissions in Work apps, to switch a work app's permissions and special access on or off (#23).
+• New: a Work folder icon switch, and the TinyFolder folder now opens even with its icon hidden (#23).

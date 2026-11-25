@@ -51,6 +51,9 @@ available in English, Spanish, Brazilian Portuguese and Russian.
 
 ## What's new
 
+- **Work app permissions, and a switch for the TinyFolder icon.** In Work apps, **Permissions** turns an
+  app's runtime permissions and special access on or off for the work profile only. **Work folder icon** and
+  **Secure folder icon** take the TinyFolder icon out of the launcher; the folder still opens from Work profile.
 - **Main profile apps, and copy from the work profile.** **Apps > Main profile apps** opens the same
   screen as Work apps for your phone's own apps: open, freeze, add a shortcut, clear data or remove. In
   Work apps, **Copy to main profile** puts a copy of a work app on your main profile.

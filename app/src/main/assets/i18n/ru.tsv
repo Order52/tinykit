@@ -1424,3 +1424,6 @@ Remove from phone	Удалить с телефона
 Everything the app saved is deleted: accounts, files and settings. The app stays.	Всё, что сохранило приложение, удаляется: аккаунты, файлы и настройки. Само приложение остаётся.
 The app and everything it saved are deleted from your main profile. Its copy in the work profile, if any, stays.	Приложение и всё, что оно сохранило, удаляются из основного профиля. Его копия в рабочем профиле, если есть, остаётся.
 That app isn't on your phone any more.	Этого приложения больше нет на телефоне.
+Work folder icon	Значок рабочей папки
+These switches change the app in the work profile only. The copy on your main profile is not touched.	Эти переключатели меняют приложение только в рабочем профиле. Копия в основном профиле не затрагивается.
+This app asks for no permissions you can change.	Это приложение не запрашивает разрешений, которые можно изменить.

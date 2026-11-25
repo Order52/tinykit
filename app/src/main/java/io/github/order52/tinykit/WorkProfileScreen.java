@@ -245,12 +245,14 @@ final class WorkProfileScreen {
         if (!secure) {
             tk.section(body, "Work folder");
             tk.row(body, "Open Work folder", "Your work apps in one place, with no lock.", tk.arrow(),
-                    () -> tk.startActivity(new Intent().setClassName(tk.getPackageName(), tk.getPackageName() + ".WorkFolder")), false);
+                    () -> tk.startActivity(new Intent(tk, SecureFolder.class)), false);
             if (Build.VERSION.SDK_INT >= 26) tk.row(body, "Add to home screen", "Some launchers don't show a new icon by themselves. "
                     + "This asks yours to add it.", tk.arrow(), () -> {
                 String why = SecureFolder.pin(tk, true);
                 if (why != null) tk.toast(Tr.t(why));
             }, false);
+            prefRow(body, "Work folder icon", "Show it on the home screen and in the app list.", SecureFolder.PREF_FOLDER_ICON, true,
+                    on -> SecureFolder.sync(tk, tk.prefs));
             tk.row(body, "Lock", lockText(), tk.arrow(), () -> chooseFolderLock(again), false);
         }
         if (secure) tk.section(body, "Secure folder");
@@ -776,6 +778,7 @@ final class WorkProfileScreen {
                     a.frozen ? "Unfreeze" : "Freeze"));
             if (!main) acts.add(auto ? "Stop auto-freezing" : "Auto-freeze when the screen is off");
             acts.add("Add launcher shortcut");
+            if (!main) acts.add("Permissions");
             if (!main) acts.add("Copy to main profile");
             acts.add("Clear data");
             if (!main || !systemApp(a.pkg)) acts.add(main ? "Remove from phone" : "Remove from work profile");
@@ -788,6 +791,8 @@ final class WorkProfileScreen {
                         } else if (act.equals("Add launcher shortcut")) {
                             String error = Work.pin(tk, id, a.pkg, tk.label(a.pkg));
                             if (error != null) tk.toast(Tr.t(error));
+                        } else if (act.equals("Permissions")) {
+                            openWorkPermissions(id, a.pkg);
                         } else if (act.equals("Copy to main profile")) {
                             tk.worker.execute(() -> {
                                 String error = Work.add(0, a.pkg);
@@ -832,6 +837,64 @@ final class WorkProfileScreen {
         });
         tk.push(main ? "Main profile apps" : "Work apps", page);
         load.run();
+    }
+
+    /** One work app's permissions and special access, switched on or off for the work profile's copy only. */
+    void openWorkPermissions(int id, String pkg) {
+        LinearLayout list = tk.vertical();
+        TextView help = tk.text("These switches change the app in the work profile only. The copy on your main profile "
+                + "is not touched.", 13, false);
+        tk.setDim(help, 0.7f);
+        help.setPadding(tk.dp(16), tk.dp(12), tk.dp(16), tk.dp(4));
+        list.addView(help);
+        TextView loading = tk.text("Reading permissions…", 14, false);
+        loading.setPadding(tk.dp(16), tk.dp(8), tk.dp(16), 0);
+        list.addView(loading);
+        tk.push(tk.label(pkg), tk.scroll(list));
+        tk.worker.execute(() -> {
+            Work.Perms perms = Work.permissions(id, pkg);
+            List<String[]> special = new ArrayList<>();
+            Map<String, Boolean> specialState = new HashMap<>();
+            for (String[] s : SpecialAccessScreen.SPECIAL) {
+                if (s[0].equals("MANAGE_EXTERNAL_STORAGE") && Build.VERSION.SDK_INT < 30) continue;
+                if (!perms.requested.contains(s[3])) continue;
+                special.add(s);
+                specialState.put(s[0], Work.specialOn(id, pkg, s[0]));
+            }
+            tk.main.post(() -> {
+                list.removeView(loading);
+                tk.section(list, "Permissions");
+                if (perms.runtime.isEmpty()) list.addView(tk.note("This app asks for no permissions you can change."));
+                for (Map.Entry<String, Boolean> e : perms.runtime.entrySet()) {
+                    String name = e.getKey().replace("android.permission.", "");
+                    switchRow(list, name, e.getKey(), e.getValue(), on -> Work.grant(id, pkg, e.getKey(), on));
+                }
+                if (!special.isEmpty()) tk.section(list, "Special access");
+                for (String[] s : special) {
+                    switchRow(list, s[1], s[2], specialState.get(s[0]), on -> Work.special(id, pkg, s[0], on));
+                }
+            });
+        });
+    }
+
+    /** A switch row that applies the change in the background and puts the switch back if it failed. */
+    void switchRow(LinearLayout list, String title, String summary, boolean initial,
+                   java.util.function.Function<Boolean, String> apply) {
+        Switch view = new Switch(tk);
+        view.setChecked(initial);
+        view.setClickable(false);
+        view.setFocusable(false);
+        tk.row(list, title, summary, view, () -> {
+            boolean on = !view.isChecked();
+            view.setChecked(on);
+            tk.worker.execute(() -> {
+                String error = apply.apply(on);
+                if (error != null) tk.main.post(() -> {
+                    view.setChecked(!on);
+                    tk.toast(Tr.t(error));
+                });
+            });
+        }, false);
     }
 
     void openHide() {

@@ -83,4 +83,33 @@ public class WorkTest {
         assertEquals(0, Work.parseLaunch("Exception occurred while executing:\njava.lang.IllegalArgumentException: Unknown option: --query-flags\n\tat android.content.Intent.parseCommandArgs(Intent.java:6525)").size());
         assertEquals(1, Work.build(Work.parseLaunch("  Activity #0:\n    com.example.a/.A"), new java.util.ArrayList<>()).size());
     }
+
+    @Test
+    public void readsAWorkAppsPermissionsFromTheDump() {
+        String dump = "  Package [com.example] (abc):\n"
+                + "    requested permissions:\n"
+                + "      android.permission.INTERNET\n"
+                + "      android.permission.CAMERA\n"
+                + "      android.permission.SYSTEM_ALERT_WINDOW: restricted=false\n"
+                + "    install permissions:\n"
+                + "      android.permission.INTERNET: granted=true\n"
+                + "    User 0: ceDataInode=1 installed=true\n"
+                + "      runtime permissions:\n"
+                + "        android.permission.CAMERA: granted=true, flags=[ USER_SET]\n"
+                + "    User 10: ceDataInode=2 installed=true\n"
+                + "      gids=[3003]\n"
+                + "      runtime permissions:\n"
+                + "        android.permission.CAMERA: granted=false, flags=[ ]\n"
+                + "        android.permission.POST_NOTIFICATIONS: granted=true, flags=[ ]\n"
+                + "      disabledComponents:\n"
+                + "        com.example.Foo\n";
+        Work.Perms work = Work.parsePerms(dump, 10);
+        assertEquals(2, work.runtime.size());
+        assertFalse(work.runtime.get("android.permission.CAMERA"));
+        assertTrue(work.runtime.get("android.permission.POST_NOTIFICATIONS"));
+        assertTrue(work.requested.contains("android.permission.SYSTEM_ALERT_WINDOW"));
+        assertEquals(3, work.requested.size());
+        assertTrue(Work.parsePerms(dump, 0).runtime.get("android.permission.CAMERA"));
+        assertEquals(0, Work.parsePerms(dump, 11).runtime.size());
+    }
 }

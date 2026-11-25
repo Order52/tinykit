@@ -399,6 +399,71 @@ final class Work {
         return script.length() == 0 ? null : failure(run(script.toString(), 120_000));
     }
 
+    /** What an app's copy in a profile asks for: its runtime permissions (granted or not) and every permission it requests. */
+    static final class Perms {
+        final Map<String, Boolean> runtime = new LinkedHashMap<>();
+        final Set<String> requested = new java.util.LinkedHashSet<>();
+    }
+
+    private static final Pattern USER_LINE = Pattern.compile("^\\s+User (\\d+):");
+    private static final Pattern RUNTIME_LINE = Pattern.compile("^([A-Za-z0-9_.]+): granted=(true|false)");
+
+    /** Reads {@code dumpsys package <pkg>}: the requested list, and the runtime permissions of user {@code id}. */
+    static Perms parsePerms(String dump, int id) {
+        Perms out = new Perms();
+        String section = null;
+        int indent = 0;
+        boolean mine = false;
+        for (String line : dump.split("\n")) {
+            String t = line.trim();
+            if (t.isEmpty()) continue;
+            int at = line.indexOf(t);
+            if (section != null && at <= indent) section = null;
+            if (section != null) {
+                if (section.equals("requested")) {
+                    Matcher m = Pattern.compile("^[A-Za-z0-9_.]+").matcher(t);
+                    if (m.find()) out.requested.add(m.group());
+                } else if (mine) {
+                    Matcher m = RUNTIME_LINE.matcher(t);
+                    if (m.find()) out.runtime.put(m.group(1), m.group(2).equals("true"));
+                }
+                continue;
+            }
+            Matcher u = USER_LINE.matcher(line);
+            if (t.equals("requested permissions:")) {
+                section = "requested";
+                indent = at;
+            } else if (t.equals("runtime permissions:")) {
+                section = "runtime";
+                indent = at;
+            } else if (u.find()) {
+                mine = Integer.parseInt(u.group(1)) == id;
+            }
+        }
+        return out;
+    }
+
+    static Perms permissions(int id, String pkg) {
+        return parsePerms(run("dumpsys package " + Shell.quote(pkg), 30_000).out, id);
+    }
+
+    /** Grants or takes away one runtime permission of the app in the profile. */
+    static String grant(int id, String pkg, String permission, boolean on) {
+        return failure(run("pm " + (on ? "grant" : "revoke") + " --user " + id + " " + Shell.quote(pkg) + " "
+                + Shell.quote(permission), 30_000));
+    }
+
+    /** Allows or resets one special-access app-op (install unknown apps, draw over apps, ...) in the profile. */
+    static String special(int id, String pkg, String op, boolean on) {
+        return failure(run("appops set --user " + id + " " + Shell.quote(pkg) + " " + op + (on ? " allow" : " default"), 30_000));
+    }
+
+    /** Whether the special-access op is allowed for the app in the profile. */
+    static boolean specialOn(int id, String pkg, String op) {
+        return run("appops get --user " + id + " " + Shell.quote(pkg) + " " + op + " 2>/dev/null", 30_000).out
+                .matches("(?s).*\\ballow\\b.*");
+    }
+
     /** Wipes the app's data in the profile (the app stays). */
     static String clear(int id, String pkg) {
         return failure(run("pm clear --user " + id + " " + Shell.quote(pkg), 60_000));

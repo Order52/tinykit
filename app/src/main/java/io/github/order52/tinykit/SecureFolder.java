@@ -39,7 +39,7 @@ import java.util.Map;
  * apps can stay out of the launcher the rest of the time. The icon is switched on while a work profile exists.
  */
 public final class SecureFolder extends Activity {
-    static final String PREF_LOCK = "secure_lock", PREF_ICON = "secure_icon", PREF_HIDE = "secure_hide";
+    static final String PREF_FOLDER_ICON = "folder_icon", PREF_LOCK = "secure_lock", PREF_ICON = "secure_icon", PREF_HIDE = "secure_hide";
     private static final int REQUEST_LOCK = 1;
 
     private SharedPreferences prefs;
@@ -108,8 +108,11 @@ public final class SecureFolder extends Activity {
     /** The icon is there only in the Secure folder look, with a work profile, unless switched off. Cheap: call it any time. */
     static void sync(Context c, SharedPreferences p) {
         boolean exists = exists(c, p);
+        // The screen itself is always there (older versions switched it off with the icon), only the aliases come and go.
+        c.getPackageManager().setComponentEnabledSetting(new ComponentName(c, SecureFolder.class),
+                PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP);
         icon(c, secure(p) && p.getBoolean(PREF_ICON, true) && exists);
-        folder(c, !secure(p) && exists);
+        folder(c, !secure(p) && p.getBoolean(PREF_FOLDER_ICON, true) && exists);
     }
 
     /** How opening the folder is guarded: "off", "device" (the phone's lock screen) or "password" (TinyFolder's own). */
@@ -159,6 +162,7 @@ public final class SecureFolder extends Activity {
         return out;
     }
 
+    private static final String SECURE_ICON = "io.github.order52.tinykit.SecureFolderIcon";
     private static final String WORK_FOLDER = "io.github.order52.tinykit.WorkFolder";
 
     /** The plain work profile's folder: its own launcher entry for the same grid, with no lock. */
@@ -198,8 +202,7 @@ public final class SecureFolder extends Activity {
             if (manager == null || !manager.isRequestPinShortcutSupported()) return "Your launcher can't add shortcuts.";
             String id = plain ? "work_folder" : "secure_folder";
             manager.enableShortcuts(java.util.Collections.singletonList(id));
-            Intent open = plain ? new Intent(Intent.ACTION_MAIN).setComponent(new ComponentName(c.getPackageName(), WORK_FOLDER))
-                    : new Intent(c, SecureFolder.class).setAction(Intent.ACTION_MAIN);
+            Intent open = new Intent(c, SecureFolder.class).setAction(Intent.ACTION_MAIN);
             ShortcutInfo.Builder builder = new ShortcutInfo.Builder(c, id)
                     .setShortLabel(c.getString(R.string.tiny_folder))
                     .setIcon(Icon.createWithResource(c, plain ? R.mipmap.ic_work_folder : R.mipmap.ic_secure_folder))
@@ -225,7 +228,7 @@ public final class SecureFolder extends Activity {
 
     /** Shows or hides the home screen icon (it exists only while there is a work profile and the person wants it). */
     static void icon(Context c, boolean on) {
-        c.getPackageManager().setComponentEnabledSetting(new ComponentName(c, SecureFolder.class),
+        c.getPackageManager().setComponentEnabledSetting(new ComponentName(c.getPackageName(), SECURE_ICON),
                 on ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP);
         if (on && Build.VERSION.SDK_INT >= 26) { // a shortcut that was switched off while the look was plain works again

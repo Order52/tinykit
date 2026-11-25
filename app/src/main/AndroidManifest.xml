@@ -163,20 +163,30 @@
         <service android:name=".Tiles$Mixer" android:exported="true" android:icon="@drawable/ic_nav_system" android:label="@string/tile_mixer" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
-        <!-- The Secure folder icon: the work apps behind the phone's lock screen. Enabled only while a work profile exists. -->
+        <!-- The folder screen: the work apps, behind a lock when one is set. It has no launcher icon of its own, so
+             it always opens from TinyKit; the icons are the two aliases below. -->
         <activity
             android:name=".SecureFolder"
+            android:exported="true"
+            android:icon="@mipmap/ic_secure_folder"
+            android:roundIcon="@mipmap/ic_secure_folder"
+            android:label="@string/tiny_folder"
+            android:taskAffinity="io.github.order52.tinykit.secure" />
+
+        <!-- The Secure folder icon. Enabled only while a work profile exists, in that look, and while the person wants it. -->
+        <activity-alias
+            android:name=".SecureFolderIcon"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_secure_folder"
             android:roundIcon="@mipmap/ic_secure_folder"
             android:label="@string/tiny_folder"
-            android:taskAffinity="io.github.order52.tinykit.secure">
+            android:targetActivity=".SecureFolder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
         <!-- The plain work profile's folder: the same grid of work apps, with no lock. Enabled only in that look, with a work profile. -->
         <activity-alias
