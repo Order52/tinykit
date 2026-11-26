@@ -51,6 +51,8 @@ available in English, Spanish, Brazilian Portuguese and Russian.
 
 ## What's new
 
+- **A new Speed-up widget.** It shows storage and RAM bars like One UI's, and **Widget style** (under
+  **Speed-up widget**) picks its colors and how see-through it is.
 - **Work app permissions, and a switch for the TinyFolder icon.** In Work apps, **Permissions** turns an
   app's runtime permissions and special access on or off for the work profile only. **Work folder icon** and
   **Secure folder icon** take the TinyFolder icon out of the launcher; the folder still opens from Work profile.

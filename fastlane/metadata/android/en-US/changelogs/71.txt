@@ -1,0 +1,1 @@
+• New: the Speed-up widget now shows storage and RAM bars like One UI, and Widget style lets you pick its colors (Ocean, Mint, Sunset, Violet, Light or your phone's own) and how see-through it is.

@@ -786,7 +786,8 @@ Without Shizuku, on **Android 13 and older**, TinyKit can close cached apps with
 Android 14 and newer the row shows **Requires Shizuku**.
 
 **Speed-up widget** puts **Speed up phone** on your home screen. One tap runs all of it without
-opening TinyKit, and the widget then shows how much memory is free. Tap **Speed-up widget** in this
+opening TinyKit, and the widget shows storage and RAM in use as two bars. **Widget style** picks its colors
+and how see-through it is. Tap **Speed-up widget** in this
 section to place it (Android 8+), or add it from your launcher's widget list. The widget never
 updates on its own and runs nothing until you tap it.
 

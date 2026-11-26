@@ -1,44 +1,168 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home screen widget. Widgets must use an XML layout (RemoteViews); the app itself has none. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Home screen widget. Widgets must use an XML layout (RemoteViews); the app itself has none.
+     Every color is set from the widget's style (BoostWidget.palette); the drawables are white shapes it tints. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:padding="12dp">
+    android:layout_height="match_parent">
 
     <ImageView
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:id="@+id/widget_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:tint="#101417"
         android:contentDescription="@null"
-        android:src="@drawable/ic_tile_ram"
-        android:tint="#8C9EFF" />
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_background" />
 
     <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="8dp">
 
-        <TextView
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/widget_name"
-            android:textColor="#FFFFFFFF"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:minWidth="52dp"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/widget_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:maxLines="2"
-            android:ellipsize="end"
-            android:text="@string/widget_hint"
-            android:textColor="#B3FFFFFF"
-            android:textSize="12sp" />
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp">
+
+                <ImageView
+                    android:id="@+id/widget_circle"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:tint="#3B5FD0"
+                    android:contentDescription="@null"
+                    android:src="@drawable/widget_icon_circle" />
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_widget_broom" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/widget_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/widget_name"
+                android:textColor="#FFFFFFFF"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <ImageView
+                android:id="@+id/widget_storage_track"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:tint="#0F3B45"
+                android:contentDescription="@null"
+                android:scaleType="fitXY"
+                android:src="@drawable/widget_track" />
+
+            <ImageView
+                android:id="@+id/widget_storage_bar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:tint="#0DB1CF"
+                android:contentDescription="@null"
+                android:scaleType="fitXY"
+                android:src="@drawable/widget_fill" />
+
+            <ImageView
+                android:id="@+id/widget_storage_icon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="9dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_widget_storage" />
+
+            <TextView
+                android:id="@+id/widget_storage_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginStart="30dp"
+                android:layout_marginEnd="10dp"
+                android:maxLines="1"
+                android:text="69.2 GB / 128 GB"
+                android:textColor="#FFFFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="5dp">
+
+            <ImageView
+                android:id="@+id/widget_ram_track"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:tint="#1A2D4B"
+                android:contentDescription="@null"
+                android:scaleType="fitXY"
+                android:src="@drawable/widget_track" />
+
+            <ImageView
+                android:id="@+id/widget_ram_bar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:tint="#3B78E7"
+                android:contentDescription="@null"
+                android:scaleType="fitXY"
+                android:src="@drawable/widget_fill" />
+
+            <ImageView
+                android:id="@+id/widget_ram_icon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="9dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_tile_ram" />
+
+            <TextView
+                android:id="@+id/widget_ram_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginStart="30dp"
+                android:layout_marginEnd="10dp"
+                android:maxLines="1"
+                android:text="2.6 GB / 4 GB"
+                android:textColor="#FFFFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

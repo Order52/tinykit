@@ -1592,6 +1592,8 @@ public class MainActivity extends Activity {
                 () -> Ram.free(this));
         row(list, "Speed-up widget", "Add a home screen widget that does the same speed-up in one tap, "
                 + "without opening TinyKit.", arrow(), this::addBoostWidget, false);
+        row(list, "Widget style", "Pick the colors and how see-through the widget is.", arrow(),
+                () -> BoostWidget.style(this), false);
         action(list, "Clear all app caches", "Frees the space used by every app's cache.",
                 () -> Ram.clearCaches(this) + ".");
         action(list, "Optimize apps",
