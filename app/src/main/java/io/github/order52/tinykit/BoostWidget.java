@@ -15,6 +15,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.StatFs;
 import android.widget.RemoteViews;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Arrays;
 import java.util.Locale;
@@ -146,31 +152,90 @@ public class BoostWidget extends AppWidgetProvider {
         return COLORS[theme >= COLORS.length ? 0 : theme];
     }
 
-    /** Pick the colors, then how see-through the widget is. Both apply to the widgets on the home screen at once. */
+    /**
+     * A panel with a live preview of the widget, the colors and the background to pick from, and OK to keep
+     * them. Nothing changes on the home screen until OK.
+     */
     static void style(MainActivity tk) {
         SharedPreferences prefs = tk.prefs;
         String[] themes = Build.VERSION.SDK_INT >= 31 ? THEMES : Arrays.copyOf(THEMES, COLORS.length);
-        new AlertDialog.Builder(tk).setTitle(Tr.t("Widget colors"))
-                .setSingleChoiceItems(Tr.all(themes), Math.min(prefs.getInt(PREF_THEME, 0), themes.length - 1), (d, theme) -> {
-                    d.dismiss();
-                    prefs.edit().putInt(PREF_THEME, theme).apply();
+        int[] pick = {Math.min(prefs.getInt(PREF_THEME, 0), themes.length - 1), Math.max(0, Math.min(prefs.getInt(PREF_GLASS, 0), 2))};
+        LinearLayout panel = tk.vertical();
+        panel.setPadding(tk.dp(16), tk.dp(8), tk.dp(16), 0);
+        FrameLayout preview = new FrameLayout(tk);
+        preview.setBackgroundColor(0xFF6B7A99);
+        preview.setPadding(tk.dp(8), tk.dp(8), tk.dp(8), tk.dp(8));
+        panel.addView(preview, new LinearLayout.LayoutParams(-1, tk.dp(96)));
+        Runnable draw = () -> {
+            preview.removeAllViews();
+            preview.addView(render(tk, false, pick[0], pick[1]).apply(tk, preview));
+        };
+        draw.run();
+        panel.addView(chips(tk, "Widget colors", themes, pick, 0, draw, true));
+        panel.addView(chips(tk, "Widget background", GLASS, pick, 1, draw, false));
+        new AlertDialog.Builder(tk).setTitle(Tr.t("Widget style")).setView(panel)
+                .setPositiveButton(Tr.t("OK"), (d, w) -> {
+                    prefs.edit().putInt(PREF_THEME, pick[0]).putInt(PREF_GLASS, pick[1]).apply();
                     show(tk, false);
-                    new AlertDialog.Builder(tk).setTitle(Tr.t("Widget background"))
-                            .setSingleChoiceItems(Tr.all(GLASS), prefs.getInt(PREF_GLASS, 0), (g, glass) -> {
-                                g.dismiss();
-                                prefs.edit().putInt(PREF_GLASS, glass).apply();
-                                show(tk, false);
-                            }).show();
-                }).show();
+                })
+                .setNegativeButton(Tr.t("Cancel"), null).show();
+    }
+
+    /** A heading and rows of three chips; tapping one sets pick[slot] and redraws the preview. */
+    private static View chips(MainActivity tk, String title, String[] names, int[] pick, int slot, Runnable draw, boolean colored) {
+        LinearLayout box = tk.vertical();
+        TextView heading = new TextView(tk);
+        heading.setText(Tr.t(title));
+        heading.setPadding(0, tk.dp(14), 0, tk.dp(4));
+        box.addView(heading);
+        LinearLayout row = null;
+        View[] all = new View[names.length];
+        for (int i = 0; i < names.length; i++) {
+            if (i % 3 == 0) {
+                row = new LinearLayout(tk);
+                box.addView(row);
+            }
+            int[] colors = palette(tk, colored ? i : 0);
+            TextView chip = new TextView(tk);
+            chip.setText(Tr.t(names[i]));
+            chip.setGravity(Gravity.CENTER);
+            chip.setSingleLine();
+            chip.setTextColor(colored ? colors[0] : 0xFFFFFFFF);
+            GradientDrawable shape = new GradientDrawable();
+            shape.setCornerRadius(tk.dp(20));
+            shape.setColor(colored ? colors[1] : 0xFF5A6068);
+            chip.setBackground(shape);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, tk.dp(40), 1);
+            lp.setMargins(tk.dp(3), tk.dp(3), tk.dp(3), tk.dp(3));
+            row.addView(chip, lp);
+            all[i] = chip;
+            int index = i;
+            chip.setOnClickListener(v -> {
+                pick[slot] = index;
+                for (int j = 0; j < all.length; j++) all[j].setAlpha(j == index ? 1f : 0.4f);
+                draw.run();
+            });
+        }
+        for (int j = 0; j < all.length; j++) all[j].setAlpha(j == pick[slot] ? 1f : 0.4f);
+        return box;
     }
 
     private static RemoteViews views(Context context, boolean busy) {
+        SharedPreferences prefs = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
+        RemoteViews views = render(context, busy, Math.max(0, prefs.getInt(PREF_THEME, 0)), Math.max(0, Math.min(prefs.getInt(PREF_GLASS, 0), 2)));
+        Intent tap = new Intent(context, BoostWidget.class).setAction(ACTION_BOOST);
+        views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getBroadcast(context, 0, tap,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+        return views;
+    }
+
+    /** The widget as it looks with this theme and background (also used for the preview, which has no tap). */
+    private static RemoteViews render(Context context, boolean busy, int theme, int glass) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_boost);
         views.setTextViewText(R.id.widget_status, context.getString(busy ? R.string.widget_busy : R.string.widget_name));
-        SharedPreferences prefs = context.getSharedPreferences("tinykit", Context.MODE_PRIVATE);
-        int[] colors = palette(context, Math.max(0, prefs.getInt(PREF_THEME, 0)));
+        int[] colors = palette(context, theme);
         views.setInt(R.id.widget_bg, "setColorFilter", colors[0]);
-        views.setInt(R.id.widget_bg, "setImageAlpha", OPACITY[Math.max(0, Math.min(prefs.getInt(PREF_GLASS, 0), 2))]);
+        views.setInt(R.id.widget_bg, "setImageAlpha", OPACITY[glass]);
         views.setInt(R.id.widget_circle, "setColorFilter", colors[3]);
         views.setTextColor(R.id.widget_status, colors[4]);
         try {
@@ -184,9 +249,6 @@ public class BoostWidget extends AppWidgetProvider {
         } catch (RuntimeException ignored) {
             // The numbers stay as they were; the tap still works.
         }
-        Intent tap = new Intent(context, BoostWidget.class).setAction(ACTION_BOOST);
-        views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getBroadcast(context, 0, tap,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         return views;
     }
 }

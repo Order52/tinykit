@@ -1,0 +1,1 @@
+• New: Widget style is a panel with a live preview of the widget. Pick the colors and background, then tap OK.

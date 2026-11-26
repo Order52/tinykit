@@ -51,6 +51,8 @@ available in English, Spanish, Brazilian Portuguese and Russian.
 
 ## What's new
 
+- **Widget style has a live preview.** Pick the widget's colors and background in a panel that shows the
+  widget as you choose, then tap OK.
 - **Check for updates works on shared connections.** It no longer fails with "Couldn't reach GitHub"
   when GitHub's request limit for your network is used up.
 - **A new Speed-up widget.** It shows storage and RAM bars like One UI's, and **Widget style** (under
