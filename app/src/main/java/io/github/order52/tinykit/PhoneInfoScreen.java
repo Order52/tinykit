@@ -278,24 +278,19 @@ final class PhoneInfoScreen {
      * updates on start" on; nothing checks in the background.
      */
     String[] latestRelease() {
+        // The releases page redirects to the newest tag. Unlike api.github.com, which allows 60 requests an
+        // hour per address and answers 403 beyond that, it is not rate limited.
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(
-                    "https://api.github.com/repos/Order52/tinykit/releases/latest").openConnection();
+            HttpURLConnection conn = (HttpURLConnection) new URL(MainActivity.REPO + "/releases/latest").openConnection();
+            conn.setInstanceFollowRedirects(false);
             conn.setConnectTimeout(10_000);
             conn.setReadTimeout(10_000);
-            conn.setRequestProperty("Accept", "application/vnd.github+json");
-            String body;
-            try (InputStream in = conn.getInputStream()) {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                body = out.toString("UTF-8");
-            }
-            Matcher tag = Pattern.compile("\"tag_name\"\\s*:\\s*\"v?([^\"]+)\"").matcher(body);
-            if (!tag.find()) return null;
-            Matcher url = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").matcher(body);
-            return new String[]{tag.group(1), url.find() ? url.group(1) : MainActivity.REPO + "/releases/latest"};
+            String to = conn.getHeaderField("Location");
+            conn.disconnect();
+            if (to == null || !to.contains("/tag/")) return null;
+            String tag = to.substring(to.lastIndexOf('/') + 1);
+            String version = tag.startsWith("v") ? tag.substring(1) : tag;
+            return new String[]{version, MainActivity.REPO + "/releases/download/" + tag + "/TinyKit-" + version + ".apk"};
         } catch (Exception e) {
             return null;
         }

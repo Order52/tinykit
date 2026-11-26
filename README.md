@@ -51,6 +51,8 @@ available in English, Spanish, Brazilian Portuguese and Russian.
 
 ## What's new
 
+- **Check for updates works on shared connections.** It no longer fails with "Couldn't reach GitHub"
+  when GitHub's request limit for your network is used up.
 - **A new Speed-up widget.** It shows storage and RAM bars like One UI's, and **Widget style** (under
   **Speed-up widget**) picks its colors and how see-through it is.
 - **Work app permissions, and a switch for the TinyFolder icon.** In Work apps, **Permissions** turns an

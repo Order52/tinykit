@@ -1,0 +1,1 @@
+• Fixed: Check for updates said it couldn't reach GitHub when GitHub's request limit was hit, which is common on shared connections. It no longer uses that limit.
